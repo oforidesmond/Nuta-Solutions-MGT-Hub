@@ -1,0 +1,840 @@
+// NutaSolutions Final Schema - Production Ready
+// Multi-tenant POS with offline-first mobile app, device binding, expiry tracking, and returns
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  SUPER_ADMIN    // Platform-level admin
+  ADMIN          // Organization owner/admin
+  MANAGER        // Branch manager
+  STAFF          // Regular staff/attendant
+  SALES_AGENT    // External sales agent (can use sandbox mode)
+}
+
+enum PlanType {
+  FREE
+  TRIAL
+  PRO
+  ENTERPRISE
+}
+
+enum PlanStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL_EXPIRED
+  PAYMENT_OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  CARD
+  TRANSFER
+  MIXED
+}
+
+enum StockAdjustmentType {
+  INITIAL_STOCK           // Setting up initial inventory
+  SUPPLIER_ADD            // Stock received from supplier
+  DAMAGE_EXPIRED_REMOVE   // Removing damaged/expired items
+  BULK_TO_SINGLES         // Converting bulk packages to individual units
+  SINGLES_TO_BULK         // Converting individual units to bulk packages
+  CORRECT_ENTRY_ERROR     // Correcting previous data entry mistakes
+  SALE                    // Stock reduction from sale
+  SALE_REVERSAL          // Stock restoration from voided/returned sale
+  RETURN                 // Stock restoration from return
+  MANUAL_ADJUSTMENT       // Manual correction by admin
+  STOCK_TAKE             // Physical count adjustment
+  EXPIRY_REMOVAL         // Removed due to expiry
+}
+
+enum DiscountAlertStatus {
+  PENDING
+  ACKNOWLEDGED
+  RESOLVED
+  ESCALATED
+}
+
+enum EventType {
+  // User events
+  USER_CREATED
+  USER_UPDATED
+  USER_DEACTIVATED
+  USER_PASSWORD_RESET
+  
+  // Product events
+  PRODUCT_CREATED
+  PRODUCT_UPDATED
+  PRODUCT_DELETED
+  TEMPORARY_ITEM_SOLD
+  
+  // Stock events
+  STOCK_ADJUSTED
+  STOCK_DISCREPANCY_RECORDED
+  BATCH_CREATED
+  BATCH_EXPIRING
+  
+  // Sale events
+  SALE_CREATED
+  SALE_VOIDED
+  SALE_RETURNED
+  
+  // Discount events
+  DISCOUNT_APPLIED
+  DISCOUNT_THRESHOLD_EXCEEDED
+  
+  // Organization events
+  ORGANIZATION_CREATED
+  ORGANIZATION_UPDATED
+  PLAN_UPGRADED
+  PLAN_DOWNGRADED
+  TRIAL_LIMIT_REACHED
+  
+  // Device events
+  DEVICE_REGISTERED
+  DEVICE_REVOKED
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCING
+  SYNCED
+  FAILED
+  RETRY
+}
+
+enum DeviceStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum NotificationType {
+  TEMPORARY_ITEM_SOLD
+  RETURN_REQUESTED
+  DISCOUNT_ALERT
+  EXPIRY_WARNING
+  LOW_STOCK
+  TRIAL_LIMIT_WARNING
+  PLAN_UPGRADE_REQUIRED
+  SYSTEM_ALERT
+}
+
+enum ReturnReason {
+  DAMAGED
+  WRONG_ITEM
+  CUSTOMER_CHANGED_MIND
+  EXPIRED
+  QUALITY_ISSUE
+  OTHER
+}
+
+// ============================================================================
+// CORE MODELS - ORGANIZATION & USERS
+// ============================================================================
+
+model Organization {
+  id                    String       @id @default(uuid()) @db.Uuid
+  name                  String
+  businessType          String?
+  businessLocation      String?
+  leadSource            String?
+  branchCount           Int?
+  phone                 String?
+  email                 String?
+  
+  // Plan Management
+  planType              PlanType     @default(TRIAL)
+  planStatus            PlanStatus   @default(ACTIVE)
+  trialStartDate        DateTime?
+  trialEndDate          DateTime?
+  salesCount            Int          @default(0)
+  salesLimit            Int?         // Null = unlimited, set value for trial (e.g., 50)
+  planUpgradeRequestedAt DateTime?
+  
+  // Discount threshold settings
+  maxStaffDiscountPercent  Decimal?  @db.Decimal(5, 2) // e.g., 10.00 for 10%
+  maxStaffDiscountAmount   Decimal?  @db.Decimal(12, 2)
+  alertOwnerOnExcessDiscount Boolean @default(true)
+  
+  // Tax settings
+  defaultTaxRate        Decimal      @db.Decimal(5, 2) @default(0) // Default 0%
+  taxEnabled            Boolean      @default(false)
+  
+  // Currency (always GHS for now, but flexible for future)
+  currency              String       @default("GHS")
+  
+  // Expiry tracking settings
+  expiryReminderMonths  Int          @default(3) // Alert 3 months before expiry
+  expiryAlertEnabled    Boolean      @default(true)
+  
+  // Metadata
+  isActive              Boolean      @default(true)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  
+  // Relations
+  users                 User[]
+  branches              Branch[]
+  products              Product[]
+  batches               Batch[]
+  sales                 Sale[]
+  returns               Return[]
+  stockAdjustments      StockAdjustment[]
+  stockDiscrepancies    StockDiscrepancy[]
+  discountAlerts        DiscountAlert[]
+  notifications         Notification[]
+  eventLogs             EventLog[]
+  syncQueue             SyncQueue[]
+  
+  @@index([planType, planStatus])
+  @@index([salesCount])
+}
+
+model User {
+  id                    String    @id @default(uuid()) @db.Uuid
+  email                 String    @unique
+  passwordHash          String
+  firstName             String?
+  lastName              String?
+  phoneNumber           String?
+  role                  UserRole
+  organizationId        String?   @db.Uuid
+  
+  // Account status
+  isActive              Boolean   @default(true)
+  isTemporaryPassword   Boolean   @default(false) // Forces password reset on first login
+  needsPasswordChange   Boolean   @default(false)
+  lastLoginAt           DateTime?
+  
+  // Sandbox/Demo mode flag
+  isSandboxUser         Boolean   @default(false) // For sales agents/admins testing
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relations
+  organization          Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  staffProfile          StaffProfile?
+  devices               Device[]
+  salesCreated          Sale[]
+  returnsProcessed      Return[]
+  stockAdjustments      StockAdjustment[]
+  stockDiscrepancies    StockDiscrepancy[]
+  refreshTokens         RefreshToken[]
+  discountAlerts        DiscountAlert[]
+  notifications         Notification[]
+  
+  @@index([organizationId])
+  @@index([role])
+  @@index([isSandboxUser])
+  @@index([email])
+}
+
+model Branch {
+  id                    String   @id @default(uuid()) @db.Uuid
+  organizationId        String   @db.Uuid
+  name                  String
+  location              String?
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relations
+  organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  staff                 StaffProfile[]
+  
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+}
+
+model StaffProfile {
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @unique @db.Uuid
+  staffId               String   @unique // Human-readable staff ID (e.g., "STF-001")
+  jobTitle              String?
+  
+  // Permissions stored as JSON for flexibility
+  // Example: { "canVoidSales": true, "canAdjustStock": false, "canViewReports": true, "canCreateTemporaryItems": true }
+  permissions           Json     @default("{}")
+  
+  branchId              String?  @db.Uuid
+  
+  // Discount limits specific to this staff member (overrides org defaults)
+  customDiscountLimit   Decimal? @db.Decimal(5, 2)
+  
+  // OTP for initial setup
+  oneTimePassword       String?  // Cleared after first successful login
+  otpExpiresAt          DateTime?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relations
+  user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch                Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  
+  @@index([branchId])
+  @@index([staffId])
+}
+
+// ============================================================================
+// DEVICE MANAGEMENT (Critical for offline-first mobile app)
+// ============================================================================
+
+model Device {
+  id                    String       @id @default(uuid()) @db.Uuid
+  userId                String       @db.Uuid
+  
+  // Device identification
+  deviceUuid            String       @unique // Device unique identifier (from react-native-device-info)
+  deviceName            String?      // e.g., "Samsung Galaxy Tab A"
+  deviceModel           String?
+  deviceOs              String?      // "Android", "iOS"
+  deviceOsVersion       String?
+  
+  // App information
+  appVersion            String?
+  
+  // Device status
+  status                DeviceStatus @default(ACTIVE)
+  lastSyncAt            DateTime?    // Last successful sync
+  lastActiveAt          DateTime?    // Last time device was used
+  
+  // Security
+  firstRegisteredAt     DateTime     @default(now())
+  revokedAt             DateTime?
+  revokedReason         String?
+  
+  // Metadata
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  
+  // Relations
+  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncQueue             SyncQueue[]
+  
+  @@index([userId])
+  @@index([deviceUuid])
+  @@index([status])
+}
+
+// ============================================================================
+// SYNC MANAGEMENT (For offline-first architecture)
+// ============================================================================
+
+model SyncQueue {
+  id                    String       @id @default(uuid()) @db.Uuid
+  organizationId        String       @db.Uuid
+  deviceId              String?      @db.Uuid
+  
+  // Sync details
+  entityType            String       // "SALE", "STOCK_ADJUSTMENT", "RETURN", etc.
+  entityId              String       @db.Uuid // ID of the entity being synced
+  payload               Json         @db.JsonB // Full data to sync
+  
+  // Status tracking
+  status                SyncStatus   @default(PENDING)
+  attemptCount          Int          @default(0)
+  lastAttemptAt         DateTime?
+  errorMessage          String?
+  
+  // Idempotency
+  idempotencyKey        String       @unique // Prevents duplicate syncs
+  
+  // Timestamps
+  createdAt             DateTime     @default(now()) // When queued
+  syncedAt              DateTime?    // When successfully synced
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  device                Device?      @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  
+  @@index([organizationId, status])
+  @@index([deviceId])
+  @@index([idempotencyKey])
+  @@index([entityType, entityId])
+}
+
+// ============================================================================
+// PRODUCT & INVENTORY MODELS
+// ============================================================================
+
+model Product {
+  id                    String    @id @default(uuid()) @db.Uuid
+  organizationId        String    @db.Uuid
+  
+  // Basic info
+  name                  String
+  sku                   String?   @unique
+  barcode               String?   @unique
+  description           String?
+  category              String?
+  
+  // Pricing
+  costPrice             Decimal   @db.Decimal(12, 2) // Purchase/cost price
+  sellingPrice          Decimal   @db.Decimal(12, 2) // Regular selling price
+  
+  // Inventory
+  currentStock          Decimal   @db.Decimal(12, 3) @default(0) // Support fractional quantities
+  reorderLevel          Decimal?  @db.Decimal(12, 3) // Alert when stock falls below this
+  
+  // Tax
+  taxable               Boolean   @default(true)
+  customTaxRate         Decimal?  @db.Decimal(5, 2) // Override org default tax rate
+  
+  // Additional attributes
+  supplier              String?
+  unit                  String?   // e.g., "piece", "kg", "liter"
+  
+  // Temporary items (sold before properly catalogued)
+  isTemporary           Boolean   @default(false)
+  needsReview           Boolean   @default(false) // Owner needs to complete details
+  temporarySoldCount    Int       @default(0) // How many times sold as temp item
+  
+  // Data isolation
+  isSandboxData         Boolean   @default(false) // Separates demo/test data from real data
+  
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  batches               Batch[]
+  saleItems             SaleItem[]
+  returnItems           ReturnItem[]
+  stockAdjustments      StockAdjustment[]
+  stockDiscrepancies    StockDiscrepancy[]
+  
+  @@index([organizationId])
+  @@index([organizationId, name])
+  @@index([organizationId, isSandboxData])
+  @@index([organizationId, isTemporary, needsReview])
+  @@index([sku])
+  @@index([barcode])
+}
+
+// ============================================================================
+// BATCH & EXPIRY TRACKING
+// ============================================================================
+
+model Batch {
+  id                    String    @id @default(uuid()) @db.Uuid
+  organizationId        String    @db.Uuid
+  productId             String    @db.Uuid
+  
+  // Batch details
+  batchNumber           String?   // Optional batch/lot number
+  quantity              Decimal   @db.Decimal(12, 3)
+  remainingQuantity     Decimal   @db.Decimal(12, 3)
+  
+  // Expiry tracking
+  expiryDate            DateTime?
+  manufacturedDate      DateTime?
+  
+  // Cost tracking (for FIFO/LIFO)
+  costPriceAtPurchase   Decimal   @db.Decimal(12, 2)
+  
+  // Status
+  isExpired             Boolean   @default(false)
+  expiryAlertSent       Boolean   @default(false)
+  
+  // Metadata
+  notes                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product               Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId, productId])
+  @@index([expiryDate])
+  @@index([isExpired])
+  @@index([organizationId, expiryDate, isExpired])
+}
+
+// ============================================================================
+// STOCK TRACKING MODELS
+// ============================================================================
+
+model StockAdjustment {
+  id                    String              @id @default(uuid()) @db.Uuid
+  organizationId        String              @db.Uuid
+  productId             String              @db.Uuid
+  userId                String?             @db.Uuid
+  batchId               String?             @db.Uuid
+  
+  // Adjustment details
+  type                  StockAdjustmentType
+  quantityBefore        Decimal             @db.Decimal(12, 3)
+  quantityAfter         Decimal             @db.Decimal(12, 3)
+  quantityChange        Decimal             @db.Decimal(12, 3) // Can be positive or negative
+  
+  // Context
+  reason                String?
+  notes                 String?
+  referenceId           String?             @db.Uuid // Link to Sale, StockDiscrepancy, Return, etc.
+  referenceType         String?             // e.g., "SALE", "RETURN", "DISCREPANCY"
+  
+  // Data isolation
+  isSandboxData         Boolean             @default(false)
+  
+  createdAt             DateTime            @default(now())
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product               Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user                  User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([organizationId, productId, createdAt])
+  @@index([organizationId, type])
+  @@index([userId])
+  @@index([isSandboxData])
+  @@index([referenceId, referenceType])
+}
+
+model StockDiscrepancy {
+  id                    String   @id @default(uuid()) @db.Uuid
+  organizationId        String   @db.Uuid
+  productId             String   @db.Uuid
+  recordedById          String   @db.Uuid
+  
+  // Discrepancy details
+  systemQuantity        Decimal  @db.Decimal(12, 3) // What the system says
+  physicalQuantity      Decimal  @db.Decimal(12, 3) // What was actually counted
+  difference            Decimal  @db.Decimal(12, 3) // physicalQuantity - systemQuantity
+  
+  // Financial impact (calculated fields)
+  costPriceAtTime       Decimal  @db.Decimal(12, 2) // Product cost price when recorded
+  sellingPriceAtTime    Decimal  @db.Decimal(12, 2) // Product selling price when recorded
+  estimatedLossCost     Decimal  @db.Decimal(12, 2) // difference * costPriceAtTime
+  estimatedLossSelling  Decimal  @db.Decimal(12, 2) // difference * sellingPriceAtTime
+  
+  // Context
+  note                  String?
+  stockAdjustmentId     String?  @db.Uuid // If an adjustment was made to fix this
+  
+  // Data isolation
+  isSandboxData         Boolean  @default(false)
+  
+  createdAt             DateTime @default(now())
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product               Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recordedBy            User         @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+  
+  @@index([organizationId, createdAt])
+  @@index([productId])
+  @@index([isSandboxData])
+}
+
+// ============================================================================
+// SALES MODELS
+// ============================================================================
+
+model Sale {
+  id                    String        @id @default(uuid()) @db.Uuid
+  organizationId        String        @db.Uuid
+  createdById           String        @db.Uuid
+  
+  // Sale details
+  receiptNumber         String        @unique
+  subtotal              Decimal       @db.Decimal(12, 2)
+  discountAmount        Decimal       @db.Decimal(12, 2) @default(0)
+  discountPercentage    Decimal?      @db.Decimal(5, 2) // For reporting
+  
+  // Tax
+  taxRate               Decimal       @db.Decimal(5, 2) @default(0)
+  taxAmount             Decimal       @db.Decimal(12, 2) @default(0)
+  
+  totalAmount           Decimal       @db.Decimal(12, 2)
+  paymentMethod         PaymentMethod
+  
+  // Currency
+  currency              String        @default("GHS")
+  
+  // Timestamps (CRITICAL for offline-first)
+  soldAt                DateTime      // When "Sell" button was pressed on device (device time)
+  syncedAt              DateTime?     // When sale reached the server
+  
+  // Flags
+  isVoided              Boolean       @default(false)
+  voidedAt              DateTime?
+  voidedById            String?       @db.Uuid
+  voidReason            String?
+  
+  // Returns
+  hasReturns            Boolean       @default(false)
+  returnedAmount        Decimal       @db.Decimal(12, 2) @default(0)
+  
+  // Data isolation
+  isSandboxData         Boolean       @default(false)
+  
+  // Metadata
+  notes                 String?
+  deviceInfo            Json?         // Store device details for audit
+  createdAt             DateTime      @default(now())
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy             User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items                 SaleItem[]
+  returns               Return[]
+  discountAlert         DiscountAlert?
+  
+  @@index([organizationId])
+  @@index([organizationId, soldAt])
+  @@index([organizationId, createdAt])
+  @@index([receiptNumber])
+  @@index([isSandboxData])
+  @@index([isVoided])
+  @@index([soldAt, syncedAt]) // For flagging delayed syncs
+}
+
+model SaleItem {
+  id                    String  @id @default(uuid()) @db.Uuid
+  saleId                String  @db.Uuid
+  productId             String  @db.Uuid
+  batchId               String? @db.Uuid // Link to batch for expiry tracking
+  
+  // Item details (snapshots at time of sale)
+  productName           String  // Snapshot at time of sale
+  quantity              Decimal @db.Decimal(12, 3)
+  unitPrice             Decimal @db.Decimal(12, 2) // Price per unit at time of sale
+  unitCost              Decimal @db.Decimal(12, 2) // Cost per unit at time of sale (for profit calc)
+  
+  // Tax
+  taxRate               Decimal @db.Decimal(5, 2) @default(0)
+  taxAmount             Decimal @db.Decimal(12, 2) @default(0)
+  
+  lineTotal             Decimal @db.Decimal(12, 2) // quantity * unitPrice + taxAmount
+  
+  // Relations
+  sale                  Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product               Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  returnItems           ReturnItem[]
+  
+  @@index([saleId])
+  @@index([productId])
+}
+
+// ============================================================================
+// RETURNS MANAGEMENT
+// ============================================================================
+
+model Return {
+  id                    String       @id @default(uuid()) @db.Uuid
+  organizationId        String       @db.Uuid
+  saleId                String       @db.Uuid // Original sale being returned
+  processedById         String       @db.Uuid // Staff who processed the return
+  
+  // Return details
+  returnNumber          String       @unique
+  reason                ReturnReason
+  reasonNote            String?
+  
+  // Financials
+  subtotal              Decimal      @db.Decimal(12, 2)
+  taxAmount             Decimal      @db.Decimal(12, 2)
+  totalAmount           Decimal      @db.Decimal(12, 2)
+  
+  // Status
+  isApproved            Boolean      @default(false)
+  approvedById          String?      @db.Uuid
+  approvedAt            DateTime?
+  
+  // Timestamps
+  returnedAt            DateTime     @default(now())
+  syncedAt              DateTime?
+  
+  // Metadata
+  notes                 String?
+  customerName          String?
+  
+  createdAt             DateTime     @default(now())
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sale                  Sale         @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  processedBy           User         @relation(fields: [processedById], references: [id], onDelete: Restrict)
+  items                 ReturnItem[]
+  
+  @@index([organizationId])
+  @@index([saleId])
+  @@index([organizationId, returnedAt])
+}
+
+model ReturnItem {
+  id                    String  @id @default(uuid()) @db.Uuid
+  returnId              String  @db.Uuid
+  saleItemId            String  @db.Uuid // Link to original sale item
+  productId             String  @db.Uuid
+  
+  // Item details
+  productName           String
+  quantityReturned      Decimal @db.Decimal(12, 3)
+  unitPrice             Decimal @db.Decimal(12, 2)
+  taxAmount             Decimal @db.Decimal(12, 2)
+  lineTotal             Decimal @db.Decimal(12, 2)
+  
+  // Relations
+  return                Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  saleItem              SaleItem @relation(fields: [saleItemId], references: [id], onDelete: Restrict)
+  product               Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  
+  @@index([returnId])
+  @@index([saleItemId])
+  @@index([productId])
+}
+
+// ============================================================================
+// DISCOUNT TRACKING
+// ============================================================================
+
+model DiscountAlert {
+  id                    String              @id @default(uuid()) @db.Uuid
+  organizationId        String              @db.Uuid
+  saleId                String              @unique @db.Uuid
+  createdById           String              @db.Uuid // Staff who gave the discount
+  
+  // Discount details
+  discountAmount        Decimal             @db.Decimal(12, 2)
+  discountPercentage    Decimal             @db.Decimal(5, 2)
+  thresholdExceeded     Decimal             @db.Decimal(12, 2) // How much over the limit
+  
+  // Alert status
+  status                DiscountAlertStatus @default(PENDING)
+  acknowledgedById      String?             @db.Uuid
+  acknowledgedAt        DateTime?
+  resolutionNotes       String?
+  
+  createdAt             DateTime            @default(now())
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sale                  Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  createdBy             User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  
+  @@index([organizationId, status])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// NOTIFICATIONS (In-app alerts)
+// ============================================================================
+
+model Notification {
+  id                    String           @id @default(uuid()) @db.Uuid
+  organizationId        String           @db.Uuid
+  userId                String?          @db.Uuid // If null, notify all admins
+  
+  // Notification details
+  type                  NotificationType
+  title                 String
+  message               String
+  
+  // Related entity
+  relatedEntityType     String?          // "Sale", "Product", "Return", etc.
+  relatedEntityId       String?          @db.Uuid
+  
+  // Status
+  isRead                Boolean          @default(false)
+  readAt                DateTime?
+  
+  // Action
+  actionUrl             String?          // Where to navigate when clicked
+  actionLabel           String?          // Button label
+  
+  createdAt             DateTime         @default(now())
+  expiresAt             DateTime?        // Auto-delete old notifications
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                  User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId, userId, isRead])
+  @@index([organizationId, type])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// EVENT SOURCING
+// ============================================================================
+
+/// Append-only event log. This is the source of audit truth.
+/// Writes are INSERT-only: updates and deletes are forbidden.
+/// Enforce at the database layer (e.g., triggers/RLS) and in application code.
+model EventLog {
+  id                    String   @id @default(uuid()) @db.Uuid
+  organizationId        String   @db.Uuid
+  
+  // Event classification
+  eventType             EventType
+  aggregateType         String   // e.g., "Product", "Sale", "User"
+  aggregateId           String   @db.Uuid
+  
+  // Event payload - flexible JSON structure
+  payload               Json     @db.JsonB
+  
+  // Context
+  userId                String?  @db.Uuid // Who triggered the event
+  ipAddress             String?
+  userAgent             String?
+  deviceInfo            Json?    // Device details if from mobile
+  
+  // Data isolation
+  isSandboxData         Boolean  @default(false)
+  
+  createdAt             DateTime @default(now())
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId, createdAt])
+  @@index([organizationId, aggregateType])
+  @@index([organizationId, aggregateType, aggregateId])
+  @@index([aggregateId])
+  @@index([eventType])
+  @@index([isSandboxData])
+  @@map("event_log")
+}
+
+// ============================================================================
+// AUTHENTICATION
+// ============================================================================
+
+model RefreshToken {
+  id                    String    @id @default(uuid()) @db.Uuid
+  userId                String    @db.Uuid
+  tokenHash             String    @unique
+  expiresAt             DateTime
+  revokedAt             DateTime?
+  replacedById          String?   @db.Uuid
+  
+  // Context
+  ipAddress             String?
+  userAgent             String?
+  deviceUuid            String?   // Link to device if from mobile
+  
+  createdAt             DateTime  @default(now())
+  
+  // Relations
+  user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([tokenHash])
+}
