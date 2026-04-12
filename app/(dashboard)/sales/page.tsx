@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchSales } from "@/lib/api/sales";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDateDMY, formatTime12h } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
 import type { HubSale } from "@/lib/types/domain";
 
@@ -95,7 +95,7 @@ export default function SalesPage() {
                           {formatCurrency(Number.isFinite(total) ? total : 0, currency)}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(when)}
+                          {when ? `${formatDateDMY(when)} · ${formatTime12h(when)}` : "—"}
                         </TableCell>
                         <TableCell>{createdByLabel(s)}</TableCell>
                       </TableRow>

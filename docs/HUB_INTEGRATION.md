@@ -35,11 +35,33 @@ Copy `.env.local.example` to `.env.local`:
 | GET | `/users/me` | JWT org scope; may return nested `organization`. |
 | GET | `/organizations/:id` | Used when `me` has `organizationId` but no embedded org. |
 | GET | `/products`, `/sales`, `/users` | Expected org-scoped by JWT. |
+| GET | `/products` | Query: `page`, `limit`, `search`, `categoryId`, `lowStock`, `sortBy`, `sortOrder`. |
+| POST/PATCH/DELETE | `/products/:id` | Catalog CRUD; soft delete for admins per API. |
+| POST | `/products/:id/duplicate`, PATCH `/products/:id/pricing` | Optional product helpers. |
+| GET | `/products/low-stock`, `/products/expiring-soon`, `/products/:id/stock-history` | Alerts and history. |
+| CRUD | `/categories`, `/categories/:id`, `/categories/:id/products` | Category tree (when enabled in API). |
+| CRUD | `/batches`, `/batches/expiring`, `/batches/expired`, POST `/batches/:id/remove-expired` | Lots and expiry. |
 | POST | `/users/staff` | MVP “add staff”; adjust path/DTO to match Nest. |
-| PATCH | `/organizations/:id` | Settings save. |
+| PATCH | `/organizations/:id` | Settings save (business, tax, expiry, discount limits when supported). |
 | GET | `/dashboard/summary` | Optional; Hub falls back to aggregating products + sales if **404**. |
 
-All paths are centralized in `lib/api/endpoints.ts` for easy alignment when controllers differ.
+### Hub routes (Next.js app)
+
+| Path | Purpose |
+|------|---------|
+| `/` | Dashboard (metrics + quick actions). |
+| `/products` | Product list, search, filters. |
+| `/products/new`, `/products/[id]`, `/products/[id]/edit` | Create, detail, edit. |
+| `/products/expiring` | Expiring-soon list (API or client filter). |
+| `/categories` | Categories CRUD. |
+| `/batches` | Batch list + expiry panels. |
+| `/inventory` | Inventory hub (links to alerts, batches, placeholders). |
+| `/inventory/alerts` | Low stock. |
+| `/inventory/adjustments`, `/inventory/stock-take` | Phase 2 placeholders. |
+| `/sales`, `/staff`, `/settings` | Transactions, team, organization settings. |
+| `/branches`, `/reports` | Phase 3 / 5 placeholders. |
+
+All API paths are centralized in `lib/api/endpoints.ts` for easy alignment when controllers differ.
 
 ## Security notes
 

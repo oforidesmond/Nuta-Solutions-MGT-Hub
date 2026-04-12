@@ -81,7 +81,7 @@ export default function StaffPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Staff</h1>
           <p className="text-sm text-muted-foreground">
-            Users in your organization (from JWT-scoped API).
+            People who work at your shop. More permission tools will arrive in a later update.
           </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>

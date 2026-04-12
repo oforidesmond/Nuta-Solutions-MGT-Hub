@@ -13,6 +13,9 @@ export type OrganizationPatch = Partial<
     | "taxEnabled"
     | "expiryAlertEnabled"
     | "expiryReminderMonths"
+    | "maxStaffDiscountPercent"
+    | "maxStaffDiscountAmount"
+    | "alertOwnerOnExcessDiscount"
   >
 > & { defaultTaxRate?: number | string | null };
 

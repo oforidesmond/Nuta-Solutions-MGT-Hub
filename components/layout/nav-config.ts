@@ -1,0 +1,72 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  LayoutDashboard,
+  Package,
+  FolderTree,
+  AlertTriangle,
+  CalendarClock,
+  Hourglass,
+  Boxes,
+  ClipboardList,
+  ClipboardPlus,
+  Users,
+  GitBranch,
+  LineChart,
+  Settings,
+  Receipt,
+} from "lucide-react";
+
+export type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+};
+
+export type NavSection = {
+  title?: string;
+  items: NavItem[];
+};
+
+/** Desktop sidebar + mobile sheet — order matches management hub design. */
+export const navSections: NavSection[] = [
+  {
+    items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }],
+  },
+  {
+    title: "Products",
+    items: [
+      { href: "/products", label: "All products", icon: Package },
+      { href: "/categories", label: "Categories", icon: FolderTree },
+      { href: "/inventory/alerts", label: "Low stock", icon: AlertTriangle },
+      { href: "/products/expiring", label: "Expiring soon", icon: Hourglass },
+    ],
+  },
+  {
+    title: "Inventory",
+    items: [
+      { href: "/inventory", label: "Overview", icon: Boxes },
+      { href: "/batches", label: "Batches & expiry", icon: CalendarClock },
+      { href: "/inventory/adjustments", label: "Stock adjustments", icon: ClipboardList },
+      { href: "/inventory/stock-take", label: "Stock take", icon: ClipboardPlus },
+    ],
+  },
+  {
+    title: "Business",
+    items: [
+      { href: "/sales", label: "Sales", icon: Receipt },
+      { href: "/staff", label: "Staff", icon: Users },
+      { href: "/branches", label: "Branches", icon: GitBranch },
+      { href: "/reports", label: "Reports", icon: LineChart },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
+];
+
+/** Bottom bar (mobile): short paths to most-used areas. */
+export const mobileBottomNav: NavItem[] = [
+  { href: "/", label: "Home", icon: LayoutDashboard },
+  { href: "/products", label: "Products", icon: Package },
+  { href: "/inventory", label: "Stock", icon: Boxes },
+  { href: "/sales", label: "Sales", icon: Receipt },
+  { href: "/settings", label: "More", icon: Settings },
+];
