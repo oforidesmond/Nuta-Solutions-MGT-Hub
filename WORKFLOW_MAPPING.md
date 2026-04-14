@@ -163,14 +163,73 @@ await sendWelcomeEmail(user.email, user.firstName);
 ### Schema Support:
 ```prisma
 model StaffProfile {
-  staffId               String   @unique // NEW: "STF-001", "STF-002"
-  oneTimePassword       String?  // NEW: OTP for first login
-  otpExpiresAt          DateTime? // NEW: OTP expiration
-  permissions           Json
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @unique @db.Uuid
+  staffId               String   @unique // Human-readable staff ID (e.g., "STF-001")
+  jobTitle              String?
+  
+  // Permissions stored as JSON for flexibility
+  // Example: { "canVoidSales": true, "canAdjustStock": false, "canViewReports": true, "canCreateTemporaryItems": true }
+  permissions           Json     @default("{}")
+  
+  branchId              String?  @db.Uuid
+  
+  // Discount limits specific to this staff member (overrides org defaults)
+  customDiscountLimit   Decimal? @db.Decimal(5, 2)
+  
+  // OTP for initial setup
+  oneTimePassword       String?  // Cleared after first successful login
+  otpExpiresAt          DateTime?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relations
+  user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch                Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  
+  @@index([branchId])
+  @@index([staffId])
 }
 
 model User {
-  isTemporaryPassword   Boolean  @default(false) // NEW: Forces password reset
+  id                    String    @id @default(uuid()) @db.Uuid
+  email                 String    @unique
+  passwordHash          String
+  firstName             String?
+  lastName              String?
+  phoneNumber           String?
+  role                  UserRole
+  organizationId        String?   @db.Uuid
+  
+  // Account status
+  isActive              Boolean   @default(true)
+  isTemporaryPassword   Boolean   @default(false) // Forces password reset on first login
+  needsPasswordChange   Boolean   @default(false)
+  lastLoginAt           DateTime?
+  
+  // Sandbox/Demo mode flag
+  isSandboxUser         Boolean   @default(false) // For sales agents/admins testing
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relations
+  organization          Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  staffProfile          StaffProfile?
+  devices               Device[]
+  salesCreated          Sale[]
+  returnsProcessed      Return[]
+  stockAdjustments      StockAdjustment[]
+  stockDiscrepancies    StockDiscrepancy[]
+  refreshTokens         RefreshToken[]
+  discountAlerts        DiscountAlert[]
+  notifications         Notification[]
+  
+  @@index([organizationId])
+  @@index([role])
+  @@index([isSandboxUser])
+  @@index([email])
 }
 ```
 

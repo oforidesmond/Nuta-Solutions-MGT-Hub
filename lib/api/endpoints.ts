@@ -11,6 +11,16 @@ export const endpoints = {
     list: "/users",
     createStaff: "/users/staff",
   },
+  branches: "/branches",
+  staff: {
+    list: "/staff",
+    byId: (id: string) => `/staff/${id}` as const,
+    resetPassword: (id: string) => `/staff/${id}/reset-password` as const,
+    role: (id: string) => `/staff/${id}/role` as const,
+    setPermissions: (id: string) => `/staff/${id}/set-permissions` as const,
+    activityLog: (id: string) => `/staff/${id}/activity-log` as const,
+    performance: "/staff/performance",
+  },
   organizations: {
     byId: (id: string) => `/organizations/${id}` as const,
   },
