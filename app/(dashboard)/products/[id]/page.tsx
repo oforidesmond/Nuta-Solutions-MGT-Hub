@@ -34,6 +34,7 @@ import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stoc
 import { useAuthStore } from "@/stores/auth-store";
 import type { HubProduct, HubStockAdjustment } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
+import { InventoryEventHistorySheet } from "@/components/inventory/inventory-event-history-sheet";
 
 type Tab = "batches" | "history" | "sales";
 
@@ -140,6 +141,7 @@ export default function ProductDetailPage() {
           All products
         </Button>
         <div className="flex flex-wrap gap-2">
+          <InventoryEventHistorySheet productId={id} />
           <Button type="button" variant="outline" size="sm" className="min-h-9" onClick={() => void onDuplicate()}>
             <Copy className="size-4" aria-hidden />
             Duplicate

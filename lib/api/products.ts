@@ -2,6 +2,7 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { unwrapList } from "@/lib/api/response";
 import type { HubProduct, HubStockAdjustment, PageMeta } from "@/lib/types/domain";
+import type { HubInventoryEvent, HubTemporaryItem } from "@/lib/types/phase2";
 
 export type ProductSortBy = "name" | "createdAt" | "stockQuantity" | "sellingPrice";
 
@@ -127,4 +128,65 @@ export async function fetchStockHistory(productId: string): Promise<HubStockAdju
     (data as { adjustments?: HubStockAdjustment[] }).adjustments ??
     []
   );
+}
+
+function normalizeTemporaryItem(raw: unknown): HubTemporaryItem {
+  if (!raw || typeof raw !== "object") return { id: "" };
+  const r = raw as Record<string, unknown>;
+  return {
+    id: String(r.id ?? ""),
+    barcode: (r.barcode as string | null | undefined) ?? null,
+    name: (r.name as string | null | undefined) ?? null,
+    price: (r.price as string | number | null | undefined) ?? null,
+    quantitySold:
+      (r.quantitySold ?? r.quantity_sold) as string | number | null | undefined,
+    firstSoldAt: (r.firstSoldAt ?? r.first_sold_at) as string | null | undefined,
+    aggregateId: (r.aggregateId ?? r.aggregate_id) as string | null | undefined,
+  };
+}
+
+export async function fetchTemporaryItems(): Promise<HubTemporaryItem[]> {
+  const res = await api.get(endpoints.productsTemporary);
+  const data = res.data;
+  let list: unknown[] = [];
+  if (Array.isArray(data)) list = data;
+  else if (data && typeof data === "object" && Array.isArray((data as { data?: unknown }).data)) {
+    list = (data as { data: unknown[] }).data;
+  } else if (data && typeof data === "object") {
+    const o = data as Record<string, unknown>;
+    list =
+      Array.isArray(o.items)
+        ? o.items
+        : Array.isArray(o.temporaryItems)
+          ? o.temporaryItems
+          : [];
+  }
+  return list.map(normalizeTemporaryItem);
+}
+
+export type PromoteFromTemporaryBody = {
+  name: string;
+  cost_price: number;
+  category_id: string;
+  stock_quantity: number;
+  barcode: string;
+  selling_price: number;
+};
+
+export async function promoteFromTemporary(
+  tempItemId: string,
+  body: PromoteFromTemporaryBody,
+): Promise<HubProduct> {
+  const res = await api.post(endpoints.productFromTemporary(tempItemId), body);
+  return unwrapEntity<HubProduct>(res.data);
+}
+
+export async function fetchInventoryEvents(productId: string): Promise<HubInventoryEvent[]> {
+  const res = await api.get(endpoints.productInventoryEvents(productId));
+  const data = res.data;
+  if (Array.isArray(data)) return data as HubInventoryEvent[];
+  if (data && typeof data === "object" && Array.isArray((data as { data?: unknown }).data)) {
+    return (data as { data: HubInventoryEvent[] }).data;
+  }
+  return (data as { events?: HubInventoryEvent[] }).events ?? [];
 }

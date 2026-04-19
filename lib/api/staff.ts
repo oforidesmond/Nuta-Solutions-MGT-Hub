@@ -65,6 +65,15 @@ export function parseStaffMember(raw: Record<string, unknown>): HubStaffMember {
         ? raw.isActive
         : true;
 
+  const offsetRaw =
+    p.lastDeviceTimeOffsetMinutes ??
+    p.last_device_time_offset_minutes ??
+    raw.lastDeviceTimeOffsetMinutes;
+  const offset =
+    offsetRaw != null && offsetRaw !== ""
+      ? Number(offsetRaw)
+      : undefined;
+
   return {
     id,
     email: String(u.email ?? raw.email ?? ""),
@@ -88,6 +97,22 @@ export function parseStaffMember(raw: Record<string, unknown>): HubStaffMember {
       null,
     branch: parseBranch(branchFrom),
     permissions: parsePermissions(p.permissions ?? raw.permissions),
+    lastDeviceTimeWarningAt:
+      (p.lastDeviceTimeWarningAt as string | null | undefined) ??
+      (p.last_device_time_warning_at as string | null | undefined) ??
+      null,
+    lastDeviceTimeOffsetMinutes:
+      Number.isFinite(offset) ? offset : undefined,
+    lastDeviceTimeModel:
+      (p.lastDeviceTimeModel as string | null | undefined) ??
+      (p.last_device_time_model as string | null | undefined) ??
+      null,
+    deviceTimeWarningCount:
+      p.deviceTimeWarningCount != null
+        ? Number(p.deviceTimeWarningCount)
+        : p.device_time_warning_count != null
+          ? Number(p.device_time_warning_count)
+          : undefined,
   };
 }
 

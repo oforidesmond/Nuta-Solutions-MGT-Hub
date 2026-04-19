@@ -112,9 +112,12 @@ export interface HubSale {
   id: string;
   totalAmount: string | number;
   soldAt?: string | null;
+  /** When the sale was persisted/synced server-side — required for delayed-sync UI. */
+  syncedAt?: string | null;
   createdAt?: string | null;
   createdBy?: { id: string; firstName?: string | null; lastName?: string | null; email?: string } | null;
   createdById?: string;
+  /** From `receipt_number` / `receiptNumber` on the API after normalization. */
   receiptNumber?: string;
 }
 

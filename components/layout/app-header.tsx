@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { NotificationsMenu } from "@/components/layout/notifications-menu";
 import { useAuthStore } from "@/stores/auth-store";
 import { useRouter } from "next/navigation";
 
@@ -56,6 +57,8 @@ export function AppHeader() {
           </p>
         </div>
       </div>
+      <div className="flex items-center gap-1">
+        <NotificationsMenu />
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(
@@ -77,6 +80,7 @@ export function AppHeader() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     </header>
   );
 }

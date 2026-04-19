@@ -18,6 +18,11 @@ export interface HubStaffMember {
   branch?: { id: string; name: string } | null;
   /** StaffProfile.permissions JSON as string-keyed flags. */
   permissions: Record<string, boolean>;
+  /** Phase 2 — device time warning (from StaffProfile / GET staff detail). */
+  lastDeviceTimeWarningAt?: string | null;
+  lastDeviceTimeOffsetMinutes?: number | null;
+  lastDeviceTimeModel?: string | null;
+  deviceTimeWarningCount?: number | null;
 }
 
 export interface StaffCredentialsPayload {

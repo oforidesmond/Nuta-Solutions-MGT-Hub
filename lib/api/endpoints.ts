@@ -29,6 +29,10 @@ export const endpoints = {
   productPricing: (id: string) => `/products/${id}/pricing` as const,
   productDuplicate: (id: string) => `/products/${id}/duplicate` as const,
   productStockHistory: (id: string) => `/products/${id}/stock-history` as const,
+  productInventoryEvents: (id: string) => `/products/${id}/inventory-events` as const,
+  productsTemporary: "/products/temporary",
+  productFromTemporary: (tempItemId: string) =>
+    `/products/from-temporary/${tempItemId}` as const,
   productsLowStock: "/products/low-stock",
   productsExpiringSoon: "/products/expiring-soon",
   categories: "/categories",
@@ -40,5 +44,10 @@ export const endpoints = {
   batchesExpired: "/batches/expired",
   batchRemoveExpired: (id: string) => `/batches/${id}/remove-expired` as const,
   sales: "/sales",
+  saleReturn: (saleId: string, returnId: string) =>
+    `/sales/${saleId}/return/${returnId}` as const,
+  notifications: "/notifications",
+  analyticsPerformance: "/analytics/performance",
+  analyticsCrash: "/analytics/crash",
   dashboardSummary: "/dashboard/summary",
 } as const;

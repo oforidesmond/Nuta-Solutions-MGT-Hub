@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   CalendarClock,
   Hourglass,
+  PackagePlus,
   Boxes,
   ClipboardList,
   ClipboardPlus,
@@ -48,6 +49,7 @@ export const navSections: NavSection[] = [
       { href: "/batches", label: "Batches & expiry", icon: CalendarClock },
       { href: "/inventory/adjustments", label: "Stock adjustments", icon: ClipboardList },
       { href: "/inventory/stock-take", label: "Stock take", icon: ClipboardPlus },
+      { href: "/inventory/temporary-items", label: "Temporary items", icon: PackagePlus },
     ],
   },
   {
