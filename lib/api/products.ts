@@ -137,10 +137,21 @@ function normalizeTemporaryItem(raw: unknown): HubTemporaryItem {
     id: String(r.id ?? ""),
     barcode: (r.barcode as string | null | undefined) ?? null,
     name: (r.name as string | null | undefined) ?? null,
-    price: (r.price as string | number | null | undefined) ?? null,
+    price:
+      (r.price as string | number | null | undefined) ??
+      ((r.sellingPrice ?? r.selling_price) as string | number | null | undefined) ??
+      null,
     quantitySold:
-      (r.quantitySold ?? r.quantity_sold) as string | number | null | undefined,
-    firstSoldAt: (r.firstSoldAt ?? r.first_sold_at) as string | null | undefined,
+      (r.quantitySold ?? r.quantity_sold ?? r.temporarySoldCount ?? r.temporary_sold_count) as
+        | string
+        | number
+        | null
+        | undefined,
+    firstSoldAt:
+      (r.firstSoldAt ?? r.first_sold_at ?? r.firstSold ?? r.first_sold) as
+        | string
+        | null
+        | undefined,
     aggregateId: (r.aggregateId ?? r.aggregate_id) as string | null | undefined,
   };
 }

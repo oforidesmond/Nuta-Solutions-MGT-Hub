@@ -62,9 +62,10 @@ export function DevicePerformanceSection() {
   if (perf === null && crashes === null) {
     return (
       <p className="rounded-lg border border-border/40 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-        Aggregated device performance and crash reports will appear here when the API exposes{" "}
+        Device performance and crash samples load from{" "}
         <code className="rounded bg-muted px-1 text-xs">GET /analytics/performance</code> and{" "}
-        <code className="rounded bg-muted px-1 text-xs">GET /analytics/crash</code>.
+        <code className="rounded bg-muted px-1 text-xs">GET /analytics/crashes</code> (paginated). If both return{" "}
+        <span className="font-medium">404</span>, check your API base URL and deploy.
       </p>
     );
   }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { DevicePerformanceSection } from "@/components/reports/device-performance-section";
 
 export default function ReportsPage() {
@@ -7,6 +8,13 @@ export default function ReportsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Reports & analytics</h1>
         <p className="text-sm text-muted-foreground">
           Business reporting plus device health from the staff app.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Full crash tables and filters:{" "}
+          <Link href="/operations/mobile-crashes" className="font-medium text-foreground underline underline-offset-2">
+            Mobile crash reports
+          </Link>{" "}
+          (admin and manager).
         </p>
       </div>
 

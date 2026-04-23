@@ -20,6 +20,11 @@ export const endpoints = {
     setPermissions: (id: string) => `/staff/${id}/set-permissions` as const,
     activityLog: (id: string) => `/staff/${id}/activity-log` as const,
     performance: "/staff/performance",
+    /** Phase 3: binary SQLite download (ADMIN/MANAGER any org backup). */
+    backupById: (id: string) => `/staff/backup/${id}` as const,
+    backups: "/staff/backups",
+    deviceWarnings: "/staff/device-warnings",
+    databaseWarnings: "/staff/database-warnings",
   },
   organizations: {
     byId: (id: string) => `/organizations/${id}` as const,
@@ -49,5 +54,8 @@ export const endpoints = {
   notifications: "/notifications",
   analyticsPerformance: "/analytics/performance",
   analyticsCrash: "/analytics/crash",
+  analyticsCrashes: "/analytics/crashes",
+  analyticsCrashById: (id: string) => `/analytics/crashes/${id}` as const,
   dashboardSummary: "/dashboard/summary",
+  dashboardReliabilitySummary: "/dashboard/reliability-summary",
 } as const;

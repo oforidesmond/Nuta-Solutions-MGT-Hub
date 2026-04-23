@@ -15,6 +15,10 @@ import {
   LineChart,
   Settings,
   Receipt,
+  CloudUpload,
+  HardDrive,
+  Database,
+  Bug,
 } from "lucide-react";
 
 export type NavItem = {
@@ -60,6 +64,15 @@ export const navSections: NavSection[] = [
       { href: "/branches", label: "Branches", icon: GitBranch },
       { href: "/reports", label: "Reports", icon: LineChart },
       { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      { href: "/operations/device-backups", label: "Device backups", icon: CloudUpload },
+      { href: "/operations/device-storage-warnings", label: "Storage warnings", icon: HardDrive },
+      { href: "/operations/database-warnings", label: "Database warnings", icon: Database },
+      { href: "/operations/mobile-crashes", label: "Mobile crashes", icon: Bug },
     ],
   },
 ];

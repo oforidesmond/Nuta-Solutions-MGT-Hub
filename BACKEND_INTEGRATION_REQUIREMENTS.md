@@ -1,6 +1,6 @@
 # Backend Integration Requirements — Phase 2
 
-**Last Updated:** 2026-04-18
+**Last Updated:** 2026-04-19
 
 ## Overview
 
@@ -77,6 +77,23 @@ This document tracks API endpoints, database expectations, Management Hub notifi
 ```
 
 **Mobile:** not called by the Staff app; documented for Hub/backend only.
+
+---
+
+### `GET /products/temporary` (Management Hub)
+
+| Field | Detail |
+|--------|--------|
+| **Auth** | Bearer (owner/admin) |
+| **Purpose** | List placeholder products pending review (`isTemporary` / needs-review queue) for the Temporary items page. |
+
+**Success response**
+
+- JSON array of temporary line items (or `{ data: [...] }` / `{ items: [...] }` — Hub normalizes). Each row should include at least **`id`** (placeholder **product** UUID), **`barcode`**, **`name`**, **`price`**, **`quantity_sold`** / **`quantitySold`**, **`first_sold_at`** / **`firstSoldAt`**.
+
+**Backend routing requirement**
+
+- Register this route **before** `@Get(':id')` on the same controller. If `:id` is matched first, `GET /products/temporary` is parsed as `id = "temporary"` and Nest returns **`400` — `Validation failed (uuid is expected)`**. See **Backend Implementation Notes → Troubleshooting: GET /products/temporary**.
 
 ---
 
@@ -323,6 +340,27 @@ Implementation in this repo is aligned with **Backend Implementation Notes** and
 
 All authenticated JSON routes use the global prefix **`/api/v1`** (see `main.ts`). **`GET /time`** and **`GET /health`** are excluded from the prefix and remain at **`/time`** and **`/health`** on the server root.
 
+### Troubleshooting: `GET /products/temporary` returns `400` — “uuid is expected”
+
+| Symptom | `GET /api/v1/products/temporary` (or `/products/temporary` under your global prefix) returns **400 Bad Request** with message like **`Validation failed (uuid is expected)`**. |
+|--------|---|
+| **Who owns the fix** | **NestJS backend** — Management Hub is **not** at fault; it requests the correct path ([`lib/api/endpoints.ts`](lib/api/endpoints.ts) → **`productsTemporary: "/products/temporary"`**). |
+| **Root cause** | `GET /products/:id` is registered **before** `GET /products/temporary`, so the path segment **`temporary`** is bound to **`:id`** and fails **UUID** validation. |
+| **Fix** | In **`products.controller.ts`** (or equivalent), declare **`@Get('temporary')`** (and other **static** segments: `low-stock`, `expiring-soon`, `from-temporary/:productId`, etc.) **above** **`@Get(':id')`**. Alternatively expose the list under a non-colliding path (e.g. `GET /products/hub/temporary-queue`) and update the Hub **`endpoints.productsTemporary`** — coordinate both teams if you change the path. |
+| **Verify** | After deploy: `curl -H "Authorization: Bearer …" "$API/api/v1/products/temporary"` returns **200** and a JSON array (or wrapped list). |
+
+#### Prompt for backend / Nest agent (copy-paste)
+
+```text
+The Next.js Management Hub calls GET /api/v1/products/temporary for the Temporary items page. We see 400 Bad Request: "Validation failed (uuid is expected)".
+
+Please fix NestJS route registration so GET /products/temporary is not captured by GET /products/:id (declare @Get('temporary') before @Get(':id'), or use a dedicated path and tell the Hub team).
+
+After fixing, update BACKEND_INTEGRATION_REQUIREMENTS.md in this repo: confirm GET /products/temporary is implemented and note route order under Backend Implementation Notes → Endpoints Implemented.
+
+Synced with: Management Hub (lib/api/endpoints.ts productsTemporary = "/products/temporary").
+```
+
 ### Endpoints Implemented
 
 - ✅ `POST /api/v1/staff/temporary-items` → [`src/modules/staff/staff-mobile.controller.ts`](src/modules/staff/staff-mobile.controller.ts) + [`staff-temporary-items.service.ts`](src/modules/staff/staff-temporary-items.service.ts)
@@ -336,6 +374,7 @@ All authenticated JSON routes use the global prefix **`/api/v1`** (see `main.ts`
 - ✅ `POST /api/v1/analytics/performance` and `POST /api/v1/analytics/crash` → [`src/modules/analytics/analytics.controller.ts`](src/modules/analytics/analytics.controller.ts)
 - ✅ `GET /api/v1/notifications` (Hub) → [`src/modules/notifications/notifications.controller.ts`](src/modules/notifications/notifications.controller.ts)
 - ✅ `GET /api/v1/products/:id/inventory-events` (Hub) — read model for mobile-posted inventory audit rows → [`products.controller.ts`](src/modules/products/products.controller.ts)
+- ⚠️ **`GET /api/v1/products/temporary`** (Hub) — **must** be registered **before** `@Get(':id')`; if missing or mis-ordered, Hub gets **400 uuid expected** (see **Troubleshooting** above). Add to this list when verified in code.
 
 ### Database Migrations
 
@@ -411,10 +450,11 @@ _(None blocking Phase 2 Hub — routes and fields aligned.)_
 - Inventory event history (sheet) → [`components/inventory/inventory-event-history-sheet.tsx`](components/inventory/inventory-event-history-sheet.tsx)
 - Delayed sync warning column → [`components/sales/sales-table.tsx`](components/sales/sales-table.tsx)
 - Notifications popover → [`components/layout/notifications-menu.tsx`](components/layout/notifications-menu.tsx)
-- Device performance / crashes (reports) → [`components/reports/device-performance-section.tsx`](components/reports/device-performance-section.tsx) + [`app/(dashboard)/reports/page.tsx`](app/(dashboard)/reports/page.tsx)
+- Device performance / crashes (reports) → [`components/reports/device-performance-section.tsx`](components/reports/device-performance-section.tsx) + [`app/(dashboard)/reports/page.tsx`](app/(dashboard)/reports/page.tsx); full crash table → [`app/(dashboard)/operations/mobile-crashes/page.tsx`](app/(dashboard)/operations/mobile-crashes/page.tsx)
 
 ### Field Integration Confirmed (Phase 2)
 
+- ⚠️ **Temporary items list:** Hub calls **`GET /products/temporary`**. If the API returns **`400` — `uuid is expected`**, that is a **backend route-order bug** (`:id` swallowing `temporary`). See **Backend Implementation Notes → Troubleshooting: GET /products/temporary**. No Hub code change required once Nest registers the route correctly.
 - ✅ **Receipt number:** Sales table shows `receipt_number` / `receiptNumber` via [`normalizeSale`](lib/api/sales.ts) (`N/A` when absent). [`components/sales/sales-table.tsx`](components/sales/sales-table.tsx)
 - ✅ **Refund method:** Return detail shows `refund_method`, falling back to `payment_method` when needed. [`app/(dashboard)/sales/[saleId]/return/[returnId]/page.tsx`](app/(dashboard)/sales/[saleId]/return/[returnId]/page.tsx), [`lib/api/returns.ts`](lib/api/returns.ts)
 - ✅ **Temporary items:** List uses **placeholder product `id`** for promote / ignore (`DELETE` removes placeholder); `aggregateId` is internal/legacy — optional `?highlightProductId=` or `?aggregateId=` for row highlight only.
@@ -435,6 +475,7 @@ _(None blocking Phase 2 Hub — routes and fields aligned.)_
   - [`lib/api/products.ts`](lib/api/products.ts) — `fetchTemporaryItems()` → `GET /products/temporary`, `promoteFromTemporary()` → `POST /products/from-temporary/{id}`, `fetchInventoryEvents()` → `GET /products/{id}/inventory-events`
   - [`lib/api/returns.ts`](lib/api/returns.ts) — `fetchReturnDetail()` → `GET /sales/{saleId}/return/{returnId}`
   - [`lib/api/analytics-hub.ts`](lib/api/analytics-hub.ts) — `fetchAnalyticsPerformance()`, `fetchAnalyticsCrashes()` (treats **404** as “endpoint not available yet”)
+  - [`lib/api/staff-reliability.ts`](lib/api/staff-reliability.ts) — Phase 3 read helpers + backup blob download; list calls treat **404** as missing backend routes
   - [`lib/api/staff.ts`](lib/api/staff.ts) — `parseStaffMember` extended with device time fields from `StaffProfile`
 - Hooks: [`lib/hooks/use-temporary-items.ts`](lib/hooks/use-temporary-items.ts), [`lib/hooks/use-notifications.ts`](lib/hooks/use-notifications.ts)
 
@@ -458,6 +499,55 @@ _(None blocking Phase 2 Hub — routes and fields aligned.)_
 - Run `npm run build` and `npm run lint` locally.
 - Manual: notifications → navigate; temporary: promote + ignore; return page shows refund method; sales: delayed icon when `synced_at - sold_at &gt; 24h` and `synced_at` present.
 
+---
+
+## Phase 3 — Staff reliability & operations (Management Hub)
+
+**Hub implementation:** Operations nav, dashboard widgets, and list pages under `/operations/*` ([`lib/api/staff-reliability.ts`](lib/api/staff-reliability.ts), [`lib/reliability-user-label.ts`](lib/reliability-user-label.ts), [`app/(dashboard)/operations/`](app/(dashboard)/operations/), [`app/(dashboard)/page.tsx`](app/(dashboard)/page.tsx)). **`GET /staff/backup/:id`** is used for binary download. Crash **list** omits `stack`; the hub loads **`GET /analytics/crashes/:id`** when a row is opened.
+
+### Read APIs (Nest — implemented; hub wired)
+
+**Roles:** **ADMIN** and **MANAGER** only (same as `GET /dashboard/summary`). **SUPER_ADMIN** without matching `@Roles` / org scope gets **403** — the hub UI matches this ([`lib/operations-access.ts`](lib/operations-access.ts)).
+
+**`GET /api/v1/dashboard/reliability-summary`** returns nested widgets, for example:
+
+```json
+{
+  "backups": { "countLast7Days": 0, "lastReceivedAt": null },
+  "lowStorage": {
+    "criticalCountLast24Hours": 0,
+    "lastOccurredAt": null,
+    "lastLevel": null
+  },
+  "database": { "unhealthyCountLast7Days": 0, "lastUnhealthyAt": null },
+  "crashes": {
+    "countLast24Hours": 0,
+    "fatalCountLast24Hours": 0,
+    "lastOccurredAt": null,
+    "lastWasFatal": null
+  }
+}
+```
+
+**List routes** — shared query params: `from`, `to`, `userId`, `limit` (1–100, default 20), `cursor` (opaque); **`deviceId`** on **`GET /staff/backups`** only. Response: `{ "items": [], "nextCursor": null }`. List rows may include nested **`user`** `{ id, firstName, lastName, email }` or **`null`** (crashes). **`deviceId`** on backups is the **client** stable id string.
+
+| Method | Path | Notes |
+|--------|------|--------|
+| GET | `/api/v1/staff/backups` | Nested `user` when relation exists. |
+| GET | `/api/v1/staff/device-warnings` | `freeSpaceMb`, `thresholdMb` as numbers. |
+| GET | `/api/v1/staff/database-warnings` | `errors` string array. |
+| GET | `/api/v1/analytics/crashes` | Omits `stack`; nested `user` or null. |
+| GET | `/api/v1/analytics/crashes/:id` | Full row + `stack`. |
+| GET | `/api/v1/analytics/performance` | Paginated performance events ([`lib/api/analytics-hub.ts`](lib/api/analytics-hub.ts) for Reports). |
+
+**`GET /dashboard/summary`** is unchanged; widgets use **`reliability-summary`** (legacy embed on summary is still merged if ever present).
+
+### Hub QA (Phase 3)
+
+- Calls use the same axios client and Bearer token (`/api/v1` via `NEXT_PUBLIC_API_URL`).
+- Operations UI is **ADMIN** / **MANAGER** only; **404** on these GET paths is treated as deploy or URL misconfiguration (toast + inline error on list pages).
+- Backup download uses **blob** and `Content-Disposition` filename when present.
+
 ### Open Questions for Backend/Mobile Teams
 
-- Optional: enable **`GET /analytics/performance`** and **`GET /analytics/crash`** for Hub aggregates (reports section shows a message when **404**).
+- Optional: keep **`GET /analytics/crash`** (singular) for legacy aggregates if still needed; Reports now prefers **`GET /analytics/crashes`**.

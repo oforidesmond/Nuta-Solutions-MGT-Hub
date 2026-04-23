@@ -59,7 +59,8 @@ Copy `.env.local.example` to `.env.local`:
 | `/inventory/alerts` | Low stock. |
 | `/inventory/adjustments`, `/inventory/stock-take` | Phase 2 placeholders. |
 | `/sales`, `/staff`, `/settings` | Transactions, team, organization settings. |
-| `/branches`, `/reports` | Phase 3 / 5 placeholders. |
+| `/branches`, `/reports` | Branches placeholder; reports includes device performance. |
+| `/operations/device-backups`, `/operations/device-storage-warnings`, `/operations/database-warnings`, `/operations/mobile-crashes` | Phase 3 staff reliability (admin/manager); list APIs return **404** until Nest adds read routes. |
 
 All API paths are centralized in `lib/api/endpoints.ts` for easy alignment when controllers differ.
 

@@ -121,6 +121,18 @@ export interface HubSale {
   receiptNumber?: string;
 }
 
+/** Optional Phase 3 block when backend extends `GET /dashboard/summary`. */
+export interface DashboardReliabilitySummary {
+  backupsLast7DaysCount?: number;
+  backupsLast7DaysLatestReceivedAt?: string | null;
+  storageCriticalLast24hCount?: number;
+  storageCriticalLast7DaysCount?: number;
+  databaseIssuesLast7DaysCount?: number;
+  crashesLast24hCount?: number;
+  crashesLast24hFatalCount?: number;
+  latestCriticalStorageAt?: string | null;
+}
+
 export interface DashboardSummary {
   totalSales: number;
   inventoryCount: number;
@@ -129,4 +141,6 @@ export interface DashboardSummary {
   /** Optional when API grows */
   todaySales?: number;
   inventoryValue?: number;
+  /** Phase 3 — may be nested under `reliability` or flattened with snake_case from API */
+  reliability?: DashboardReliabilitySummary | null;
 }

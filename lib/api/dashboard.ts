@@ -4,6 +4,7 @@ import { endpoints } from "@/lib/api/endpoints";
 import { fetchProducts } from "@/lib/api/products";
 import { fetchSales } from "@/lib/api/sales";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
+import { extractReliabilityFromDashboardPayload } from "@/lib/api/staff-reliability";
 import type { DashboardSummary, HubProduct } from "@/lib/types/domain";
 
 function sumSalesTotals(sales: { totalAmount: string | number }[]): number {
@@ -25,7 +26,9 @@ function countRestockAttention(products: HubProduct[]): number {
 export async function fetchDashboardSummary(): Promise<DashboardSummary> {
   try {
     const res = await api.get<DashboardSummary>(endpoints.dashboardSummary);
-    return res.data;
+    const reliability =
+      extractReliabilityFromDashboardPayload(res.data) ?? res.data.reliability ?? null;
+    return { ...res.data, reliability };
   } catch (e) {
     if (axios.isAxiosError(e) && e.response?.status === 404) {
       const [products, sales] = await Promise.all([fetchProducts(), fetchSales()]);
