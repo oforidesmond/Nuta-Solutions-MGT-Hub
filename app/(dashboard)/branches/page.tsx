@@ -5,12 +5,8 @@ export default function BranchesPage() {
     <PlaceholderPage
       title="Branches"
       icon="🏢"
-      description="Open another shop location and move stock between branches."
-      bullets={[
-        "Create branches,",
-        "duplicate your catalog,",
-        "and transfer stock.",
-      ]}
+      description="GET /api/v1/branches is not available on the backend yet. When it ships, this page will list branches and related actions."
+      bullets={["Placeholder per hub API plan", "No hub calls to /branches until the route exists"]}
     />
   );
 }

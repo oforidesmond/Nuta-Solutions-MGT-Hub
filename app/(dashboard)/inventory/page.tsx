@@ -27,16 +27,14 @@ const cards = [
   {
     href: "/inventory/adjustments",
     title: "Stock adjustments",
-    description: "Add, remove, or correct stock.",
+    description: "View adjustment history from the API.",
     icon: ClipboardList,
-    muted: true,
   },
   {
     href: "/inventory/stock-take",
     title: "Stock take",
-    description: "Count what is on the shelf.",
+    description: "View stock take records from the API.",
     icon: ClipboardPlus,
-    muted: true,
   },
 ];
 
@@ -50,13 +48,12 @@ export default function InventoryHubPage() {
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        {cards.map(({ href, title, description, icon: Icon, muted }) => (
+        {cards.map(({ href, title, description, icon: Icon }) => (
           <Link key={href} href={href} className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <Card
               className={cn(
                 "h-full border-border/40 bg-card/80 shadow-sm backdrop-blur-sm transition-shadow duration-200",
                 "hover:shadow-md",
-                muted && "opacity-90",
               )}
             >
               <CardHeader className="flex flex-row items-start gap-3 space-y-0">
@@ -68,9 +65,6 @@ export default function InventoryHubPage() {
                     {title}
                   </CardTitle>
                   <CardDescription>{description}</CardDescription>
-                  {muted ? (
-                    <p className="text-xs font-medium text-amber-700 dark:text-amber-500">Coming soon</p>
-                  ) : null}
                 </div>
               </CardHeader>
             </Card>

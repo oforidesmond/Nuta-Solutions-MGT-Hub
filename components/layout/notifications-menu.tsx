@@ -2,6 +2,7 @@
 
 import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,13 +16,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useNotifications } from "@/lib/hooks/use-notifications";
+import { notificationsListQueryKey, useNotifications } from "@/lib/hooks/use-notifications";
+import { markNotificationRead } from "@/lib/api/notifications";
 import { resolveNotificationHref } from "@/lib/navigation/notification-href";
 import { cn } from "@/lib/utils";
 
 export function NotificationsMenu() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { items, loading, error, reload } = useNotifications();
+
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => markNotificationRead(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...notificationsListQueryKey] });
+    },
+  });
 
   const unread = items.filter((n) => n.read !== true).length;
 
@@ -81,8 +91,15 @@ export function NotificationsMenu() {
                         "flex cursor-pointer flex-col items-start gap-0.5 rounded-md px-3 py-2.5",
                         isUnread && "bg-muted/50",
                       )}
-                      onSelect={(e) => {
+                      onSelect={async (e) => {
                         e.preventDefault();
+                        if (n.id && isUnread) {
+                          try {
+                            await markReadMutation.mutateAsync(n.id);
+                          } catch {
+                            toast.error("Could not mark notification read.");
+                          }
+                        }
                         if (!href) {
                           toast.info("This notification has no link yet.");
                           return;

@@ -27,7 +27,9 @@ export const endpoints = {
     databaseWarnings: "/staff/database-warnings",
   },
   organizations: {
-    byId: (id: string) => `/organizations/${id}` as const,
+    /** Same single tenant as `/me` — not a multi-org list. */
+    list: "/organizations",
+    me: "/organizations/me",
   },
   products: "/products",
   productById: (id: string) => `/products/${id}` as const,
@@ -49,9 +51,21 @@ export const endpoints = {
   batchesExpired: "/batches/expired",
   batchRemoveExpired: (id: string) => `/batches/${id}/remove-expired` as const,
   sales: "/sales",
+  salesStats: "/sales/stats",
+  salesExport: "/sales/export",
   saleReturn: (saleId: string, returnId: string) =>
     `/sales/${saleId}/return/${returnId}` as const,
+  returns: "/returns",
+  inventoryAdjustments: "/inventory/adjustments",
+  inventoryStockTakes: "/inventory/stock-takes",
+  reports: {
+    salesSummary: "/reports/sales-summary",
+    staffPerformance: "/reports/staff-performance",
+    revenueTrends: "/reports/revenue-trends",
+  },
+  auditEvents: "/audit/events",
   notifications: "/notifications",
+  notificationRead: (id: string) => `/notifications/${id}/read` as const,
   analyticsPerformance: "/analytics/performance",
   analyticsCrash: "/analytics/crash",
   analyticsCrashes: "/analytics/crashes",

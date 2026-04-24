@@ -19,7 +19,7 @@ export type OrganizationPatch = Partial<
   >
 > & { defaultTaxRate?: number | string | null };
 
-export async function patchOrganization(id: string, body: OrganizationPatch) {
-  const res = await api.patch(endpoints.organizations.byId(id), body);
+export async function patchOrganization(body: OrganizationPatch) {
+  const res = await api.patch(endpoints.organizations.me, body);
   return res.data as HubOrganization;
 }

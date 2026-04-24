@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import axios from "axios";
 import { MoreHorizontal } from "lucide-react";
@@ -161,6 +162,7 @@ function CredentialsDialog({
 }
 
 export default function StaffPage() {
+  const router = useRouter();
   const me = useAuthStore((s) => s.user);
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const members = useStaffStore((s) => s.members);
@@ -646,6 +648,9 @@ export default function StaffPage() {
                               <MoreHorizontal className="size-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="min-w-48">
+                              <DropdownMenuItem onClick={() => router.push(`/staff/${m.id}`)}>
+                                Profile page
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setDetail(m)}>View details</DropdownMenuItem>
                               <DropdownMenuItem disabled={!canRow} onClick={() => openEdit(m)}>
                                 Edit staff

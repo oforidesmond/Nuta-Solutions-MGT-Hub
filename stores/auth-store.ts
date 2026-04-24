@@ -92,7 +92,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const oid = user.organizationId ?? organization?.id;
       if (oid && !organization) {
         try {
-          const orgRes = await bareApi.get(endpoints.organizations.byId(oid), {
+          const orgRes = await bareApi.get(endpoints.organizations.me, {
             headers: { Authorization: `Bearer ${tokens.accessToken}` },
           });
           organization = orgRes.data as HubOrganization;

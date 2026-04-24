@@ -61,7 +61,7 @@ export default function SettingsPage() {
     }
     setSaving(true);
     try {
-      const updated = await patchOrganization(organization.id, {
+      const updated = await patchOrganization({
         name,
         phone: phone || undefined,
         email: email || undefined,

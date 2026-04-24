@@ -10,8 +10,8 @@ export async function fetchMe(): Promise<MeResponse> {
   return parseMePayload(res.data);
 }
 
-export async function fetchOrganization(id: string) {
-  const res = await api.get(endpoints.organizations.byId(id));
+export async function fetchOrganizationMe() {
+  const res = await api.get(endpoints.organizations.me);
   return res.data as HubOrganization;
 }
 

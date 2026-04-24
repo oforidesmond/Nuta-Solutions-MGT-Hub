@@ -19,6 +19,8 @@ import {
   HardDrive,
   Database,
   Bug,
+  Undo2,
+  Shield,
 } from "lucide-react";
 
 export type NavItem = {
@@ -60,9 +62,11 @@ export const navSections: NavSection[] = [
     title: "Business",
     items: [
       { href: "/sales", label: "Sales", icon: Receipt },
+      { href: "/returns", label: "Returns", icon: Undo2 },
       { href: "/staff", label: "Staff", icon: Users },
       { href: "/branches", label: "Branches", icon: GitBranch },
       { href: "/reports", label: "Reports", icon: LineChart },
+      { href: "/audit", label: "Activity log", icon: Shield },
       { href: "/settings", label: "Settings", icon: Settings },
     ],
   },

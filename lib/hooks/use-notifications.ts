@@ -1,30 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { fetchNotifications } from "@/lib/api/notifications";
 import type { HubNotification } from "@/lib/types/phase2";
+import { POLL_NOTIFICATIONS_MS, refetchIntervalWhenVisible } from "@/lib/query/poll-intervals";
+
+export const notificationsListQueryKey = ["notifications", "list"] as const;
 
 export function useNotifications() {
-  const [items, setItems] = useState<HubNotification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const query = useQuery({
+    queryKey: notificationsListQueryKey,
+    queryFn: () => fetchNotifications({ limit: 50 }),
+    refetchInterval: () => refetchIntervalWhenVisible(POLL_NOTIFICATIONS_MS),
+  });
 
-  const reload = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchNotifications();
-      setItems(data);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  return { items, loading, error, reload };
+  return {
+    items: (query.data ?? []) as HubNotification[],
+    loading: query.isPending,
+    error: query.error instanceof Error ? query.error : query.error ? new Error(String(query.error)) : null,
+    reload: query.refetch,
+  };
 }

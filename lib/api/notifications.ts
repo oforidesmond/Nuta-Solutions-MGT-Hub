@@ -33,7 +33,23 @@ function normalizeNotification(row: unknown): HubNotification {
   };
 }
 
-export async function fetchNotifications(): Promise<HubNotification[]> {
-  const res = await api.get(endpoints.notifications);
+export interface FetchNotificationsParams {
+  unread?: boolean;
+  limit?: number;
+  cursor?: string;
+}
+
+export async function fetchNotifications(params: FetchNotificationsParams = {}): Promise<HubNotification[]> {
+  const res = await api.get(endpoints.notifications, {
+    params: {
+      unread: params.unread === true ? true : undefined,
+      limit: params.limit,
+      cursor: params.cursor,
+    },
+  });
   return unwrapNotifications(res.data);
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  await api.patch(endpoints.notificationRead(id), {});
 }
