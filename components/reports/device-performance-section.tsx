@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -11,36 +11,91 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchAnalyticsCrashes, fetchAnalyticsPerformance } from "@/lib/api/analytics-hub";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip as UiTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  fetchAnalyticsCrashesPage,
+  fetchAnalyticsPerformancePage,
+} from "@/lib/api/analytics-hub";
 import type { HubAnalyticsCrashRow, HubAnalyticsPerformanceRow } from "@/lib/types/phase2";
+
+const DEFAULT_LIMIT = 50;
+
+function formatNumber(v: number): string {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(v);
+}
+
+function truncateMiddle(v: string, keep = 6): string {
+  if (!v) return v;
+  if (v.length <= keep * 2 + 3) return v;
+  return `${v.slice(0, keep)}...${v.slice(-keep)}`;
+}
 
 export function DevicePerformanceSection() {
   const [loading, setLoading] = useState(true);
   const [perf, setPerf] = useState<HubAnalyticsPerformanceRow[] | null>(null);
   const [crashes, setCrashes] = useState<HubAnalyticsCrashRow[] | null>(null);
+  const [perfCursor, setPerfCursor] = useState<string | null>(null);
+  const [crashCursor, setCrashCursor] = useState<string | null>(null);
+  const [loadingMorePerf, setLoadingMorePerf] = useState(false);
+  const [loadingMoreCrashes, setLoadingMoreCrashes] = useState(false);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const [p, c] = await Promise.all([fetchAnalyticsPerformance(), fetchAnalyticsCrashes()]);
-        if (!cancelled) {
-          setPerf(p);
-          setCrashes(c);
-          setError(false);
-        }
-      } catch {
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const loadInitial = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [p, c] = await Promise.all([
+        fetchAnalyticsPerformancePage({ limit: DEFAULT_LIMIT }),
+        fetchAnalyticsCrashesPage({ limit: DEFAULT_LIMIT }),
+      ]);
+      setPerf(p ? p.items : p);
+      setCrashes(c ? c.items : c);
+      setPerfCursor(p ? p.nextCursor : null);
+      setCrashCursor(c ? c.nextCursor : null);
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadInitial();
+  }, [loadInitial]);
+
+  const loadMorePerf = useCallback(async () => {
+    if (!perfCursor) return;
+    setLoadingMorePerf(true);
+    try {
+      const res = await fetchAnalyticsPerformancePage({ limit: DEFAULT_LIMIT, cursor: perfCursor });
+      if (res) {
+        setPerf((p) => [...(p ?? []), ...res.items]);
+        setPerfCursor(res.nextCursor);
+      }
+    } finally {
+      setLoadingMorePerf(false);
+    }
+  }, [perfCursor]);
+
+  const loadMoreCrashes = useCallback(async () => {
+    if (!crashCursor) return;
+    setLoadingMoreCrashes(true);
+    try {
+      const res = await fetchAnalyticsCrashesPage({ limit: DEFAULT_LIMIT, cursor: crashCursor });
+      if (res) {
+        setCrashes((c) => [...(c ?? []), ...res.items]);
+        setCrashCursor(res.nextCursor);
+      }
+    } finally {
+      setLoadingMoreCrashes(false);
+    }
+  }, [crashCursor]);
 
   if (loading) {
     return (
@@ -96,12 +151,19 @@ export function DevicePerformanceSection() {
                     <TableCell>{row.deviceModel ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{row.metric ?? "—"}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {row.avgDurationMs != null ? Math.round(row.avgDurationMs) : "—"}
+                      {row.avgDurationMs != null ? formatNumber(row.avgDurationMs) : "—"}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            {perfCursor ? (
+              <div className="mt-4 flex justify-center">
+                <Button type="button" variant="secondary" disabled={loadingMorePerf} onClick={() => void loadMorePerf()}>
+                  {loadingMorePerf ? "Loading…" : "Load more"}
+                </Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
@@ -128,11 +190,50 @@ export function DevicePerformanceSection() {
                       {row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}
                     </TableCell>
                     <TableCell>{row.deviceModel ?? "—"}</TableCell>
-                    <TableCell className="max-w-md truncate font-mono text-xs">{row.error ?? "—"}</TableCell>
+                    <TableCell className="max-w-md truncate font-mono text-xs">
+                      {row.error && row.error.length > 60 ? (
+                        <TooltipProvider>
+                          <UiTooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="max-w-md truncate text-left">
+                                {row.error}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>{row.error}</TooltipContent>
+                          </UiTooltip>
+                        </TooltipProvider>
+                      ) : (
+                        row.error ?? "—"
+                      )}
+                      {row.id ? (
+                        <TooltipProvider>
+                          <UiTooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="ml-2 align-middle font-mono text-[10px] text-muted-foreground">
+                                {truncateMiddle(row.id)}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>{row.id}</TooltipContent>
+                          </UiTooltip>
+                        </TooltipProvider>
+                      ) : null}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            {crashCursor ? (
+              <div className="mt-4 flex justify-center">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={loadingMoreCrashes}
+                  onClick={() => void loadMoreCrashes()}
+                >
+                  {loadingMoreCrashes ? "Loading…" : "Load more"}
+                </Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}

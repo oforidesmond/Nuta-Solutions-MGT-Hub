@@ -13,8 +13,13 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
+  const auth = useAuthStore.getState();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const tenantId = auth.organization?.id ?? auth.user?.organizationId;
+  if (tenantId && !config.headers["X-Tenant-ID"]) {
+    config.headers["X-Tenant-ID"] = tenantId;
   }
   return config;
 });

@@ -164,7 +164,6 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
             productId: saved.id,
             batchNumber: batchNumber.trim(),
             quantity: parseFloat(batchQty),
-            remainingQuantity: parseFloat(batchQty),
             expiryDate: new Date(batchExpiry).toISOString(),
             costPriceAtPurchase: cost,
           });

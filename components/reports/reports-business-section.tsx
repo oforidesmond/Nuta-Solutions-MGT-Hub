@@ -16,6 +16,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
+  Tooltip as UiTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Table,
   TableBody,
   TableCell,
@@ -31,13 +37,30 @@ import type { RevenueTrendPeriod, StaffReportPeriod } from "@/lib/types/reports"
 
 function extractRows(obj: Record<string, unknown>): Record<string, unknown>[] {
   const r = obj.rows ?? obj.data ?? obj.staff ?? obj.items ?? obj.results ?? obj.leaderboard;
-  return Array.isArray(r) ? (r as Record<string, unknown>[]) : [];
+  if (Array.isArray(r)) return r as Record<string, unknown>[];
+
+  const rankings = obj.rankings;
+  if (rankings && typeof rankings === "object") {
+    const o = rankings as Record<string, unknown>;
+    const preferred = o.byRevenue ?? o.bySalesCount ?? o.byReturnsCount;
+    if (Array.isArray(preferred)) return preferred as Record<string, unknown>[];
+    for (const v of Object.values(o)) {
+      if (Array.isArray(v)) return v as Record<string, unknown>[];
+    }
+  }
+
+  return [];
 }
 
 function extractTrendSeries(obj: Record<string, unknown>): { name: string; value: number }[] {
-  const raw = obj.data ?? obj.points ?? obj.series ?? obj.trends;
-  if (!Array.isArray(raw)) return [];
-  return raw.map((row, i) => {
+  const raw = obj.buckets ?? obj.data ?? obj.points ?? obj.series ?? obj.trends;
+  const rows = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).buckets)
+      ? ((raw as Record<string, unknown>).buckets as unknown[])
+      : [];
+  if (!rows.length) return [];
+  return rows.map((row, i) => {
     if (row && typeof row === "object") {
       const o = row as Record<string, unknown>;
       const name = String(o.period ?? o.label ?? o.date ?? o.bucket ?? o.week ?? i);
@@ -54,7 +77,49 @@ function formatSummaryKv(data: Record<string, unknown>): { k: string; v: string 
   return Object.entries(data)
     .filter(([k, v]) => !skip.has(k) && v !== null && typeof v !== "object")
     .slice(0, 12)
-    .map(([k, v]) => ({ k, v: String(v) }));
+    .map(([k, v]) => {
+      const asNum =
+        typeof v === "number"
+          ? v
+          : typeof v === "string" && v.trim() && !Number.isNaN(Number(v))
+            ? Number(v)
+            : null;
+      if (asNum != null && Number.isFinite(asNum)) {
+        return {
+          k,
+          v: new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(asNum),
+        };
+      }
+      return { k, v: String(v) };
+    });
+}
+
+function isLikelyIdKey(k: string): boolean {
+  return k === "userId" || k === "staffId" || k.endsWith("Id");
+}
+
+function truncateMiddle(v: string, keep = 6): string {
+  if (!v) return v;
+  if (v.length <= keep * 2 + 3) return v;
+  return `${v.slice(0, keep)}...${v.slice(-keep)}`;
+}
+
+function formatCellValue(k: string, v: unknown): { display: string; full?: string } {
+  if (v == null) return { display: "—" };
+  const s = typeof v === "string" ? v : typeof v === "number" ? String(v) : null;
+  if (s && isLikelyIdKey(k) && s.length > 14) {
+    return { display: truncateMiddle(s), full: s };
+  }
+  if (typeof v === "number" && Number.isFinite(v)) {
+    return { display: new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(v) };
+  }
+  if (typeof v === "string" && v.trim() && !Number.isNaN(Number(v))) {
+    const n = Number(v);
+    if (Number.isFinite(n)) {
+      return { display: new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(n) };
+    }
+  }
+  return { display: String(v) };
 }
 
 export function ReportsBusinessSection() {
@@ -177,9 +242,27 @@ export function ReportsBusinessSection() {
                     <TableRow key={idx}>
                       {Object.keys(staffRows[0] ?? {})
                         .slice(0, 8)
-                        .map((k) => (
-                          <TableCell key={k}>{String(row[k] ?? "—")}</TableCell>
-                        ))}
+                        .map((k) => {
+                          const { display, full } = formatCellValue(k, row[k]);
+                          return (
+                            <TableCell key={k} className={isLikelyIdKey(k) ? "font-mono text-xs" : undefined}>
+                              {full ? (
+                                <TooltipProvider>
+                                  <UiTooltip>
+                                    <TooltipTrigger asChild>
+                                      <button type="button" className="max-w-[10rem] truncate text-left">
+                                        {display}
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{full}</TooltipContent>
+                                  </UiTooltip>
+                                </TooltipProvider>
+                              ) : (
+                                display
+                              )}
+                            </TableCell>
+                          );
+                        })}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -221,10 +304,24 @@ export function ReportsBusinessSection() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(v) => {
+                      const s = String(v);
+                      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+                      return s;
+                    }}
+                  />
                   <YAxis tick={{ fontSize: 11 }} width={48} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={chartData.length === 1 ? { r: 4 } : false}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             )}

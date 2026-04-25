@@ -5,7 +5,7 @@ import type { HubAnalyticsCrashRow, HubAnalyticsPerformanceRow } from "@/lib/typ
 import type { MobileCrashReportRow } from "@/lib/types/staff-reliability";
 import axios from "axios";
 
-const DEFAULT_PAGE = 50;
+const DEFAULT_PAGE_LIMIT = 50;
 
 function str(v: unknown): string | null {
   if (typeof v === "string" && v.trim()) return v;
@@ -29,6 +29,28 @@ function unwrapItems<T>(raw: unknown): T[] {
     if (Array.isArray(list)) return list as T[];
   }
   return [];
+}
+
+function unwrapCursor(raw: unknown): string | null {
+  if (raw && typeof raw === "object") {
+    const o = raw as Record<string, unknown>;
+    const next = o.nextCursor ?? o.next_cursor;
+    return typeof next === "string" && next.trim() ? next : null;
+  }
+  return null;
+}
+
+function isLimitNotAllowedError(e: unknown): boolean {
+  return (
+    axios.isAxiosError(e) &&
+    e.response?.status === 400 &&
+    typeof e.response?.data === "object" &&
+    e.response?.data !== null &&
+    Array.isArray((e.response.data as { message?: unknown }).message) &&
+    (e.response.data as { message: unknown[] }).message.some(
+      (m) => typeof m === "string" && m.includes("property limit should not exist"),
+    )
+  );
 }
 
 function normalizePerformanceRow(raw: unknown): HubAnalyticsPerformanceRow | null {
@@ -70,28 +92,122 @@ function crashRowToHubRow(row: MobileCrashReportRow | null): HubAnalyticsCrashRo
 }
 
 /** Paginated `GET /analytics/performance` (limit default 20 on API; we request a larger first page for Reports). */
-export async function fetchAnalyticsPerformance(): Promise<HubAnalyticsPerformanceRow[] | null> {
+export async function fetchAnalyticsPerformance(params?: {
+  from?: string;
+  to?: string;
+  userId?: string;
+  cursor?: string;
+  limit?: number;
+}): Promise<HubAnalyticsPerformanceRow[] | null> {
   try {
-    const res = await api.get(endpoints.analyticsPerformance, { params: { limit: DEFAULT_PAGE } });
+    const res = await api.get(endpoints.analyticsPerformance, {
+      params: { ...params, limit: params?.limit ?? DEFAULT_PAGE_LIMIT },
+    });
     const items = unwrapItems<unknown>(res.data);
     const rows = items.map(normalizePerformanceRow).filter(Boolean) as HubAnalyticsPerformanceRow[];
     return rows.length ? rows : [];
   } catch (e) {
+    if (isLimitNotAllowedError(e)) {
+      const { limit: _limit, ...rest } = params ?? {};
+      const res = await api.get(endpoints.analyticsPerformance, { params: rest });
+      const items = unwrapItems<unknown>(res.data);
+      const rows = items.map(normalizePerformanceRow).filter(Boolean) as HubAnalyticsPerformanceRow[];
+      return rows.length ? rows : [];
+    }
+    if (axios.isAxiosError(e) && e.response?.status === 404) return null;
+    throw e;
+  }
+}
+
+export async function fetchAnalyticsPerformancePage(params?: {
+  from?: string;
+  to?: string;
+  userId?: string;
+  cursor?: string;
+  limit?: number;
+}): Promise<{ items: HubAnalyticsPerformanceRow[]; nextCursor: string | null } | null> {
+  try {
+    const res = await api.get(endpoints.analyticsPerformance, {
+      params: { ...params, limit: params?.limit ?? DEFAULT_PAGE_LIMIT },
+    });
+    const items = unwrapItems<unknown>(res.data);
+    const nextCursor = unwrapCursor(res.data);
+    const rows = items.map(normalizePerformanceRow).filter(Boolean) as HubAnalyticsPerformanceRow[];
+    return { items: rows, nextCursor };
+  } catch (e) {
+    if (isLimitNotAllowedError(e)) {
+      const { limit: _limit, ...rest } = params ?? {};
+      const res = await api.get(endpoints.analyticsPerformance, { params: rest });
+      const items = unwrapItems<unknown>(res.data);
+      const nextCursor = unwrapCursor(res.data);
+      const rows = items.map(normalizePerformanceRow).filter(Boolean) as HubAnalyticsPerformanceRow[];
+      return { items: rows, nextCursor };
+    }
     if (axios.isAxiosError(e) && e.response?.status === 404) return null;
     throw e;
   }
 }
 
 /** `GET /analytics/crashes` list (no stack); maps into compact hub rows for Reports. */
-export async function fetchAnalyticsCrashes(): Promise<HubAnalyticsCrashRow[] | null> {
+export async function fetchAnalyticsCrashes(params?: {
+  from?: string;
+  to?: string;
+  userId?: string;
+  cursor?: string;
+  limit?: number;
+}): Promise<HubAnalyticsCrashRow[] | null> {
   try {
-    const res = await api.get(endpoints.analyticsCrashes, { params: { limit: DEFAULT_PAGE } });
+    const res = await api.get(endpoints.analyticsCrashes, {
+      params: { ...params, limit: params?.limit ?? DEFAULT_PAGE_LIMIT },
+    });
     const items = unwrapItems<unknown>(res.data);
     const rows = items
       .map((raw) => crashRowToHubRow(normalizeMobileCrashRow(raw)))
       .filter(Boolean) as HubAnalyticsCrashRow[];
     return rows.length ? rows : [];
   } catch (e) {
+    if (isLimitNotAllowedError(e)) {
+      const { limit: _limit, ...rest } = params ?? {};
+      const res = await api.get(endpoints.analyticsCrashes, { params: rest });
+      const items = unwrapItems<unknown>(res.data);
+      const rows = items
+        .map((raw) => crashRowToHubRow(normalizeMobileCrashRow(raw)))
+        .filter(Boolean) as HubAnalyticsCrashRow[];
+      return rows.length ? rows : [];
+    }
+    if (axios.isAxiosError(e) && e.response?.status === 404) return null;
+    throw e;
+  }
+}
+
+export async function fetchAnalyticsCrashesPage(params?: {
+  from?: string;
+  to?: string;
+  userId?: string;
+  cursor?: string;
+  limit?: number;
+}): Promise<{ items: HubAnalyticsCrashRow[]; nextCursor: string | null } | null> {
+  try {
+    const res = await api.get(endpoints.analyticsCrashes, {
+      params: { ...params, limit: params?.limit ?? DEFAULT_PAGE_LIMIT },
+    });
+    const items = unwrapItems<unknown>(res.data);
+    const nextCursor = unwrapCursor(res.data);
+    const rows = items
+      .map((raw) => crashRowToHubRow(normalizeMobileCrashRow(raw)))
+      .filter(Boolean) as HubAnalyticsCrashRow[];
+    return { items: rows, nextCursor };
+  } catch (e) {
+    if (isLimitNotAllowedError(e)) {
+      const { limit: _limit, ...rest } = params ?? {};
+      const res = await api.get(endpoints.analyticsCrashes, { params: rest });
+      const items = unwrapItems<unknown>(res.data);
+      const nextCursor = unwrapCursor(res.data);
+      const rows = items
+        .map((raw) => crashRowToHubRow(normalizeMobileCrashRow(raw)))
+        .filter(Boolean) as HubAnalyticsCrashRow[];
+      return { items: rows, nextCursor };
+    }
     if (axios.isAxiosError(e) && e.response?.status === 404) return null;
     throw e;
   }

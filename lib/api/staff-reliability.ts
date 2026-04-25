@@ -18,6 +18,7 @@ import type {
   StaffDeviceBackupRow,
   StaffDeviceStorageWarningRow,
 } from "@/lib/types/staff-reliability";
+import axios from "axios";
 
 function num(v: unknown, fallback = 0): number {
   if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -70,6 +71,19 @@ function unwrapList<T>(raw: unknown): { items: T[]; nextCursor: string | null } 
     if (Array.isArray(list)) return { items: list as T[], nextCursor: next };
   }
   return { items: [], nextCursor: null };
+}
+
+function isLimitNotAllowedError(e: unknown): boolean {
+  return (
+    axios.isAxiosError(e) &&
+    e.response?.status === 400 &&
+    typeof e.response?.data === "object" &&
+    e.response?.data !== null &&
+    Array.isArray((e.response.data as { message?: unknown }).message) &&
+    (e.response.data as { message: unknown[] }).message.some(
+      (m) => typeof m === "string" && m.includes("property limit should not exist"),
+    )
+  );
 }
 
 export function normalizeNestedUser(raw: unknown): ReliabilityNestedUser | null {
@@ -361,12 +375,23 @@ export async function fetchMobileCrashReportsPage(params?: {
   errorType?: string;
   limit?: number;
 }): Promise<PaginatedReliabilityResult<MobileCrashReportRow>> {
-  const res = await api.get(endpoints.analyticsCrashes, {
-    params: { ...params, limit: params?.limit ?? DEFAULT_LIST_LIMIT },
-  });
-  const { items, nextCursor } = unwrapList<unknown>(res.data);
-  const rows = items.map(normalizeMobileCrashRow).filter(Boolean) as MobileCrashReportRow[];
-  return { items: rows, nextCursor };
+  try {
+    const res = await api.get(endpoints.analyticsCrashes, {
+      params: { ...params, limit: params?.limit ?? DEFAULT_LIST_LIMIT },
+    });
+    const { items, nextCursor } = unwrapList<unknown>(res.data);
+    const rows = items.map(normalizeMobileCrashRow).filter(Boolean) as MobileCrashReportRow[];
+    return { items: rows, nextCursor };
+  } catch (e) {
+    if (isLimitNotAllowedError(e)) {
+      const { limit: _limit, ...rest } = params ?? {};
+      const res = await api.get(endpoints.analyticsCrashes, { params: rest });
+      const { items, nextCursor } = unwrapList<unknown>(res.data);
+      const rows = items.map(normalizeMobileCrashRow).filter(Boolean) as MobileCrashReportRow[];
+      return { items: rows, nextCursor };
+    }
+    throw e;
+  }
 }
 
 /** Full crash row including `stack` (`GET /analytics/crashes/:id`). */
