@@ -1,15 +1,33 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { navSections } from "@/components/layout/nav-config";
+import { canManageStockTakes } from "@/lib/inventory-access";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { useAuthStore } from "@/stores/auth-store";
 
 type AppSidebarProps = { onNavigate?: () => void };
 
+const STOCK_TAKE_HREF = "/inventory/stock-take";
+
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const pathname = usePathname();
+  const role = useAuthStore((s) => s.user?.role);
+  const showStockTake = canManageStockTakes(role);
+
+  const filteredSections = useMemo(
+    () =>
+      navSections.map((section) => ({
+        ...section,
+        items: section.items.filter(
+          (item) => showStockTake || item.href !== STOCK_TAKE_HREF,
+        ),
+      })),
+    [showStockTake],
+  );
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -28,7 +46,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         <p className="text-sm font-semibold text-foreground">Management Hub</p>
       </div>
       <nav className="flex flex-1 flex-col gap-4 overflow-y-auto pb-4">
-        {navSections.map((section, si) => (
+        {filteredSections.map((section, si) => (
           <div key={si} className="space-y-1">
             {section.title ? (
               <p className="px-2 pb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">

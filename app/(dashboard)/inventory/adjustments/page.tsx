@@ -6,6 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Tooltip as UiTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Table,
   TableBody,
   TableCell,
@@ -19,6 +25,55 @@ import { fetchInventoryAdjustmentsPage } from "@/lib/api/inventory-logs";
 import { fetchOrgUsers } from "@/lib/api/users";
 import type { DateRangePreset } from "@/lib/date-range-presets";
 import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
+
+function truncateMiddle(v: string, keep = 4): string {
+  if (!v) return v;
+  if (v.length <= keep * 2 + 3) return v;
+  return `${v.slice(0, keep)}...${v.slice(-keep)}`;
+}
+
+function isLikelyIdKey(k: string): boolean {
+  return k === "id" || k === "userId" || k === "referenceId" || k.endsWith("Id");
+}
+
+function isLikelyDateKey(k: string): boolean {
+  return k === "createdAt" || k.endsWith("At");
+}
+
+function formatHumanDate(v: unknown): string | null {
+  if (typeof v !== "string" || !v.trim()) return null;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function cellDisplay(k: string, v: unknown): { display: string; full?: string; kind?: "id" | "date" } {
+  if (v == null) return { display: "—" };
+
+  if (isLikelyDateKey(k)) {
+    const formatted = formatHumanDate(v);
+    if (formatted) return { display: formatted, full: String(v), kind: "date" };
+  }
+
+  const s =
+    typeof v === "string" ? v : typeof v === "number" ? String(v) : typeof v === "boolean" ? String(v) : null;
+
+  if (s && isLikelyIdKey(k) && s.length > 12) {
+    return { display: truncateMiddle(s), full: s, kind: "id" };
+  }
+
+  if (s && s.length > 32) {
+    return { display: `${s.slice(0, 32)}…`, full: s };
+  }
+
+  return { display: String(v) };
+}
 
 export default function InventoryAdjustmentsPage() {
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
@@ -118,24 +173,47 @@ export default function InventoryAdjustmentsPage() {
           ) : rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No adjustments in this range.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {keys.map((k) => (
-                    <TableHead key={k}>{k}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row, idx) => (
-                  <TableRow key={idx}>
+            <TooltipProvider>
+              <Table>
+                <TableHeader>
+                  <TableRow>
                     {keys.map((k) => (
-                      <TableCell key={k}>{String(row[k] ?? "—")}</TableCell>
+                      <TableHead key={k}>{k}</TableHead>
                     ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row, idx) => (
+                    <TableRow key={idx}>
+                      {keys.map((k) => {
+                        const { display, full, kind } = cellDisplay(k, row[k]);
+                        const widthClass = kind === "id" ? "max-w-[9rem]" : "max-w-[14rem]";
+                        return (
+                          <TableCell key={k} className={`${widthClass} truncate`} title={full ? undefined : display}>
+                            {full ? (
+                              <UiTooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="w-full truncate text-left">
+                                    {display}
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px]">
+                                    {full}
+                                  </pre>
+                                </TooltipContent>
+                              </UiTooltip>
+                            ) : (
+                              display
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TooltipProvider>
           )}
           {listQuery.data ? (
             <PaginationBar

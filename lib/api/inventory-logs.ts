@@ -45,25 +45,3 @@ export async function fetchInventoryAdjustmentsPage(
   };
 }
 
-export async function fetchInventoryStockTakesPage(
-  params: InventoryLogListParams = {},
-): Promise<PaginatedInventoryRows> {
-  const res = await api.get(endpoints.inventoryStockTakes, {
-    params: {
-      startDate: params.startDate,
-      endDate: params.endDate,
-      page: params.page,
-      limit: params.limit,
-      staffId: params.staffId,
-    },
-  });
-  const { rows, meta } = unwrap(res.data);
-  const m = parseMeta(meta, rows.length);
-  return {
-    data: rows.map((r) => (r && typeof r === "object" ? (r as Record<string, unknown>) : {})),
-    page: m.page,
-    limit: m.limit,
-    total: m.total,
-    totalPages: m.totalPages,
-  };
-}

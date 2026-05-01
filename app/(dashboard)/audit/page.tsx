@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Tooltip as UiTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Table,
   TableBody,
   TableCell,
@@ -14,6 +20,93 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fetchAuditEventsPage } from "@/lib/api/audit";
+
+function truncateMiddle(v: string, keep = 4): string {
+  if (!v) return v;
+  if (v.length <= keep * 2 + 3) return v;
+  return `${v.slice(0, keep)}...${v.slice(-keep)}`;
+}
+
+function isLikelyIdKey(k: string): boolean {
+  return k === "id" || k === "userId" || k === "organizationId" || k === "aggregateId" || k.endsWith("Id");
+}
+
+function isLikelyDateKey(k: string): boolean {
+  return k === "createdAt" || k.endsWith("At");
+}
+
+function formatHumanDate(v: unknown): string | null {
+  if (typeof v !== "string" || !v.trim()) return null;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function safeJsonStringify(obj: unknown): string {
+  try {
+    return JSON.stringify(obj);
+  } catch {
+    return String(obj);
+  }
+}
+
+function safeJsonPretty(obj: unknown): string {
+  try {
+    return JSON.stringify(obj, null, 2);
+  } catch {
+    return String(obj);
+  }
+}
+
+function cellDisplay(k: string, v: unknown): { display: string; full?: string; kind?: "id" | "payload" } {
+  if (v == null) return { display: "—" };
+
+  if (k === "payload") {
+    if (typeof v === "object") {
+      const compact = safeJsonStringify(v);
+      const pretty = safeJsonPretty(v);
+      return {
+        display: compact.length > 40 ? `${compact.slice(0, 40)}…` : compact,
+        full: pretty,
+        kind: "payload",
+      };
+    }
+    const s = String(v);
+    return {
+      display: s.length > 40 ? `${s.slice(0, 40)}…` : s,
+      full: s.length > 40 ? s : undefined,
+      kind: s.length > 40 ? "payload" : undefined,
+    };
+  }
+
+  if (isLikelyDateKey(k)) {
+    const formatted = formatHumanDate(v);
+    if (formatted) return { display: formatted, full: String(v) };
+  }
+
+  const s = typeof v === "string" ? v : typeof v === "number" ? String(v) : typeof v === "boolean" ? String(v) : null;
+  if (s && isLikelyIdKey(k) && s.length > 12) {
+    return { display: truncateMiddle(s), full: s, kind: "id" };
+  }
+
+  if (typeof v === "object") {
+    const compact = safeJsonStringify(v);
+    const pretty = safeJsonPretty(v);
+    return {
+      display: compact.length > 40 ? `${compact.slice(0, 40)}…` : compact,
+      full: pretty,
+      kind: "payload",
+    };
+  }
+
+  return { display: String(v) };
+}
 
 export default function AuditPage() {
   const [cursorHistory, setCursorHistory] = useState<(string | undefined)[]>([undefined]);
@@ -79,11 +172,37 @@ export default function AuditPage() {
               <TableBody>
                 {items.map((row, idx) => (
                   <TableRow key={idx}>
-                    {keys.map((k) => (
-                      <TableCell key={k} className="max-w-[14rem] truncate" title={String(row[k] ?? "")}>
-                        {String(row[k] ?? "—")}
-                      </TableCell>
-                    ))}
+                    {keys.map((k) => {
+                      const { display, full, kind } = cellDisplay(k, row[k]);
+                      const widthClass =
+                        kind === "id"
+                          ? "max-w-[9rem]"
+                          : k === "payload"
+                            ? "max-w-[18rem]"
+                            : "max-w-[14rem]";
+                      return (
+                        <TableCell key={k} className={`${widthClass} truncate`} title={full ? undefined : display}>
+                          {full ? (
+                            <TooltipProvider>
+                              <UiTooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="w-full truncate text-left">
+                                    {display}
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px]">
+                                    {full}
+                                  </pre>
+                                </TooltipContent>
+                              </UiTooltip>
+                            </TooltipProvider>
+                          ) : (
+                            display
+                          )}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))}
               </TableBody>

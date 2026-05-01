@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import {
   AlertTriangle,
   Boxes,
@@ -9,36 +10,49 @@ import {
   ClipboardPlus,
 } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { canManageStockTakes } from "@/lib/inventory-access";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 
-const cards = [
+const allCards = [
   {
     href: "/inventory/alerts",
     title: "Low stock alerts",
     description: "See what needs restocking first.",
     icon: AlertTriangle,
+    requiresStockTakeRole: false,
   },
   {
     href: "/batches",
     title: "Batches & expiry",
     description: "Track lot numbers and expiry dates.",
     icon: CalendarClock,
+    requiresStockTakeRole: false,
   },
   {
     href: "/inventory/adjustments",
     title: "Stock adjustments",
     description: "View adjustment history from the API.",
     icon: ClipboardList,
+    requiresStockTakeRole: false,
   },
   {
     href: "/inventory/stock-take",
-    title: "Stock take",
-    description: "View stock take records from the API.",
+    title: "Stock takes",
+    description: "View physical count history from the API.",
     icon: ClipboardPlus,
+    requiresStockTakeRole: true,
   },
-];
+] as const;
 
 export default function InventoryHubPage() {
+  const role = useAuthStore((s) => s.user?.role);
+  const canStock = canManageStockTakes(role);
+  const cards = useMemo(
+    () => allCards.filter((c) => !c.requiresStockTakeRole || canStock),
+    [canStock],
+  );
+
   return (
     <div className="space-y-8">
       <div className="space-y-1">

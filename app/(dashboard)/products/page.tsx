@@ -4,7 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, LayoutGrid, List, MoreHorizontal, Plus, Search } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  LayoutGrid,
+  List,
+  MoreHorizontal,
+  Plus,
+  Search,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +34,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { StockTakeRecordModal } from "@/components/inventory/stock-take-record-modal";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -44,6 +59,7 @@ import { handleApiError } from "@/lib/api/errors";
 import { formatCurrency } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
+import { canManageStockTakes } from "@/lib/inventory-access";
 import { useAuthStore } from "@/stores/auth-store";
 import type { HubCategory, HubProduct, PageMeta } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
@@ -94,6 +110,8 @@ function applyClientFilters(
 export default function ProductsPage() {
   const router = useRouter();
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const role = useAuthStore((s) => s.user?.role);
+  const canStockTake = canManageStockTakes(role);
   const [categories, setCategories] = useState<HubCategory[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -117,6 +135,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [stockTakeProduct, setStockTakeProduct] = useState<HubProduct | null>(null);
 
   const clientMode = useMemo(() => {
     if (stockFilter === "in_stock" || stockFilter === "out") return true;
@@ -483,21 +502,43 @@ export default function ProductsPage() {
                         {formatCurrency(Number.isFinite(price) ? price : 0, currency)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={<Button variant="ghost" size="icon-sm" className="min-h-9 min-w-9" aria-label={`Actions for ${p.name}`} />}
-                          >
-                            <MoreHorizontal className="size-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem render={<Link href={`/products/${p.id}`} />}>View details</DropdownMenuItem>
-                            <DropdownMenuItem render={<Link href={`/products/${p.id}/edit`} />}>Edit</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onDuplicate(p.id)}>Duplicate</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(p.id)}>
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center justify-end gap-0.5">
+                          {canStockTake ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="min-h-9 min-w-9"
+                                  aria-label={`Stock take for ${p.name}`}
+                                  onClick={() => setStockTakeProduct(p)}
+                                >
+                                  <ClipboardCheck className="size-4" aria-hidden />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Stock take</TooltipContent>
+                            </Tooltip>
+                          ) : null}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={<Button variant="ghost" size="icon-sm" className="min-h-9 min-w-9" aria-label={`Actions for ${p.name}`} />}
+                            >
+                              <MoreHorizontal className="size-4" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem render={<Link href={`/products/${p.id}`} />}>View details</DropdownMenuItem>
+                              <DropdownMenuItem render={<Link href={`/products/${p.id}/edit`} />}>Edit</DropdownMenuItem>
+                              {canStockTake ? (
+                                <DropdownMenuItem onClick={() => setStockTakeProduct(p)}>Stock take</DropdownMenuItem>
+                              ) : null}
+                              <DropdownMenuItem onClick={() => onDuplicate(p.id)}>Duplicate</DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(p.id)}>
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -537,6 +578,9 @@ export default function ProductsPage() {
                       <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="min-h-9" />}>More</DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
                         <DropdownMenuItem render={<Link href={`/products/${p.id}`} />}>View details</DropdownMenuItem>
+                        {canStockTake ? (
+                          <DropdownMenuItem onClick={() => setStockTakeProduct(p)}>Stock take</DropdownMenuItem>
+                        ) : null}
                         <DropdownMenuItem onClick={() => onDuplicate(p.id)}>Duplicate</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(p.id)}>
                           Delete
@@ -599,6 +643,15 @@ export default function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <StockTakeRecordModal
+        open={!!stockTakeProduct}
+        onOpenChange={(open) => {
+          if (!open) setStockTakeProduct(null);
+        }}
+        product={stockTakeProduct}
+        onRecorded={() => loadProducts()}
+      />
     </div>
   );
 }

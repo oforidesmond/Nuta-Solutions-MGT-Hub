@@ -21,6 +21,7 @@ export function DateRangePresetToolbar({
   onCustomStartChange,
   onCustomEndChange,
   className,
+  disabled = false,
 }: {
   preset: DateRangePreset;
   onPresetChange: (p: DateRangePreset) => void;
@@ -29,6 +30,7 @@ export function DateRangePresetToolbar({
   onCustomStartChange: (v: string) => void;
   onCustomEndChange: (v: string) => void;
   className?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className={cn("space-y-3", className)}>
@@ -40,6 +42,7 @@ export function DateRangePresetToolbar({
             size="sm"
             variant={preset === id ? "default" : "outline"}
             className="min-h-9"
+            disabled={disabled}
             onClick={() => onPresetChange(id)}
           >
             {label}
@@ -54,6 +57,7 @@ export function DateRangePresetToolbar({
               id="custom-start"
               type="date"
               value={customStart}
+              disabled={disabled}
               onChange={(e) => onCustomStartChange(e.target.value)}
             />
           </div>
@@ -63,6 +67,7 @@ export function DateRangePresetToolbar({
               id="custom-end"
               type="date"
               value={customEnd}
+              disabled={disabled}
               onChange={(e) => onCustomEndChange(e.target.value)}
             />
           </div>
