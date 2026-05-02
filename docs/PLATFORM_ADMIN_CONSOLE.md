@@ -6,18 +6,21 @@ JWT carries `role === "SUPER_ADMIN"` AND `organizationId === null`. Backend
 contract: see `SUPER_ADMIN_API.md` and `SUPER_ADMIN_IMPLEMENTATION_SUMMARY.md`
 in the repo root.
 
-This document captures **Phase 1** (foundation + dashboard). Subsequent
-phases will extend each section as they ship.
+This document captures **Phase 1** (foundation + dashboard) and
+**Phase 2** (organizations). Subsequent phases will extend each section as
+they ship.
 
 ---
 
 ## 1. Routes
 
 ```
-/platform                        Phase 1 — implemented (this PR)
-/platform/organizations          Coming soon (catch-all placeholder)
-/platform/organizations/:id      Coming soon
-/platform/organizations/:id/activity
+/platform                                  Phase 1 — implemented
+/platform/organizations                    Phase 2 — implemented
+/platform/organizations/:id                Phase 2 — implemented (overview)
+/platform/organizations/:id/users          Phase 2 — implemented
+/platform/organizations/:id/devices        Phase 2 — implemented
+/platform/organizations/:id/activity       Phase 2 — implemented
 /platform/users                  Coming soon
 /platform/users/:id              Coming soon
 /platform/devices                Coming soon
@@ -125,6 +128,42 @@ All shared types live in [`lib/types/platform.ts`](../lib/types/platform.ts) (`P
   - 3 `StatusCard`s — Org status, Plan distribution, Health alerts.
   - Quick actions row linking to upcoming surfaces (currently land on the catch-all).
 
+### Organizations (Phase 2)
+
+- List: [`app/(platform)/platform/organizations/page.tsx`](../app/(platform)/platform/organizations/page.tsx). State held client-side: `page`, `search` (debounced 300 ms), `planType[]`, `planStatus[]`, `sortBy`, `sortOrder`. Filter changes reset `page` to 1 via the local `setFilter` helper. Query key: `["platform","organizations", params]`. Renders `OrgFiltersBar`, `OrgsTable` (md+) and `OrgCard` list (mobile), and `PaginationBar`.
+- Details layout: [`app/(platform)/platform/organizations/[id]/layout.tsx`](../app/(platform)/platform/organizations/[id]/layout.tsx). Single `useQuery({ queryKey: ["platform","organizations", id] })` shared by all child routes. Header carries `PlanBadge` + `StatusBadge` + creation date + an `OrgActionsMenu` that owns the four destructive-action modals.
+- Sub-routes:
+  - `/[id]` overview — three `InfoCard`s (Org / Plan & billing / Settings) and eight `StatCard`s.
+  - `/[id]/users` — paginated, filtered by `organizationId`. Links to (forthcoming) `/platform/users/:userId`.
+  - `/[id]/devices` — paginated, filtered by `organizationId`. Status pill (Active / Suspended / Revoked).
+  - `/[id]/activity` — paginated audit feed with `MultiSelectDropdown` for `eventType` and native date inputs for the range. Renders one `AuditEventRow` per event (reused by Phase 6).
+- Sub-route navigation uses real `Link`s instead of an in-memory `Tabs` primitive — bookmarkable, browser-back friendly, no new UI dependency.
+
+### Action modals (`components/platform/organizations/`)
+
+Each modal is a `Dialog` containing an inner form keyed on `open` so its local state is fresh on every reopen (avoids `useEffect`-driven setState resets). All four:
+
+1. Capture a required reason (≤ 500 chars).
+2. Disable the submit button until validation passes.
+3. On success: `toast.success` + `queryClient.invalidateQueries({ queryKey: ["platform"] })` + close.
+4. On error: `toast.error(handleApiError(err))`.
+
+| Modal | Extra UX |
+|-------|----------|
+| `ManagePlanModal` | 4-button plan picker · Unlimited / Set-N radio · trial date input shown only when `planType === "TRIAL"` |
+| `SuspendOrganizationModal` | Side-effect callout · `notifyOwner` checkbox · explicit confirm checkbox |
+| `UnsuspendOrganizationModal` | `planStatus` select (default `ACTIVE`) |
+| `DeleteOrganizationModal` | PII-anonymization callout · `confirmDelete` checkbox · `router.push("/platform/organizations")` after success |
+
+### Shared platform primitives added in Phase 2
+
+| Primitive | Used by |
+|-----------|---------|
+| [`MultiSelectDropdown`](../components/platform/multi-select-dropdown.tsx) | Organizations filters, activity event-type filter, and forthcoming users / devices / audit pages |
+| [`InfoCard`](../components/platform/info-card.tsx) (`InfoCard`, `InfoRow`) | Org details overview; reused by user / device detail pages later |
+| [`StatCard`](../components/platform/stat-card.tsx) | Org details overview; reused by analytics + telemetry summaries |
+| [`AuditEventRow`](../components/platform/audit-event-row.tsx) | Org activity feed; will be reused by the Phase 6 audit log |
+
 ### Adding a new platform page
 
 1. Create `app/(platform)/platform/<area>/page.tsx`. The `(platform)` group's layout already wraps it in `PlatformAuthGate` + `PlatformShell`.
@@ -157,17 +196,17 @@ No new CSS variables were introduced.
 - [ ] Hard refresh from `/platform` keeps the user on `/platform` after `bootstrap()` completes.
 - [ ] `npm run lint` clean.
 
-## 9. Out of scope (Phase 1)
+## 9. Out of scope (after Phase 2)
 
 The following are intentionally deferred to follow-up phases. Their service-layer functions are already implemented, so each follow-up phase only adds UI:
 
-- Organizations list / details + suspend / unsuspend / manage-plan / delete modals.
-- Users / Devices list & detail pages and their action modals.
-- Analytics chart pages (growth, plan distribution).
-- Telemetry pages (crashes, performance, device health).
-- Audit log viewer + organization activity feed.
-- Broadcast notifications UI.
-- A `Tabs` primitive, `MultiSelect`, dedicated date-picker library, and `AlertDialog` will be added in the phase that needs them.
+- Standalone Users page (`/platform/users`) and `/platform/users/:id` (Phase 3).
+- Standalone Devices page (`/platform/devices`) and `/platform/devices/:id` (Phase 3).
+- Analytics chart pages (growth, plan distribution) — Phase 4.
+- Telemetry pages (crashes, performance, device health) — Phase 5.
+- Audit log viewer (`/platform/audit`) reusing `AuditEventRow` — Phase 6.
+- Broadcast notifications UI — Phase 6.
+- The catch-all `[...slug]/page.tsx` is removed once all real pages exist (Phase 6).
 
 ## 10. Required environment variables
 
