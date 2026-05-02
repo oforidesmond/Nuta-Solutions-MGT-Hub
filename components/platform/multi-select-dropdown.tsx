@@ -6,6 +6,8 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -65,27 +67,30 @@ export function MultiSelectDropdown<T extends string>({
         <ChevronDown className="size-4 opacity-60" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
-        <DropdownMenuLabel>{label}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {options.map((opt) => (
-          <DropdownMenuCheckboxItem
-            key={opt.value}
-            checked={selected.includes(opt.value)}
-            onCheckedChange={(isOn) => toggle(opt.value, isOn)}
-          >
-            {opt.label}
-          </DropdownMenuCheckboxItem>
-        ))}
+        {/* Base UI: GroupLabel / checkbox items must live under Menu.Group */}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>{label}</DropdownMenuLabel>
+          {options.map((opt) => (
+            <DropdownMenuCheckboxItem
+              key={opt.value}
+              checked={selected.includes(opt.value)}
+              onCheckedChange={(isOn) => toggle(opt.value, isOn)}
+            >
+              {opt.label}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuGroup>
         {selected.length > 0 ? (
           <>
             <DropdownMenuSeparator />
-            <button
-              type="button"
-              onClick={() => onChange([])}
-              className="w-full rounded-md px-1.5 py-1 text-left text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            >
-              Clear selection
-            </button>
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                className="text-xs text-muted-foreground focus:text-accent-foreground"
+                onClick={() => onChange([])}
+              >
+                Clear selection
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </>
         ) : null}
       </DropdownMenuContent>

@@ -1,213 +1,139 @@
 # Platform Admin Console (SUPER_ADMIN)
 
-The platform admin console is a separate surface from the tenant Management
-Hub. It is mounted under `/platform/*` and is reachable only by users whose
-JWT carries `role === "SUPER_ADMIN"` AND `organizationId === null`. Backend
-contract: see `SUPER_ADMIN_API.md` and `SUPER_ADMIN_IMPLEMENTATION_SUMMARY.md`
-in the repo root.
+The platform admin console is a separate surface from the tenant Management Hub. It is mounted under `/platform/*` and is reachable only by users whose JWT carries `role === "SUPER_ADMIN"` AND `organizationId === null`. Backend contract: see [`docs/SUPER_ADMIN_API.md`](SUPER_ADMIN_API.md) and [`docs/SUPER_ADMIN_IMPLEMENTATION_SUMMARY.md`](SUPER_ADMIN_IMPLEMENTATION_SUMMARY.md).
 
-This document captures **Phase 1** (foundation + dashboard) and
-**Phase 2** (organizations). Subsequent phases will extend each section as
-they ship.
+This document reflects **Phase 1** (foundation + dashboard), **Phase 2** (organizations), and **Phases 3–6** (users, devices, analytics, telemetry, audit, notifications). All **24** `/platform/*` REST endpoints described in those docs now have matching UI surfaces.
 
 ---
 
 ## 1. Routes
 
-```
-/platform                                  Phase 1 — implemented
-/platform/organizations                    Phase 2 — implemented
-/platform/organizations/:id                Phase 2 — implemented (overview)
-/platform/organizations/:id/users          Phase 2 — implemented
-/platform/organizations/:id/devices        Phase 2 — implemented
-/platform/organizations/:id/activity       Phase 2 — implemented
-/platform/users                  Coming soon
-/platform/users/:id              Coming soon
-/platform/devices                Coming soon
-/platform/devices/:id            Coming soon
-/platform/analytics              Coming soon
-/platform/analytics/growth       Coming soon
-/platform/analytics/plans        Coming soon
-/platform/telemetry              Coming soon
-/platform/telemetry/crashes      Coming soon
-/platform/telemetry/performance  Coming soon
-/platform/telemetry/device-health
-/platform/audit                  Coming soon
-/platform/notifications          Coming soon
-```
+| Route | Purpose |
+| --- | --- |
+| `/platform` | Dashboard headline metrics |
+| `/platform/organizations` | Tenant directory + mutations |
+| `/platform/organizations/:id` | Org overview |
+| `/platform/organizations/:id/users` | Org-scoped user list → links to `/platform/users/:userId` |
+| `/platform/organizations/:id/devices` | Org-scoped devices → `/platform/devices/:deviceId` |
+| `/platform/organizations/:id/activity` | Org-scoped audit feed (`AuditEventRow`) |
+| `/platform/users` | Cross-org user directory + bulk actions (`UserActionsMenu`) |
+| `/platform/users/:id` | Profile, org link, deactivate / reset-password |
+| `/platform/devices` | Global device roster + revoke/suspend/unsuspend (`?organizationId=` / `?userId=` supported on first paint) |
+| `/platform/devices/:id` | Device detail + telemetry stats |
+| `/platform/analytics` | Landing links |
+| `/platform/analytics/growth` | Growth charts (**Recharts**) + CSV export of current buckets |
+| `/platform/analytics/plans` | Plan mix + migrations + CSV for transitions |
+| `/platform/telemetry` | Telemetry hub + quick KPIs |
+| `/platform/telemetry/crashes` | Crash summaries, filters, expandable stacks |
+| `/platform/telemetry/performance` | Latency aggregates + slow operations |
+| `/platform/telemetry/device-health` | Storage / DB / backups snapshot |
+| `/platform/audit` | Global audit feed (`AuditEventRow` + `showOrganization`) |
+| `/platform/notifications` | Platform notification inbox + broadcast dialog |
 
-The catch-all `app/(platform)/platform/[...slug]/page.tsx` renders a
-"Coming soon" `EmptyState` for any path that has not yet been implemented.
-**Delete it as each phase ships.** When all real pages exist, remove
-`[...slug]/page.tsx` to restore Next.js's standard 404 behavior.
+Missing paths now yield the default Next.js **404** (the former `[...slug]` catch‑all placeholder was deleted once every route landed).
+
+---
 
 ## 2. Auth & route gating
 
-There is **no** Next `middleware.ts` and the JWT is not decoded on the
-client. Tokens live in:
+There is **no** Next `middleware.ts`; gating mirrors the backend `SuperAdminGuard` purely on the client (access token memory + refresh token persistence — see Phase 1 notes).
 
-- Access token → memory (Zustand `useAuthStore`).
-- Refresh token → `localStorage` (`nutapos_hub_refresh_token`).
+| Helper | Used in |
+| --- | --- |
+| `isPlatformAdmin(user)` in [`lib/platform-access.ts`](../lib/platform-access.ts) | `PlatformAuthGate`, redirects |
+| `postLoginRedirect(user)` | login + OAuth callback |
 
-Gating is purely client-side and matches the backend `SuperAdminGuard`
-contract:
+[`components/auth/platform-auth-gate.tsx`](../components/auth/platform-auth-gate.tsx) and [`components/auth/dashboard-auth-gate.tsx`](../components/auth/dashboard-auth-gate.tsx) document the redirects.
 
-| Helper | Returns | Used in |
-|--------|---------|---------|
-| `isPlatformAdmin(user)` in [`lib/platform-access.ts`](../lib/platform-access.ts) | `true` iff `user.role === "SUPER_ADMIN"` AND `!user.organizationId` | `PlatformAuthGate`, `DashboardAuthGate`, `postLoginRedirect` |
-| `postLoginRedirect(user)` | `"/platform"` for SUPER_ADMIN, `"/"` otherwise | login page, OAuth callback |
-
-| Component | Behavior |
-|-----------|----------|
-| [`PlatformAuthGate`](../components/auth/platform-auth-gate.tsx) | unauth → `/login`; tenant role → `/`; super-admin with non-null org → `/`; SUPER_ADMIN with null org → render children |
-| [`DashboardAuthGate`](../components/auth/dashboard-auth-gate.tsx) | unauth → `/login`; SUPER_ADMIN → `/platform` (defense in depth, even if they typed `/` directly) |
-
-Login (`app/(auth)/login/page.tsx`) and OAuth callback (`app/auth/callback/page.tsx`) call `router.replace(postLoginRedirect(user))` after `setSession`.
+---
 
 ## 3. Layout
 
 ```
 app/(platform)/layout.tsx
 └── PlatformAuthGate
-    └── PlatformShell                   (components/platform/platform-shell.tsx)
-        ├── PlatformSidebar             (md+ desktop, mirrors AppSidebar styling)
-        ├── PlatformHeader              (mobile sheet trigger + account menu)
-        ├── <main>{children}</main>
-        └── PlatformMobileNav           (md- bottom bar)
+    └── PlatformShell (`components/platform/platform-shell.tsx`)
 ```
 
-Navigation lives in [`components/platform/nav-config.ts`](../components/platform/nav-config.ts):
-`platformNavSections` (sidebar) and `platformMobileBottomNav` (bottom bar).
+Navigation constants: [`components/platform/nav-config.ts`](../components/platform/nav-config.ts).
 
-The header reads "Platform Console / SUPER ADMIN" instead of the tenant org
-name — SUPER_ADMIN tokens carry no organization.
+Grouped areas (**Analytics**, **Telemetry**) use dedicated `layout.tsx` files with bookmarkable **`Link`** sub-navigation (same pattern as `organizations/[id]/layout.tsx`).
+
+---
 
 ## 4. API service layer
 
-All 24 `/platform/*` endpoints are typed and exported from
-`lib/api/platform/*`. The service layer reuses the existing axios `api`
-instance (`lib/api/client.ts`):
+| Module | Endpoints |
+| --- | --- |
+| [`lib/api/platform/dashboard.ts`](../lib/api/platform/dashboard.ts) | dashboard |
+| [`lib/api/platform/organizations.ts`](../lib/api/platform/organizations.ts) | org CRUD-ish + activity |
+| [`lib/api/platform/users.ts`](../lib/api/platform/users.ts) | users |
+| [`lib/api/platform/devices.ts`](../lib/api/platform/devices.ts) | devices |
+| [`lib/api/platform/analytics.ts`](../lib/api/platform/analytics.ts) | analytics |
+| [`lib/api/platform/telemetry.ts`](../lib/api/platform/telemetry.ts) | telemetry |
+| [`lib/api/platform/audit.ts`](../lib/api/platform/audit.ts) | audit/events |
+| [`lib/api/platform/notifications.ts`](../lib/api/platform/notifications.ts) | notifications |
 
-- The interceptor adds `Authorization: Bearer …` automatically.
-- It **omits** `X-Tenant-ID` when no organization is set in the auth store
-  — exactly what the backend `SuperAdminGuard` requires.
-- 401 responses are auto-refreshed via the standard refresh interceptor.
+Shared types: [`lib/types/platform.ts`](../lib/types/platform.ts). Repeated array query serialization: [`lib/api/platform/_pagination.ts`](../lib/api/platform/_pagination.ts).
 
-### Module layout
+CSV helpers (client-side only): [`lib/utils/csv.ts`](../lib/utils/csv.ts) (`rowsToCsv`, `downloadTextFile` with UTF‑8 BOM for Excel).
 
-| File | Endpoints covered |
-|------|-------------------|
-| [`lib/api/platform/_pagination.ts`](../lib/api/platform/_pagination.ts) | `platformGet/Post/Patch/Delete` helpers + `unwrapPaginated` envelope normalizer + `paramsSerializer` for repeated array query keys (`?planType=PRO&planType=TRIAL`) |
-| [`lib/api/platform/dashboard.ts`](../lib/api/platform/dashboard.ts) | `GET /platform/dashboard` |
-| [`lib/api/platform/organizations.ts`](../lib/api/platform/organizations.ts) | list, get, updatePlan, suspend, unsuspend, softDelete, activity (7 endpoints) |
-| [`lib/api/platform/users.ts`](../lib/api/platform/users.ts) | list, get, deactivate, resetPassword (4 endpoints) |
-| [`lib/api/platform/devices.ts`](../lib/api/platform/devices.ts) | list, get, revoke, suspend, unsuspend (5 endpoints) |
-| [`lib/api/platform/analytics.ts`](../lib/api/platform/analytics.ts) | growth, plans (2 endpoints) |
-| [`lib/api/platform/telemetry.ts`](../lib/api/platform/telemetry.ts) | crashes, performance, device-health (3 endpoints) |
-| [`lib/api/platform/audit.ts`](../lib/api/platform/audit.ts) | events (1 endpoint) |
-| [`lib/api/platform/notifications.ts`](../lib/api/platform/notifications.ts) | list, broadcast (2 endpoints) |
+---
 
-All shared types live in [`lib/types/platform.ts`](../lib/types/platform.ts) (`PlanType`, `PlanStatus`, `DeviceStatus`, `PlatformOrganization`, `PlatformOrgDetails`, `PlatformDashboardData`, etc.). Endpoint paths are centralized under `endpoints.platform.*` in [`lib/api/endpoints.ts`](../lib/api/endpoints.ts).
-
-### Adding a new platform endpoint
-
-1. Add the path to the `platform` block in [`lib/api/endpoints.ts`](../lib/api/endpoints.ts).
-2. Add the request/response types to [`lib/types/platform.ts`](../lib/types/platform.ts).
-3. Add a typed wrapper to the relevant `lib/api/platform/<area>.ts` module using `platformGet/Post/Patch/Delete` from `_pagination.ts`. List endpoints should pipe responses through `unwrapPaginated<T>(raw)`.
-
-## 5. Pages
+## 5. Page & component map
 
 ### Dashboard
 
-- File: [`app/(platform)/platform/page.tsx`](../app/(platform)/platform/page.tsx)
-- Data: `useQuery({ queryKey: ["platform","dashboard"], queryFn: fetchPlatformDashboard, refetchInterval: 60_000 })`.
-- Loading: [`PlatformDashboardSkeleton`](../components/platform/dashboard-skeleton.tsx).
-- Error: inline `Card` with a `Try again` button calling `query.refetch()`.
-- Composition:
-  - 4 `MetricCard`s — Organizations, Users, Devices, Revenue.
-  - 3 `StatusCard`s — Org status, Plan distribution, Health alerts.
-  - Quick actions row linking to upcoming surfaces (currently land on the catch-all).
+[`app/(platform)/platform/page.tsx`](../app/(platform)/platform/page.tsx) — auto-refresh dashboard query; quick-action links resolve to concrete pages.
 
 ### Organizations (Phase 2)
 
-- List: [`app/(platform)/platform/organizations/page.tsx`](../app/(platform)/platform/organizations/page.tsx). State held client-side: `page`, `search` (debounced 300 ms), `planType[]`, `planStatus[]`, `sortBy`, `sortOrder`. Filter changes reset `page` to 1 via the local `setFilter` helper. Query key: `["platform","organizations", params]`. Renders `OrgFiltersBar`, `OrgsTable` (md+) and `OrgCard` list (mobile), and `PaginationBar`.
-- Details layout: [`app/(platform)/platform/organizations/[id]/layout.tsx`](../app/(platform)/platform/organizations/[id]/layout.tsx). Single `useQuery({ queryKey: ["platform","organizations", id] })` shared by all child routes. Header carries `PlanBadge` + `StatusBadge` + creation date + an `OrgActionsMenu` that owns the four destructive-action modals.
-- Sub-routes:
-  - `/[id]` overview — three `InfoCard`s (Org / Plan & billing / Settings) and eight `StatCard`s.
-  - `/[id]/users` — paginated, filtered by `organizationId`. Links to (forthcoming) `/platform/users/:userId`.
-  - `/[id]/devices` — paginated, filtered by `organizationId`. Status pill (Active / Suspended / Revoked).
-  - `/[id]/activity` — paginated audit feed with `MultiSelectDropdown` for `eventType` and native date inputs for the range. Renders one `AuditEventRow` per event (reused by Phase 6).
-- Sub-route navigation uses real `Link`s instead of an in-memory `Tabs` primitive — bookmarkable, browser-back friendly, no new UI dependency.
+Unchanged behaviour: list + `[id]` layout + sub-pages + four org modals. See prior sections in git history if you need the detailed mutation table.
 
-### Action modals (`components/platform/organizations/`)
+### Users & Devices (Phase 3)
 
-Each modal is a `Dialog` containing an inner form keyed on `open` so its local state is fresh on every reopen (avoids `useEffect`-driven setState resets). All four:
+| Area | Highlights |
+| --- | --- |
+| [`components/platform/users/`](../components/platform/users/) | `UserFiltersBar`, `UserActionsMenu`, `DeactivateUserModal`, `ResetPasswordUserModal` |
+| [`components/platform/devices/`](../components/platform/devices/) | `DeviceFiltersBar`, `DeviceActionsMenu`, revoke / suspend / unsuspend modals |
+| [`components/platform/org-filter-picker.tsx`](../components/platform/org-filter-picker.tsx) | Debounced tenant search surfaced on users/devices/crash/notifications filters |
 
-1. Capture a required reason (≤ 500 chars).
-2. Disable the submit button until validation passes.
-3. On success: `toast.success` + `queryClient.invalidateQueries({ queryKey: ["platform"] })` + close.
-4. On error: `toast.error(handleApiError(err))`.
+Destructive confirmations follow the Phase 2 modal contract (`reason`, checkboxes where appropriate, `"platform"` query invalidation, `toast`).
 
-| Modal | Extra UX |
-|-------|----------|
-| `ManagePlanModal` | 4-button plan picker · Unlimited / Set-N radio · trial date input shown only when `planType === "TRIAL"` |
-| `SuspendOrganizationModal` | Side-effect callout · `notifyOwner` checkbox · explicit confirm checkbox |
-| `UnsuspendOrganizationModal` | `planStatus` select (default `ACTIVE`) |
-| `DeleteOrganizationModal` | PII-anonymization callout · `confirmDelete` checkbox · `router.push("/platform/organizations")` after success |
+### Analytics (Phase 4)
 
-### Shared platform primitives added in Phase 2
+[`app/(platform)/platform/analytics/`](../app/(platform)/platform/analytics/) — `recharts` charts; Growth page exposes **CSV download** for the currently loaded timeline. Plans page supports transitions CSV export.
 
-| Primitive | Used by |
-|-----------|---------|
-| [`MultiSelectDropdown`](../components/platform/multi-select-dropdown.tsx) | Organizations filters, activity event-type filter, and forthcoming users / devices / audit pages |
-| [`InfoCard`](../components/platform/info-card.tsx) (`InfoCard`, `InfoRow`) | Org details overview; reused by user / device detail pages later |
-| [`StatCard`](../components/platform/stat-card.tsx) | Org details overview; reused by analytics + telemetry summaries |
-| [`AuditEventRow`](../components/platform/audit-event-row.tsx) | Org activity feed; will be reused by the Phase 6 audit log |
+### Telemetry (Phase 5)
 
-### Adding a new platform page
+[`app/(platform)/platform/telemetry/`](../app/(platform)/platform/telemetry/) — hub summarizes crash totals + heuristic health rollup; crashes page mirrors API `summary`; performance page renders horizontal percentile chart + tables.
 
-1. Create `app/(platform)/platform/<area>/page.tsx`. The `(platform)` group's layout already wraps it in `PlatformAuthGate` + `PlatformShell`.
-2. Use `useQuery` with a `["platform", "<area>", ...params]` query key for caching.
-3. Mutations should `queryClient.invalidateQueries({ queryKey: ["platform"] })` (or be more targeted if performance matters).
-4. Compose UI from existing primitives in `components/ui/*` and platform primitives in `components/platform/*`. The codebase has no `react-hook-form`, no `date-fns`, and no `react-day-picker` — keep new pages aligned with that.
+### Audit & notifications (Phase 6)
 
-## 6. Theming
+[`app/(platform)/platform/audit/page.tsx`](../app/(platform)/platform/audit/page.tsx) — filters + curated event-type presets (platform actions + common tenant plan events).
 
-The platform console reuses the tenant theme tokens (defined in `app/globals.css`) and is visually differentiated by:
+[`app/(platform)/platform/notifications/page.tsx`](../app/(platform)/platform/notifications/page.tsx) — filters + pagination + **[`BroadcastNotificationModal`](../components/platform/notifications/broadcast-notification-modal.tsx)** (all-org vs explicit org picker, optional role fan-out consistent with `/platform/notifications/broadcast` semantics).
 
-- A `Shield` icon next to "NutaPOS / Platform Console" in both the sidebar and the header.
-- Mobile bottom-bar items map to platform routes only.
+---
 
-No new CSS variables were introduced.
+## 6. Theming & mobile
 
-## 7. Mobile responsiveness
+Reuse tenant tokens; differentiated via Platform shell chrome. Responsive tables collapse to stacked cards wherever list pages mirror `/platform/organizations`. Shell retains bottom safe-area padding for [`PlatformMobileNav`](../components/platform/platform-mobile-nav.tsx).
 
-- Desktop sidebar is `hidden md:flex`.
-- Mobile uses the `Sheet`-based sidebar from `PlatformHeader` plus `PlatformMobileNav` along the bottom.
-- Cards and grids stack below the `md` breakpoint.
-- The shell sets `pb-24 md:pb-8` to keep the bottom nav from covering content.
+---
 
-## 8. Verification checklist
+## 7. Verification checklist
 
-- [ ] Sign in as SUPER_ADMIN → land on `/platform` with metrics rendered.
-- [ ] Sign in as ADMIN → land on `/`. Visit `/platform` → bounce back to `/` with a toast.
-- [ ] Visit `/` (or any `/dashboard` route) as SUPER_ADMIN → bounce to `/platform`.
-- [ ] DevTools → `/api/v1/platform/dashboard` request has `Authorization: Bearer …` and **no** `X-Tenant-ID` header.
-- [ ] Hard refresh from `/platform` keeps the user on `/platform` after `bootstrap()` completes.
-- [ ] `npm run lint` clean.
+- [ ] SUPER_ADMIN → `/platform` dashboard renders.
+- [ ] Tenant ADMIN cannot stay on `/platform` (toast + bounce).
+- [ ] Smoke each nav item from [`nav-config.ts`](../components/platform/nav-config.ts).
+- [ ] Org-scoped user/device drill-down links resolve globally.
+- [ ] Crash / telemetry filters hit real query params (observe network tab — no erroneous `X-Tenant-ID`).
+- [ ] Broadcast flow: toggle all-orgs vs explicit org selections (must pick ≥1 org when “all” is off).
+- [ ] `npm run build` succeeds (workspace currently clean aside from unrelated lint **warnings** in non-platform API helpers).
 
-## 9. Out of scope (after Phase 2)
+---
 
-The following are intentionally deferred to follow-up phases. Their service-layer functions are already implemented, so each follow-up phase only adds UI:
+## 8. Environment variables
 
-- Standalone Users page (`/platform/users`) and `/platform/users/:id` (Phase 3).
-- Standalone Devices page (`/platform/devices`) and `/platform/devices/:id` (Phase 3).
-- Analytics chart pages (growth, plan distribution) — Phase 4.
-- Telemetry pages (crashes, performance, device health) — Phase 5.
-- Audit log viewer (`/platform/audit`) reusing `AuditEventRow` — Phase 6.
-- Broadcast notifications UI — Phase 6.
-- The catch-all `[...slug]/page.tsx` is removed once all real pages exist (Phase 6).
-
-## 10. Required environment variables
-
-The platform console uses the same axios client as the tenant hub. No new env vars are needed; `NEXT_PUBLIC_API_URL` (already pointing at `…/api/v1`) is the only requirement.
+No additions beyond tenant hub defaults — `NEXT_PUBLIC_API_URL` (base `…/api/v1`) remains the lone requirement.

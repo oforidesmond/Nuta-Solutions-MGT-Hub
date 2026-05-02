@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -72,45 +73,53 @@ export function OrgActionsMenu({ org, variant = "header" }: OrgActionsMenuProps)
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Manage</DropdownMenuLabel>
-          <DropdownMenuItem render={<Link href={detailsHref} />}>
-            <ExternalLink className="size-4" aria-hidden />
-            View details
-          </DropdownMenuItem>
-          <DropdownMenuItem render={<Link href={`${detailsHref}/activity`} />}>
-            <Activity className="size-4" aria-hidden />
-            Activity log
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel>Plan</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => setOpenModal("plan")}>
-            <Sliders className="size-4" aria-hidden />
-            Manage plan
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel>Status</DropdownMenuLabel>
-          {isSuspended ? (
-            <DropdownMenuItem onClick={() => setOpenModal("unsuspend")}>
-              <CheckCircle className="size-4" aria-hidden />
-              Unsuspend
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Manage</DropdownMenuLabel>
+            <DropdownMenuItem render={<Link href={detailsHref} />}>
+              <ExternalLink className="size-4" aria-hidden />
+              View details
             </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem onClick={() => setOpenModal("suspend")}>
-              <PauseCircle className="size-4" aria-hidden />
-              Suspend
+            <DropdownMenuItem render={<Link href={`${detailsHref}/activity`} />}>
+              <Activity className="size-4" aria-hidden />
+              Activity log
             </DropdownMenuItem>
-          )}
+          </DropdownMenuGroup>
 
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => setOpenModal("delete")}
-          >
-            <Trash2 className="size-4" aria-hidden />
-            Delete organization
-          </DropdownMenuItem>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Plan</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => setOpenModal("plan")}>
+              <Sliders className="size-4" aria-hidden />
+              Manage plan
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Status</DropdownMenuLabel>
+            {isSuspended ? (
+              <DropdownMenuItem onClick={() => setOpenModal("unsuspend")}>
+                <CheckCircle className="size-4" aria-hidden />
+                Unsuspend
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={() => setOpenModal("suspend")}>
+                <PauseCircle className="size-4" aria-hidden />
+                Suspend
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuGroup>
+
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setOpenModal("delete")}
+            >
+              <Trash2 className="size-4" aria-hidden />
+              Delete organization
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 
