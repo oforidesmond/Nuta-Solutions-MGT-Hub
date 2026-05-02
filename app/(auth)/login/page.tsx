@@ -10,10 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/stores/auth-store";
+import { postLoginRedirect } from "@/lib/platform-access";
 
 export default function LoginPage() {
   const router = useRouter();
   const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   const setSession = useAuthStore((s) => s.setSession);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,9 +23,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace("/");
+      router.replace(postLoginRedirect(user));
     }
-  }, [router, status]);
+  }, [router, status, user]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +35,7 @@ export default function LoginPage() {
         await loginRequest(email, password);
       setSession({ accessToken, refreshToken, user, organization });
       toast.success("Signed in");
-      router.replace("/");
+      router.replace(postLoginRedirect(user));
     } catch {
       toast.error("Invalid email or password.");
     } finally {

@@ -72,4 +72,36 @@ export const endpoints = {
   analyticsCrashById: (id: string) => `/analytics/crashes/${id}` as const,
   dashboardSummary: "/dashboard/summary",
   dashboardReliabilitySummary: "/dashboard/reliability-summary",
+  platform: {
+    dashboard: "/platform/dashboard",
+    organizations: "/platform/organizations",
+    organizationById: (id: string) => `/platform/organizations/${id}` as const,
+    organizationPlan: (id: string) =>
+      `/platform/organizations/${id}/plan` as const,
+    organizationSuspend: (id: string) =>
+      `/platform/organizations/${id}/suspend` as const,
+    organizationUnsuspend: (id: string) =>
+      `/platform/organizations/${id}/unsuspend` as const,
+    organizationActivity: (id: string) =>
+      `/platform/organizations/${id}/activity` as const,
+    users: "/platform/users",
+    userById: (id: string) => `/platform/users/${id}` as const,
+    userDeactivate: (id: string) => `/platform/users/${id}/deactivate` as const,
+    userResetPassword: (id: string) =>
+      `/platform/users/${id}/reset-password` as const,
+    devices: "/platform/devices",
+    deviceById: (id: string) => `/platform/devices/${id}` as const,
+    deviceRevoke: (id: string) => `/platform/devices/${id}/revoke` as const,
+    deviceSuspend: (id: string) => `/platform/devices/${id}/suspend` as const,
+    deviceUnsuspend: (id: string) =>
+      `/platform/devices/${id}/unsuspend` as const,
+    analyticsGrowth: "/platform/analytics/growth",
+    analyticsPlans: "/platform/analytics/plans",
+    telemetryCrashes: "/platform/telemetry/crashes",
+    telemetryPerformance: "/platform/telemetry/performance",
+    telemetryDeviceHealth: "/platform/telemetry/device-health",
+    auditEvents: "/platform/audit/events",
+    notifications: "/platform/notifications",
+    notificationsBroadcast: "/platform/notifications/broadcast",
+  },
 } as const;

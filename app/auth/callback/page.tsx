@@ -9,6 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/stores/auth-store";
+import { postLoginRedirect } from "@/lib/platform-access";
 
 function MissingCodeCard() {
   return (
@@ -47,7 +48,7 @@ function CallbackContent() {
           await consumeHandoffRequest(code);
         if (cancelled) return;
         setSession({ accessToken, refreshToken, user, organization });
-        router.replace("/");
+        router.replace(postLoginRedirect(user));
       } catch {
         if (cancelled) return;
         setError("This link is invalid or has expired. Sign in instead.");
