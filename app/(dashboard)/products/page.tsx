@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   ChevronLeft,
@@ -38,6 +39,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ConvertProductModal } from "@/components/inventory/convert-product-modal";
 import { StockTakeRecordModal } from "@/components/inventory/stock-take-record-modal";
 import {
   Dialog,
@@ -59,7 +61,8 @@ import { handleApiError } from "@/lib/api/errors";
 import { formatCurrency } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
-import { canManageStockTakes } from "@/lib/inventory-access";
+import { canManageInventoryConversions, canManageStockTakes } from "@/lib/inventory-access";
+import { fetchProductConversions } from "@/lib/api/product-conversions";
 import { useAuthStore } from "@/stores/auth-store";
 import type { HubCategory, HubProduct, PageMeta } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
@@ -112,6 +115,7 @@ export default function ProductsPage() {
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const role = useAuthStore((s) => s.user?.role);
   const canStockTake = canManageStockTakes(role);
+  const canConvert = canManageInventoryConversions(role);
   const [categories, setCategories] = useState<HubCategory[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -136,6 +140,28 @@ export default function ProductsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [stockTakeProduct, setStockTakeProduct] = useState<HubProduct | null>(null);
+  const [convertProduct, setConvertProduct] = useState<HubProduct | null>(null);
+  const [actionsMenuProductId, setActionsMenuProductId] = useState<string | null>(null);
+
+  const actionsConversionsQuery = useQuery({
+    queryKey: ["product-conversions", actionsMenuProductId],
+    queryFn: () => fetchProductConversions(actionsMenuProductId!),
+    enabled: !!actionsMenuProductId,
+    staleTime: 15_000,
+  });
+
+  function hasActiveConversionForMenuRow(p: HubProduct): boolean {
+    if (actionsMenuProductId !== p.id || !actionsConversionsQuery.data) return false;
+    const d = actionsConversionsQuery.data;
+    return (
+      d.asParent.some((c) => c.isActive) ||
+      d.asChild.some((c) => c.isActive)
+    );
+  }
+
+  function conversionsLoadingForRow(p: HubProduct): boolean {
+    return actionsMenuProductId === p.id && actionsConversionsQuery.isPending;
+  }
 
   const clientMode = useMemo(() => {
     if (stockFilter === "in_stock" || stockFilter === "out") return true;
@@ -520,7 +546,11 @@ export default function ProductsPage() {
                               <TooltipContent>Stock take</TooltipContent>
                             </Tooltip>
                           ) : null}
-                          <DropdownMenu>
+                          <DropdownMenu
+                            onOpenChange={(open) => {
+                              setActionsMenuProductId(open ? p.id : null);
+                            }}
+                          >
                             <DropdownMenuTrigger
                               render={<Button variant="ghost" size="icon-sm" className="min-h-9 min-w-9" aria-label={`Actions for ${p.name}`} />}
                             >
@@ -531,6 +561,12 @@ export default function ProductsPage() {
                               <DropdownMenuItem render={<Link href={`/products/${p.id}/edit`} />}>Edit</DropdownMenuItem>
                               {canStockTake ? (
                                 <DropdownMenuItem onClick={() => setStockTakeProduct(p)}>Stock take</DropdownMenuItem>
+                              ) : null}
+                              {canConvert && hasActiveConversionForMenuRow(p) ? (
+                                <DropdownMenuItem onClick={() => setConvertProduct(p)}>Convert</DropdownMenuItem>
+                              ) : null}
+                              {canConvert && conversionsLoadingForRow(p) ? (
+                                <DropdownMenuItem disabled>Checking conversion…</DropdownMenuItem>
                               ) : null}
                               <DropdownMenuItem onClick={() => onDuplicate(p.id)}>Duplicate</DropdownMenuItem>
                               <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(p.id)}>
@@ -574,12 +610,22 @@ export default function ProductsPage() {
                     <Button type="button" size="sm" variant="outline" render={<Link href={`/products/${p.id}/edit`} />}>
                       Edit
                     </Button>
-                    <DropdownMenu>
+                    <DropdownMenu
+                      onOpenChange={(open) => {
+                        setActionsMenuProductId(open ? p.id : null);
+                      }}
+                    >
                       <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="min-h-9" />}>More</DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
                         <DropdownMenuItem render={<Link href={`/products/${p.id}`} />}>View details</DropdownMenuItem>
                         {canStockTake ? (
                           <DropdownMenuItem onClick={() => setStockTakeProduct(p)}>Stock take</DropdownMenuItem>
+                        ) : null}
+                        {canConvert && hasActiveConversionForMenuRow(p) ? (
+                          <DropdownMenuItem onClick={() => setConvertProduct(p)}>Convert</DropdownMenuItem>
+                        ) : null}
+                        {canConvert && conversionsLoadingForRow(p) ? (
+                          <DropdownMenuItem disabled>Checking conversion…</DropdownMenuItem>
                         ) : null}
                         <DropdownMenuItem onClick={() => onDuplicate(p.id)}>Duplicate</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(p.id)}>
@@ -651,6 +697,15 @@ export default function ProductsPage() {
         }}
         product={stockTakeProduct}
         onRecorded={() => loadProducts()}
+      />
+
+      <ConvertProductModal
+        open={!!convertProduct}
+        onOpenChange={(open) => {
+          if (!open) setConvertProduct(null);
+        }}
+        product={convertProduct}
+        onSuccess={() => loadProducts()}
       />
     </div>
   );

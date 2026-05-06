@@ -1,1194 +1,455 @@
-# NutaPOS Management Hub - Frontend Development Guide
+# NutaPOS Management Hub — Design & integration
 
-## Project Context
+This document describes how the hub works in **this repository**: structure, auth, navigation, data patterns, and a **deep pass on products** (model, APIs, UI, inventory, sales interactions, edge cases).
 
-You are working on the **Management Hub** for NutaPOS in this workspace - a web application where **business owners, admins, and managers** in Ghana manage their retail operations. This is NOT the point-of-sale interface (that's a separate mobile app). This is the **back-office management system** where they:
+---
 
-- Set up and manage their product catalog
-- Monitor inventory levels and expiry dates
-- Track stock movements and adjustments
-- Manage staff and permissions
-- View sales reports and analytics
-- Configure business settings
+## 1. Repository overview
 
-## Target Users
+### 1.1 Two surfaces in one Next.js app
 
-**Primary Users:** Small to medium business owners in Ghana (pharmacies, retail shops, supermarkets, etc.)
+| Surface | Route group | Who |
+| --- | --- | --- |
+| **Tenant Management Hub** | `(dashboard)` — `/`, `/products`, etc. | `ADMIN`, `MANAGER`, `STAFF`, `SALES_AGENT` (organisation-scoped users) |
+| **Platform Admin Console** | `(platform)` — `/platform`, … | `SUPER_ADMIN` with **`organizationId === null`** |
 
-**User Characteristics:**
-- Not tech-savvy - need simple, intuitive interfaces
-- Busy - want to accomplish tasks quickly
-- Mobile-first mindset but using web for management
-- Value clarity over complexity
-- Need visual feedback and confirmation
-- Prefer simple language over technical jargon
+They use different shells and API modules (`lib/api/*` vs `lib/api/platform/*`). `postLoginRedirect` in `lib/platform-access.ts` sends SUPER_ADMIN users to `/platform` and everyone else to `/`.
 
-**Design Philosophy:**
-- **"No-brainer" interactions** - buttons and actions should be self-explanatory
-- **Visual hierarchy** - most important actions should stand out
-- **Forgiveness** - easy to undo mistakes, confirm destructive actions
-- **Progressive disclosure** - show advanced features only when needed
-- **Immediate feedback** - loading states, success messages, error explanations
-- **Mobile-responsive** - many will access from phones/tablets
+### 1.2 Layout & auth gates
 
-## Technology Stack & Existing Code
+- **Root:** `app/layout.tsx` — `QueryProvider`, `AuthProvider`, global toaster.
+- **Tenant:** `app/(dashboard)/layout.tsx` — `DashboardAuthGate` → `DashboardShell`.
+- **Platform:** `app/(platform)/layout.tsx` — `PlatformAuthGate` → `PlatformShell`.
+- **No `middleware.ts`:** route protection is handled in gate components plus API authorization.
 
-**Analyze the existing codebase first:**
-- Review current component patterns and naming conventions
-- Identify existing UI libraries and design system
-- Find reusable components (buttons, modals, tables, forms)
-- Locate existing API service files and patterns
-- Check authentication/authorization implementation
-- Review state management approach (Context, Redux, Zustand, etc.)
+Session lives in **`stores/auth-store.ts`** (Zustand).
 
-**Maintain consistency:**
-- Use the same styling approach (Tailwind, CSS modules, styled-components, etc.)
-- Follow existing folder structure
-- Reuse existing components before creating new ones
-- Match existing error handling patterns
-- Use established routing conventions
+### 1.3 Tenant navigation
 
-## Backend API Endpoints Available
+- **Config:** `components/layout/nav-config.ts` (`navSections`, `mobileBottomNav`).
+- **Sidebar:** `components/layout/app-sidebar.tsx` hides `/inventory/stock-take` unless `canManageStockTakes(role)` (`lib/inventory-access.ts`).
+- **Operations subtree** (`/operations/*`): gated by `app/(dashboard)/operations/layout.tsx` using `canViewStaffReliability` (`lib/operations-access.ts`).
 
-### Products Module (`/products`)
+### 1.4 Data layer conventions
 
-**List & Search**
+- **HTTP:** authenticated client `lib/api/client.ts`, paths in `lib/api/endpoints.ts`.
+- **Server state:** TanStack Query v5 (`components/providers/query-provider.tsx`) on many list/dashboard pages.
+- **Types:** `lib/types/domain.ts`, `lib/types/phase2.ts`, etc.
+
+---
+
+# 2. Products — complete reference
+
+This section is exhaustive for **everything the frontend implements** around catalogue products: types, endpoints, screens, helpers, how stock is interpreted, how categories attach, how inventory and sales relate, and what is wired only in API code but not in UI.
+
+---
+
+## 2.1 Domain type: `HubProduct`
+
+Defined in `lib/types/domain.ts`. The API may return **string or number** for numeric fields; the UI usually coerces with `Number(...)`.
+
+| Field | Role |
+| --- | --- |
+| `id` | UUID string — primary key for routes and mutations. |
+| `name` | Display name — **required** in forms. |
+| `sku` | Optional stock-keeping identifier; monospace in tables. |
+| `barcode` | Optional barcode; used heavily for **temporary items** promotion (required there). |
+| `description` | Longer text; optional. |
+| `categoryId` | FK to category when API uses relational style. |
+| `category` | **Polymorphic:** may be **`HubCategory`**, **`string`** (legacy label), or null. Display uses `productCategoryLabel()` (below). |
+| `costPrice` | Unit cost — form requires ≥ 0. |
+| `sellingPrice` | Retail/unit sell price — form requires ≥ cost (validation warns if sell &lt; cost). |
+| `currentStock` | Common Prisma/API name for on-hand qty. |
+| `stockQuantity` | Alternate API name — **both** supported (see §2.5). |
+| `reorderLevel` | When set and &gt; 0, drives “low stock” colouring vs quantity; if unset, heuristic applies (§2.5). |
+| `unit` / `unitOfMeasure` | Unit label (“pcs”, “boxes”…); form writes **both** to the API for compatibility. |
+| `taxable`, `customTaxRate`, `taxRate` | Present on model and on `ProductWriteBody`; **product form does not expose them** — backend defaults apply unless PATCH’d elsewhere. |
+| `isActive` | Soft-active flag; **low stock fallback** and **expiring fallback** filters use `isActive !== false`. |
+| `expirySummary` | Optional human string from API. |
+| `nearestExpiryDate` | ISO date — powers **Expiring soon** page and dashboard fallback aggregation. |
+| `createdAt`, `updatedAt` | Shown on product detail card. |
+| `batches` | Optional **`HubBatch[]`** embedded on `GET /products/:id` (used on detail **Batches** tab). |
+
+**`HubBatch`** (attached to products): `id`, `productId`, `batchNumber`, `quantity`, `remainingQuantity`, `expiryDate`, `manufacturedDate`, `isExpired`, `notes`, optional nested `product` stub (`id`, `name`, `sku`).
+
+---
+
+## 2.2 Write payload: `ProductWriteBody`
+
+`lib/api/products.ts` builds PATCH/POST bodies. All fields optional on PATCH unless business rules say otherwise.
+
+| Field | Typical use |
+| --- | --- |
+| `name` | Required on create (enforced client-side). |
+| `sku`, `barcode`, `description` | Trimmed strings or omitted when empty. |
+| `categoryId` | Omit when unset (“Select category” = no id). |
+| `category` | Supported for backends that accept free-text category (Prisma-style); **form does not use it**. |
+| `costPrice`, `sellingPrice`, `taxRate`, `customTaxRate`, `taxable` | Tax trio unused in UI. |
+| `initialStock`, `stockQuantity`, `currentStock` | Form maps **entered stock** to **`currentStock`** only (`ProductForm`). |
+| `reorderLevel` | Parsed float or omitted. |
+| `unit` + `unitOfMeasure` | Both set from single “Unit of measure” field. |
+| `isActive` | Not toggled on current form — delete flow uses **`DELETE`** instead. |
+
+**Create vs edit stock field**
+
+- **Create:** label “Starting stock quantity”; sending a numeric value sets `currentStock` on POST.
+- **Edit:** label “Current stock quantity”; initial value = `productQuantity(p)` (§2.5); same PATCH uses `currentStock` when changed.
+
+---
+
+## 2.3 Product REST endpoints (tenant API)
+
+Declared in `lib/api/endpoints.ts`, called from `lib/api/products.ts` unless noted.
+
+| Method | Path | Function | UI usage |
+| --- | --- | --- | --- |
+| GET | `/products` | `fetchProductsPaginated` | Product list; unwraps `{ items, meta }` via list helper |
+| GET | `/products/:id` | `fetchProduct` | Detail page, edit form preload |
+| POST | `/products` | `createProduct` | New product |
+| PATCH | `/products/:id` | `updateProduct` | Edit product |
+| DELETE | `/products/:id` | `deleteProduct` | Detail delete, list delete, **temporary item “ignore”** |
+| POST | `/products/:id/duplicate` | `duplicateProduct` | Detail + list row |
+| PATCH | `/products/:id/pricing` | `updateProductPricing` | **`updateProductPricing` only — no page calls it today** |
+| GET | `/products/low-stock` | `fetchLowStockProducts` | Low stock alerts page (**with 404 fallback** — §2.12) |
+| GET | `/products/expiring-soon` | `fetchExpiringSoonProducts` | Expiring page (**with 404 fallback** — §2.12) |
+| GET | `/products/:id/stock-history` | `fetchStockHistory` | Detail tab **Stock history** — array / `.data` / `.history` / `.adjustments` tolerant unwrap |
+| GET | `/products/:id/inventory-events` | `fetchInventoryEvents` | **InventoryEventHistorySheet** on detail |
+| GET | `/products/temporary` | `fetchTemporaryItems` | Temporary items page (+ hook `useTemporaryItems`) |
+| POST | `/products/from-temporary/:tempItemId` | `promoteFromTemporary` | Promote modal — **`snake_case` body keys** (`cost_price`, `category_id`, `stock_quantity`, `barcode`, `selling_price`, `name`) |
+| *(high limit helper)* | `GET /products?page=1&limit=500` | `fetchProducts` | Dashboard fallback aggregation, category dropdown source for large lists |
+
+List query params for paginated catalogue: **`page`, `limit`, `search`, `categoryId`, `lowStock`** (boolean), **`sortBy`** ∈ `name` \| `createdAt` \| `stockQuantity` \| `sellingPrice`, **`sortOrder`** `asc`|`desc`.
+
+---
+
+## 2.4 Categories and products
+
+### Data model
+
+- **`HubCategory`:** `id`, `name`, optional `description`, optional **`productCount`** (shown in product list category `<select>` when present).
+
+### APIs (`lib/api/categories.ts`)
+
+- `GET /categories` — product form + product list filters + temporary promote dialog + categories admin page.
+- `GET /categories/:id`, `POST /categories`, `PATCH /categories/:id`, `DELETE /categories/:id` — categories CRUD on `/categories` page only.
+- `GET /categories/:id/products` — implemented as **`fetchCategoryProducts`** — **nothing in the frontend imports this** today; filtering by category on `/products` uses **`categoryId`** on **`GET /products`** instead.
+
+### Display helper
+
+```ts
+// lib/product-helpers.ts — verbatim behaviour
+productCategoryLabel(p): string
 ```
-GET /products
-Query params:
-  - page: number (default: 1)
-  - limit: number (default: 20)
-  - search: string (searches name, SKU, barcode)
-  - categoryId: string (UUID)
-  - lowStock: boolean (show only low stock items)
-  - sortBy: string (name, createdAt, stockQuantity, sellingPrice)
-  - sortOrder: 'asc' | 'desc'
 
-Response: {
-  data: Product[],
-  meta: { page, limit, total, totalPages }
+Returns category **name** if `category` is an object; the string itself if legacy string; **`"—"`** if missing.
+
+### Form wiring
+
+Product form **`categoryId`** select: plain `<select>` with “Select category”; optional (empty allowed). Hydration from `fetchProduct`:
+
+- Prefer `categoryId`; else nested `category.id` when `category` is object.
+
+---
+
+## 2.5 Quantity calculation and “running low” rules
+
+Central logic: **`lib/stock-status.ts`**.
+
+### Canonical quantity (`productQuantity`)
+
+```text
+raw = stockQuantity ?? currentStock ?? 0
+parse string to float → if finite, use it; else 0
+```
+
+So whichever field the API prefers wins; **`stockQuantity` takes precedence** when both exist.
+
+### Reorder parsing (`productReorderLevel`)
+
+Null/empty → **null**. Otherwise parse float; valid only if **finite and &gt; 0**.
+
+### Status tone (`getStockStatus(quantity, reorderLevel)`)
+
+Returns **`ok` \| `low` \| `out`**:
+
+1. Quantity **≤ 0** or non-finite → **`out`**.
+2. Else threshold =
+   - if `reorderLevel` valid → `reorderLevel`
+   - else **`DEFAULT_LOW_STOCK_MAX`** (= **5**) — heuristic when API omits reorder.
+3. If `quantity <= threshold` → **`low`**; else **`ok`**.
+
+Badge colours tie to tone on **`/products`**, grids, rows, detail card.
+
+---
+
+## 2.6 Product UI routes and responsibilities
+
+| Path | Implementation | Behaviour |
+| --- | --- | --- |
+| `/products` | `app/(dashboard)/products/page.tsx` | Main catalogue |
+| `/products/new` | `.../products/new/page.tsx` | Renders **`ProductForm` `mode="create"`** |
+| `/products/[id]` | `.../products/[id]/page.tsx` | Detail: summary, batches table, stock history, placeholder sales tab |
+| `/products/[id]/edit` | `.../products/[id]/edit/page.tsx` | **`ProductForm` `mode="edit"`** |
+| `/products/expiring` | `.../products/expiring/page.tsx` | Expiring-soon workflow |
+| `/inventory/alerts` | Nav label “Low stock” | Uses product low-stock endpoints + fallback |
+| `/inventory/temporary-items` | Temporary barcodes aggregation | Lifecycle **before** full product |
+
+**`ProductForm`** — `components/products/product-form.tsx`  
+Sections: Basic info (name *, sku, barcode, category, description), Pricing (cost *, sell * + margin hint), Inventory (starting/current stock, reorder, unit), optional **Batch & expiry on create only** (`trackBatch` → after save calls **`createBatch`** — §2.8).
+
+---
+
+## 2.7 Product list (`/products`) — behaviour details
+
+### Data loading
+
+1. Loads **categories** once (`fetchCategories`) for filter `<select>`; failures → empty categories.
+2. Debounced search (300 ms).
+
+### Pagination and “client mode”
+
+If user picks **stock filter** `In stock` or `Out`, or fills **price min/max**, the UI switches **`clientMode`**: it fetches **up to 500** products with server params for search/category/lowStock/sort, then applies **filters in the browser**:
+
+- Price min/max filters on `Number(sellingPrice)`.
+- Stock filter uses **`getStockStatus` + `productQuantity`**.
+
+Otherwise it passes **`page`, `limit`** straight to **`fetchProductsPaginated`**.
+
+When `clientMode` is on, UI shows yellow helper: *filters use first 500 matches*.
+
+### “Running low” special case
+
+When stock filter is **`Running low`**, **`clientMode` stays false**: the list is **server-driven** pagination with **`GET /products?lowStock=true`**. **`clientMode`** activates only for **`In stock`**, **`Out of stock`**, or **price min/max** filters; those paths fetch **500** rows first but still attach **`lowStock: true`** when the stock dropdown is **`low`** at the same time, then apply client filtering on top.
+
+### Sort options (server-side)
+
+Mapped to **`sortBy` + `sortOrder`**: name asc/desc, sellingPrice asc/desc, stockQuantity asc/desc (note: API sort key **`stockQuantity`** while display uses **`productQuantity`**), createdAt asc/desc.
+
+### Row capabilities
+
+Per row/link: view detail, edit, duplicate (`duplicateProduct`), delete confirm. **`canManageStockTakes(role)`**: extra **clipboard** shortcut + **`StockTakeRecordModal`** preset with that `HubProduct` (§2.11).
+
+### Intentionally weak / stubbed UX
+
+**“Export to Excel”** — button fires **`toast.message("Export to Excel will be available soon.")`** only; **no export**.
+
+---
+
+## 2.8 Batches tied to products
+
+### Creation from product wizard
+
+After **`createProduct`** succeeds, if user enabled **track batches**, form posts **`POST /batches`** via **`createBatch`** with payload:
+
+```ts
+{
+  productId: saved.id,
+  batchNumber: trimmed,
+  quantity: parsed float from batch qty,
+  expiryDate: ISO from `<input type="date">`,
+  costPriceAtPurchase: costPrice from pricing card,
 }
 ```
 
-**CRUD Operations**
-```
-POST   /products                    - Create product
-GET    /products/:id                - Get product details (includes batches, stock history)
-PATCH  /products/:id                - Update product
-DELETE /products/:id                - Soft delete (Admin/Manager only)
-```
-
-**Specialized Endpoints**
-```
-PATCH  /products/:id/pricing        - Update pricing only
-POST   /products/:id/duplicate      - Duplicate product
-GET    /products/low-stock          - Get low stock alerts
-GET    /products/:id/stock-history  - Get stock adjustment history
-GET    /products/expiring-soon      - Get products with expiring batches
-```
-
-### Categories Module (`/categories`)
-
-```
-POST   /categories                  - Create category
-GET    /categories                  - List all (includes product count)
-GET    /categories/:id              - Get single category
-GET    /categories/:id/products     - Get products in category
-PATCH  /categories/:id              - Update category name
-DELETE /categories/:id              - Delete (only if no active products)
-```
-
-### Batches Module (`/batches`)
-
-```
-POST   /batches                     - Create batch
-GET    /batches                     - List batches (filter by date range, product)
-GET    /batches/:id                 - Get batch details
-PATCH  /batches/:id                 - Update batch
-DELETE /batches/:id                 - Remove batch
-GET    /batches/expiring            - Get expiring batches (configurable threshold)
-GET    /batches/expired             - Get expired batches
-POST   /batches/:id/remove-expired  - Mark batch expired & adjust stock
-```
-
-## Upcoming Endpoints (Phase 2-6) - Prepare UI Structure
-
-These endpoints are NOT yet implemented but will be added. **Create placeholders/empty states** for these sections:
-
-### Inventory Management (Phase 2)
-```
-POST   /inventory/adjustments       - Stock adjustments
-GET    /inventory/adjustments       - List adjustments
-POST   /inventory/stock-take        - Physical count
-GET    /inventory/discrepancies     - Stock discrepancies
-GET    /inventory/valuation         - Inventory value
-```
-
-### Staff Management (Phase 3)
-```
-POST   /staff                       - Create staff
-GET    /staff                       - List staff
-PATCH  /staff/:id                   - Update staff
-DELETE /staff/:id                   - Deactivate staff
-POST   /staff/:id/reset-password    - Reset password
-```
-
-### Branch Management (Phase 3)
-```
-POST   /branches                    - Create branch (give option to duplicate current default branch data to new branch)
-GET    /branches                    - List branches
-PATCH  /branches/:id                - Update branch
-POST   /branches/:id/transfer-stock - Transfer stock
-```
-
-### Reports & Analytics (Phase 5)
-```
-GET    /reports/dashboard           - Dashboard metrics
-GET    /reports/sales-trend         - Sales trends
-GET    /reports/profit-loss         - P&L statement
-GET    /reports/inventory-aging     - Inventory aging
-GET    /reports/staff-performance   - Staff performance
-```
-
-### Organization Settings (Phase 4)
-```
-GET    /organization                - Get org details
-PATCH  /organization                - Update org info
-PATCH  /organization/tax-settings   - Tax configuration
-PATCH  /organization/discount-limits - Discount thresholds
-GET    /organization/plan           - Plan details
-```
-
-## Required Pages & Features
-
-### 1. Dashboard (Landing Page after Login)
-
-**Purpose:** Quick overview of business health (initial branch is default; only data from that branch is displayed; If owner creates multiple branches, they can switch branches to view branch specific data)
-
-**Key Metrics to Display:**
-- Total products count
-- Low stock alerts (red badge if > 0)
-- Items expiring soon (orange badge if > 0)
-- Today's sales summary (if available from Phase 5)
-- Quick action buttons
-
-**Layout:**
-```
-┌─────────────────────────────────────────────────┐
-│ Welcome back, [Business Name]! 👋               │
-├─────────────────────────────────────────────────┤
-│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐        │
-│  │ 450  │  │  12  │  │  8   │  │ GHS  │        │
-│  │Items │  │ Low  │  │Expiry│  │45.2K │        │
-│  │      │  │Stock │  │Alerts│  │Value │        │
-│  └──────┘  └──────┘  └──────┘  └──────┘        │
-├─────────────────────────────────────────────────┤
-│ Quick Actions:                                  │
-│ [+ Add Product] [View Inventory] [Reports]      │
-└─────────────────────────────────────────────────┘
-```
-
-**Implementation Notes:**
-- Use card-based layout
-- Red badges for urgent items (low stock, expired)
-- Orange badges for warnings (expiring soon)
-- Large, tappable buttons for quick actions
-- Show loading skeletons while fetching data
-
-### 2. Products Page (`/products`)
-
-**Layout:** Table/Grid view with search and filters
-
-**Features:**
-1. **Search Bar** (prominent at top)
-   - Placeholder: "Search by name, SKU, or barcode..."
-   - Real-time search or debounced (300ms)
-
-2. **Filters** (collapsible on mobile)
-   - Category dropdown
-   - Stock status: All | In Stock | Low Stock | Out of Stock
-   - Price range slider
-   - Clear filters button
-
-3. **Actions Bar**
-   - [+ Add New Product] button (primary, prominent)
-   - [Export to Excel] button (secondary)
-   - View toggle: Table | Grid
-
-4. **Product List/Grid**
-   - **Table View** (desktop): Name, SKU, Category, Stock, Price, Actions
-   - **Grid View** (mobile-friendly): Card with image, name, stock badge, price
-   - Color-coded stock status:
-     - Green: In stock
-     - Orange: Low stock (below reorder level)
-     - Red: Out of stock
-   - Quick actions: Edit, View Details, Duplicate, Delete
-
-5. **Pagination**
-   - Show "Showing 1-20 of 450 products"
-   - Page numbers or Load More button
-   - Items per page selector: 20 | 50 | 100
-
-**Table Columns:**
-| Product | SKU | Category | Stock | Cost | Price | Actions |
-|---------|-----|----------|-------|------|-------|---------|
-| Paracetamol 500mg | MED-001 | Medicine | 45 🟢 | GHS 0.50 | GHS 2.00 | •••
-
-**Stock Status Indicators:**
-- 🟢 45 (In stock)
-- 🟠 5 (Low stock - with tooltip "Below reorder level")
-- 🔴 0 (Out of stock)
-
-**Mobile Optimization:**
-```
-┌─────────────────────────────┐
-│ [Search box]         [Filter]│
-├─────────────────────────────┤
-│ ┌─────────────────────────┐ │
-│ │ Paracetamol 500mg   🟠5│ │
-│ │ MED-001 • Medicine      │ │
-│ │ GHS 2.00                │ │
-│ │ [Edit] [•••]            │ │
-│ └─────────────────────────┘ │
-└─────────────────────────────┘
-```
-
-### 3. Add/Edit Product Form
-
-**Form Structure:** Multi-step or single page with sections
-
-**Section 1: Basic Information**
-```
-Product Name *          [_________________________]
-SKU (optional)          [_________________________] [Auto-generate]
-Barcode                 [_________________________]
-Category *              [Select category ▼] [+ New]
-Description             [_________________________]
-                        [_________________________]
-```
-
-**Section 2: Pricing**
-```
-Cost Price (GHS) *      [___________]
-Selling Price (GHS) *   [___________]
-                        Profit: GHS 1.50 (75%)
-Tax Rate (%)            [___________] (default from org settings)
-```
-
-**Section 3: Inventory**
-```
-Initial Stock Quantity * [___________]
-Reorder Level           [___________]  ⓘ Get alert when stock falls below this
-Unit of Measure         [Select ▼] (e.g., pcs, boxes, bottles)
-```
-
-**Section 4: Batch & Expiry (Optional - expandable)**
-```
-☑ Track batches for this product
-
-Batch Number            [___________]
-Expiry Date            [Pick date 📅]
-Quantity in Batch      [___________]
-[+ Add another batch]
-```
-
-**Form Behavior:**
-- Real-time validation with inline error messages
-- Profit calculation auto-updates as prices change
-- Warning if selling price < cost price
-- Disable submit until required fields valid
-- Show loading spinner on submit
-- Success toast: "Product added successfully!" with [View Product] action
-- Error handling: Clear, actionable messages
-
-**Mobile Layout:** Stack fields vertically, larger input fields
-
-### 4. Product Details Page (`/products/:id`)
-
-**Layout:** Two-column (desktop) / stacked (mobile)
-
-**Left Column: Product Info Card**
-```
-┌─────────────────────────────────────┐
-│ Paracetamol 500mg                   │
-│ SKU: MED-001 | Barcode: 123456789   │
-├─────────────────────────────────────┤
-│ Category: Medicine                  │
-│ Stock: 45 units 🟢                  │
-│ Reorder Level: 20 units             │
-├─────────────────────────────────────┤
-│ Cost Price:    GHS 0.50             │
-│ Selling Price: GHS 2.00             │
-│ Profit Margin: 75%                  │
-│ Tax Rate:      0%                   │
-├─────────────────────────────────────┤
-│ Created: Jan 15, 2025               │
-│ Last Updated: Mar 3, 2025           │
-├─────────────────────────────────────┤
-│ [Edit Product] [Duplicate] [Delete] │
-└─────────────────────────────────────┘
-```
-
-**Right Column: Tabs**
-- **Batches** - List of batches with expiry dates
-- **Stock History** - Stock adjustments timeline
-- **Sales Data** (future) - Sales performance
-
-**Batches Tab:**
-```
-| Batch # | Quantity | Expiry Date | Status  | Actions |
-|---------|----------|-------------|---------|---------|
-| B001    | 20       | Dec 2025    | Active  | Edit    |
-| B002    | 25       | Mar 2026    | Active  | Edit    |
-```
-
-**Stock History Tab:**
-```
-Timeline view:
-Mar 5, 2025 - Stock Adjustment
-+50 units added (SUPPLIER_ADD)
-By: John Mensah
-Note: New delivery from supplier
-
-Mar 1, 2025 - Sale
--3 units sold
-Receipt: #R00123
-```
-
-### 5. Categories Page (`/categories`)
-
-**Simple List View:**
-```
-┌─────────────────────────────────────────┐
-│ Categories                      [+ New] │
-├─────────────────────────────────────────┤
-│ Medicine                    (145 items) │
-│ [Edit] [View Products]                  │
-├─────────────────────────────────────────┤
-│ Toiletries                   (89 items) │
-│ [Edit] [View Products]                  │
-├─────────────────────────────────────────┤
-│ Food & Beverages             (67 items) │
-│ [Edit] [View Products]                  │
-└─────────────────────────────────────────┘
-```
-
-**Add/Edit Category Modal:**
-```
-┌──────────────────────────┐
-│ Add New Category      [×]│
-├──────────────────────────┤
-│ Category Name *          │
-│ [___________________]    │
-│                          │
-│ Description (optional)   │
-│ [___________________]    │
-│                          │
-│     [Cancel]  [Save]     │
-└──────────────────────────┘
-```
-
-**Delete Confirmation:**
-```
-⚠️ Cannot delete category "Medicine"
-This category has 145 active products.
-Move or delete products first.
-
-[OK, Got it]
-```
-
-### 6. Batches & Expiry Management (`/batches`)
-
-**Two Views:**
-1. **All Batches** - Filterable list
-2. **Expiry Alerts** - Focused view of expiring/expired items
-
-**All Batches View:**
-```
-Filters: [Product ▼] [Date Range 📅] [Status ▼]
-
-| Product | Batch # | Quantity | Expiry | Status | Actions |
-|---------|---------|----------|--------|--------|---------|
-| Para... | B001    | 20       | 30 days| ⚠️Alert| View    |
-| Ibup... | B005    | 50       | 6 months|   ✓   | View    |
-```
-
-**Expiry Alerts View (Dashboard Widget + Dedicated Page):**
-```
-┌─────────────────────────────────────────┐
-│ 🔴 Expired (2 items)                    │
-│ Paracetamol B001 - Expired 5 days ago  │
-│ [Remove from Stock]                     │
-│                                         │
-│ Ibuprofen B003 - Expired yesterday      │
-│ [Remove from Stock]                     │
-├─────────────────────────────────────────┤
-│ 🟠 Expiring Soon (5 items)              │
-│ Vitamin C B012 - Expires in 15 days    │
-│ Antibiotic B045 - Expires in 28 days   │
-│ [View All]                              │
-└─────────────────────────────────────────┘
-```
-
-**Batch Details Modal:**
-```
-Batch B001 - Paracetamol 500mg
-Expiry Date: Dec 31, 2025 (30 days)
-Current Quantity: 20 units
-Added: Nov 15, 2025
-
-[Edit Quantity] [Edit Expiry] [Remove Batch]
-```
-
-### 7. Low Stock Alerts (`/inventory/alerts`)
-
-**Alert List:**
-```
-12 products need restocking
-
-| Product | Current | Reorder | Short by | Actions |
-|---------|---------|---------|----------|---------|
-| Para... | 8       | 20      | 12 units | Restock |
-| Ibup... | 5       | 15      | 10 units | Restock |
-```
-
-**Restock Action:**
-Opens form to add stock adjustment or create new batch
-
-### 8. Inventory Adjustments (Phase 2 - Placeholder)
-
-**Empty State:**
-```
-┌─────────────────────────────────────┐
-│                                     │
-│         📦                          │
-│   Stock Adjustments                 │
-│   Coming Soon                       │
-│                                     │
-│   Record stock additions, removals, │
-│   and corrections.                  │
-│                                     │
-└─────────────────────────────────────┘
-```
-
-### 9. Staff Management (Phase 3 - Placeholder)
-
-**Empty State:**
-```
-┌─────────────────────────────────────┐
-│                                     │
-│         👥                          │
-│   Staff Management                  │
-│   Coming Soon                       │
-│                                     │
-│   Manage your team members and      │
-│   their permissions.                │
-│                                     │
-└─────────────────────────────────────┘
-```
-
-### 10. Reports (Phase 5 - Placeholder)
-
-**Empty State with Preview:**
-```
-┌─────────────────────────────────────┐
-│         📊 Reports & Analytics      │
-│         Coming Soon                 │
-│                                     │
-│   You'll be able to view:           │
-│   • Sales trends                    │
-│   • Profit & loss statements        │
-│   • Inventory reports               │
-│   • Staff performance               │
-└─────────────────────────────────────┘
-```
-
-### 11. Settings Page
-
-**Organization Settings:**
-```
-Business Information
-Name:     [______________________]
-Phone:    [______________________]
-Email:    [______________________]
-Location: [______________________]
-
-Tax Settings
-☑ Enable tax
-Default Tax Rate: [____] %
-
-Inventory Settings
-☑ Enable expiry alerts
-Alert me [___] days before expiry
-
-Discount Limits (for staff)
-Max discount %: [____] %
-☑ Alert me when limit exceeded
-
-[Save Changes]
-```
-
-## UI/UX Guidelines for Ghanaian Business Owners
-
-### Language & Terminology
-
-**Use simple, everyday language:**
-- ✅ "Add Product" NOT "Create SKU"
-- ✅ "Items in stock" NOT "Inventory count"
-- ✅ "Running low" NOT "Below reorder threshold"
-- ✅ "Money made" NOT "Gross profit margin"
-- ✅ "Expired items" NOT "Batch expiration events"
-
-**Local Context:**
-- Default currency: GHS (Ghana Cedis)
-- Date format: DD/MM/YYYY (or make configurable)
-- 12-hour time format (8:00 AM) preferred over 24-hour
-
-### Color Coding System
-
-**Status Colors (accessible):**
-- 🟢 Green: Good, In Stock, Active, Success
-- 🟠 Orange: Warning, Low Stock, Expiring Soon
-- 🔴 Red: Critical, Out of Stock, Expired, Error
-- 🔵 Blue: Information, Neutral status
-- ⚪ Gray: Inactive, Disabled
-
-**Contextual Use:**
-- Stock levels: Green (healthy) → Orange (low) → Red (out)
-- Actions: Blue (primary) → Gray (secondary) → Red (destructive)
-- Notifications: Green (success) → Orange (warning) → Red (error)
-
-### Button Design
-
-**Primary Actions (most important):**
-- Large, colorful buttons
-- Examples: "Add Product", "Save", "Confirm"
-- Color: Brand primary (blue/green)
-
-**Secondary Actions:**
-- Outlined or ghost buttons
-- Examples: "Cancel", "Back", "View Details"
-
-**Destructive Actions:**
-- Red, require confirmation
-- Examples: "Delete Product", "Remove Batch"
-- Always show confirmation dialog
-
-**Button Text Guidelines:**
-- Use action verbs: "Add Product" not "Product Addition"
-- Be specific: "Save Product" not just "Save"
-- Show loading state: "Saving..." with spinner
-
-### Form Design
-
-**Input Fields:**
-- Large touch targets (min 44px height)
-- Clear labels above inputs
-- Placeholder text as examples: "e.g., Paracetamol 500mg"
-- Required fields marked with *
-- Inline validation (real-time feedback)
-- Help text below field: "This is your internal product code"
-
-**Validation Messages:**
-- ❌ "Product name is required" NOT "Field cannot be empty"
-- ❌ "Price must be greater than cost" NOT "Invalid input"
-- ❌ "SKU already exists" NOT "Duplicate key violation"
-
-**Error Prevention:**
-- Confirm before deleting: "Delete [Product Name]? This cannot be undone."
-- Warn before expensive actions: "This will affect 45 items"
-- Auto-save drafts where possible
-- Undo option for non-critical actions
-
-### Mobile Responsiveness
-
-**Breakpoints:**
-- Mobile: < 640px (single column, full-width)
-- Tablet: 640px - 1024px (adaptive layout)
-- Desktop: > 1024px (multi-column)
-
-**Mobile-Specific Patterns:**
-- Bottom navigation for primary tabs
-- Floating action button for "Add" actions
-- Swipe gestures for common actions
-- Pull to refresh on lists
-- Sticky headers on scroll
-- Modal forms slide up from bottom
-
-**Touch Targets:**
-- Minimum 44x44px for all interactive elements
-- Adequate spacing between buttons (8px minimum)
-- Large input fields (48px height minimum)
-
-### Loading States & Feedback
-
-**Loading Indicators:**
-- Skeleton screens for initial page load
-- Spinners for actions (save, delete)
-- Progress bars for long operations
-- Optimistic updates where safe
-
-**Success Feedback:**
-- Toast messages (auto-dismiss after 4s)
-- ✅ "Product added successfully!"
-- ✅ "Changes saved"
-- Green checkmark animation
-
-**Error Feedback:**
-- Toast or inline messages
-- ❌ "Could not save product. Please check your internet connection."
-- ❌ "This SKU already exists. Try MED-002 instead."
-- Red error icon
-- Suggest solutions when possible
-
-### Empty States
-
-**Make them helpful and actionable:**
-
-```
-┌─────────────────────────────────────┐
-│           📦                        │
-│     No products yet                 │
-│                                     │
-│  Get started by adding your first   │
-│  product to your inventory.         │
-│                                     │
-│      [+ Add First Product]          │
-│                                     │
-│  or  [Import from Excel]            │
-└─────────────────────────────────────┘
-```
-
-**Zero State with Illustration:**
-- Friendly icon or illustration
-- Clear explanation of what this section does
-- Prominent call-to-action button
-- Optional secondary action (import, tutorial)
-
-### Navigation Structure
-
-**Top-Level Navigation (Sidebar/Header):**
-1. 🏠 Dashboard
-2. 📦 Products
-   - All Products
-   - Categories
-   - Low Stock
-   - Expiring Soon
-3. 📊 Inventory
-   - Stock Adjustments (Phase 2)
-   - Stock Take (Phase 2)
-4. 👥 Staff (Phase 3)
-5. 🏢 Branches (Phase 3)
-6. 📈 Reports (Phase 5)
-7. ⚙️ Settings
-
-**Mobile Bottom Nav (Top 4-5 items):**
-- Home, Products, Inventory, Reports, More
-
-### Data Tables Best Practices
-
-**Desktop Tables:**
-- Sortable columns (click header)
-- Fixed header on scroll
-- Row actions in dropdown (•••)
-- Bulk actions with checkbox selection
-- Zebra striping for readability
-- Hover state on rows
-
-**Mobile Tables:**
-- Convert to card layout
-- Show only essential columns
-- Tap card for full details
-- Or use horizontal scroll with pinned first column
-
-**Pagination:**
-- Show current page clearly
-- "< Previous | Next >" buttons
-- Jump to page input for large datasets
-- "Showing 1-20 of 450 items"
-
-### Accessibility
-
-**Must-haves:**
-- Keyboard navigation (Tab, Enter, Esc)
-- Focus indicators on interactive elements
-- ARIA labels for screen readers
-- Sufficient color contrast (WCAG AA minimum)
-- Text alternatives for icons
-- Error messages announced to screen readers
-
-## Technical Implementation Guide
-
-### API Integration Pattern
-
-**Service Layer Example:**
-```typescript
-// services/products.service.ts
-import axios from 'axios';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/';
-
-export interface Product {
-  id: string;
-  name: string;
-  sku?: string;
-  barcode?: string;
-  categoryId?: string;
-  category?: Category;
-  description?: string;
-  costPrice: number;
-  sellingPrice: number;
-  taxRate: number;
-  stockQuantity: number;
-  reorderLevel?: number;
-  unitOfMeasure?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-export interface ProductQueryParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  categoryId?: string;
-  lowStock?: boolean;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-}
-
-class ProductService {
-  private baseUrl = `${API_BASE}/products`;
-
-  async getProducts(params: ProductQueryParams = {}): Promise<PaginatedResponse<Product>> {
-    const response = await axios.get(this.baseUrl, { params });
-    return response.data;
-  }
-
-  async getProduct(id: string): Promise<Product> {
-    const response = await axios.get(`${this.baseUrl}/${id}`);
-    return response.data;
-  }
-
-  async createProduct(data: CreateProductDto): Promise<Product> {
-    const response = await axios.post(this.baseUrl, data);
-    return response.data;
-  }
-
-  async updateProduct(id: string, data: UpdateProductDto): Promise<Product> {
-    const response = await axios.patch(`${this.baseUrl}/${id}`, data);
-    return response.data;
-  }
-
-  async deleteProduct(id: string): Promise<void> {
-    await axios.delete(`${this.baseUrl}/${id}`);
-  }
-
-  async duplicateProduct(id: string): Promise<Product> {
-    const response = await axios.post(`${this.baseUrl}/${id}/duplicate`);
-    return response.data;
-  }
-
-  async getLowStock(): Promise<Product[]> {
-    const response = await axios.get(`${this.baseUrl}/low-stock`);
-    return response.data;
-  }
-
-  async getExpiringSoon(): Promise<Product[]> {
-    const response = await axios.get(`${this.baseUrl}/expiring-soon`);
-    return response.data;
-  }
-}
-
-export const productService = new ProductService();
-```
-
-### React Component Example (Products List)
-
-```tsx
-// components/products/ProductList.tsx
-'use client';
-
-import { useState, useEffect } from 'react';
-import { productService, Product, ProductQueryParams } from '@/services/products.service';
-import { ProductCard } from './ProductCard';
-import { SearchBar } from '@/components/ui/SearchBar';
-import { Pagination } from '@/components/ui/Pagination';
-import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { toast } from '@/components/ui/Toast';
-
-export function ProductList() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [meta, setMeta] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
-  const [filters, setFilters] = useState<ProductQueryParams>({
-    page: 1,
-    limit: 20,
-    search: '',
-  });
-
-  useEffect(() => {
-    fetchProducts();
-  }, [filters]);
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const response = await productService.getProducts(filters);
-      setProducts(response.data);
-      setMeta(response.meta);
-    } catch (error) {
-      toast.error('Failed to load products. Please try again.');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSearch = (search: string) => {
-    setFilters({ ...filters, search, page: 1 });
-  };
-
-  const handlePageChange = (page: number) => {
-    setFilters({ ...filters, page });
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
-
-    try {
-      await productService.deleteProduct(id);
-      toast.success('Product deleted successfully');
-      fetchProducts(); // Refresh list
-    } catch (error) {
-      toast.error('Failed to delete product');
-    }
-  };
-
-  if (loading) {
-    return <LoadingSkeleton count={6} />;
-  }
-
-  if (products.length === 0 && !filters.search) {
-    return (
-      <EmptyState
-        icon="📦"
-        title="No products yet"
-        description="Get started by adding your first product to your inventory."
-        action={{
-          label: 'Add First Product',
-          onClick: () => router.push('/products/new'),
-        }}
-      />
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <SearchBar
-        placeholder="Search by name, SKU, or barcode..."
-        onSearch={handleSearch}
-        value={filters.search}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            onDelete={handleDelete}
-          />
-        ))}
-      </div>
-
-      <Pagination
-        currentPage={meta.page}
-        totalPages={meta.totalPages}
-        total={meta.total}
-        onPageChange={handlePageChange}
-      />
-    </div>
-  );
-}
-```
-
-### State Management Options
-
-**Choose based on existing codebase:**
-
-1. **React Context** (simple, built-in)
-   - Good for: Auth state, theme, simple app state
-   - Use if already using Context
-
-2. **Zustand** (lightweight)
-   - Good for: Medium complexity, clean API
-   - Minimal boilerplate
-
-3. **Redux Toolkit** (enterprise)
-   - Good for: Complex state, large teams
-   - Use if already in project
-
-4. **TanStack Query (React Query)** (recommended for API state)
-   - Excellent for: Server state management
-   - Built-in caching, refetching, optimistic updates
-   - Reduces boilerplate significantly
-
-**Example with TanStack Query:**
-```tsx
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-function useProducts(filters: ProductQueryParams) {
-  return useQuery({
-    queryKey: ['products', filters],
-    queryFn: () => productService.getProducts(filters),
-  });
-}
-
-function useDeleteProduct() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (id: string) => productService.deleteProduct(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast.success('Product deleted successfully');
-    },
-    onError: () => {
-      toast.error('Failed to delete product');
-    },
-  });
-}
-```
-
-### Error Handling Pattern
-
-```typescript
-// utils/errorHandler.ts
-import { AxiosError } from 'axios';
-
-export function handleApiError(error: unknown): string {
-  if (error instanceof AxiosError) {
-    const message = error.response?.data?.message;
-    
-    // User-friendly messages
-    if (error.response?.status === 404) {
-      return 'Item not found';
-    }
-    if (error.response?.status === 401) {
-      return 'Please log in to continue';
-    }
-    if (error.response?.status === 403) {
-      return 'You don\'t have permission to do this';
-    }
-    if (error.response?.status === 409) {
-      return message || 'This item already exists';
-    }
-    
-    return message || 'Something went wrong. Please try again.';
-  }
-  
-  return 'Connection error. Please check your internet.';
-}
-```
-
-### Form Validation Example
-
-```tsx
-// components/products/ProductForm.tsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-
-const productSchema = z.object({
-  name: z.string().min(1, 'Product name is required'),
-  sku: z.string().optional(),
-  categoryId: z.string().uuid().optional(),
-  costPrice: z.number().min(0, 'Cost price must be 0 or more'),
-  sellingPrice: z.number().min(0, 'Selling price must be 0 or more'),
-  stockQuantity: z.number().min(0, 'Stock cannot be negative'),
-  reorderLevel: z.number().min(0).optional(),
-}).refine((data) => data.sellingPrice >= data.costPrice, {
-  message: 'Selling price should be higher than cost price',
-  path: ['sellingPrice'],
-});
-
-type ProductFormData = z.infer<typeof productSchema>;
-
-export function ProductForm({ onSubmit, initialData }: Props) {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<ProductFormData>({
-    resolver: zodResolver(productSchema),
-    defaultValues: initialData,
-  });
-
-  const costPrice = watch('costPrice');
-  const sellingPrice = watch('sellingPrice');
-  const profit = sellingPrice - costPrice;
-  const profitMargin = costPrice > 0 ? (profit / costPrice) * 100 : 0;
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium mb-2">
-          Product Name *
-        </label>
-        <input
-          {...register('name')}
-          className="w-full px-4 py-3 border rounded-lg"
-          placeholder="e.g., Paracetamol 500mg"
-        />
-        {errors.name && (
-          <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Cost Price (GHS) *
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            {...register('costPrice', { valueAsNumber: true })}
-            className="w-full px-4 py-3 border rounded-lg"
-          />
-          {errors.costPrice && (
-            <p className="text-red-600 text-sm mt-1">{errors.costPrice.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Selling Price (GHS) *
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            {...register('sellingPrice', { valueAsNumber: true })}
-            className="w-full px-4 py-3 border rounded-lg"
-          />
-          {errors.sellingPrice && (
-            <p className="text-red-600 text-sm mt-1">{errors.sellingPrice.message}</p>
-          )}
-        </div>
-      </div>
-
-      {profit > 0 && (
-        <div className="bg-green-50 p-4 rounded-lg">
-          <p className="text-green-800">
-            Profit: GHS {profit.toFixed(2)} ({profitMargin.toFixed(1)}%)
-          </p>
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-      >
-        {isSubmitting ? 'Saving...' : 'Save Product'}
-      </button>
-    </form>
-  );
-}
-```
-
-## Deliverables Expected
-
-### Immediate (Phase 1 - Products, Categories, Batches):
-- [ ] Dashboard page with metrics
-- [ ] Products list page with search/filter
-- [ ] Add/Edit product form
-- [ ] Product details page
-- [ ] Categories management page
-- [ ] Batches & expiry management page
-- [ ] Low stock alerts page
-- [ ] Responsive layouts (mobile, tablet, desktop)
-- [ ] API service layer for all endpoints
-- [ ] Error handling and loading states
-- [ ] Toast notifications
-- [ ] Form validation
-- [ ] Empty states
-
-### Future Phases (Placeholders):
-- [ ] Inventory adjustments page (empty state)
-- [ ] Staff management page (empty state)
-- [ ] Branches page (empty state)
-- [ ] Reports page (empty state)
-- [ ] Navigation structure for future sections
-
-### Cross-cutting:
-- [ ] Authentication pages (login, password reset)
-- [ ] Settings page (organization settings)
-- [ ] User profile management
-- [ ] Navigation sidebar/header
-- [ ] Mobile bottom navigation
-- [ ] Global search
-- [ ] Notifications center
-
-## Testing Checklist
-
-**Functionality:**
-- [ ] Can create, read, update, delete products
-- [ ] Search and filters work correctly
-- [ ] Pagination works
-- [ ] Form validation catches errors
-- [ ] Success/error messages appear
-- [ ] Loading states show during API calls
-
-**Responsiveness:**
-- [ ] Works on mobile (375px width)
-- [ ] Works on tablet (768px width)
-- [ ] Works on desktop (1920px width)
-- [ ] Touch targets are large enough
-- [ ] Text is readable on all screens
-
-**Accessibility:**
-- [ ] Keyboard navigation works
-- [ ] Focus indicators visible
-- [ ] Color contrast passes WCAG AA
-- [ ] Screen reader compatible
-
-**Performance:**
-- [ ] Initial page load < 3s
-- [ ] Navigation feels instant
-- [ ] Large lists don't lag
-- [ ] Images optimized
-
-## Design Resources
-
-**Colors (adjust to match brand):**
-```css
---primary: #2563eb;      /* Blue - primary actions */
---success: #16a34a;      /* Green - in stock, success */
---warning: #ea580c;      /* Orange - low stock, warnings */
---danger: #dc2626;       /* Red - out of stock, errors */
---neutral: #64748b;      /* Gray - secondary text */
-```
-
-## Final Notes
-
-- **Analyze existing codebase first** - maintain consistency
-- **Keep it simple** - business owners value clarity over features
-- **Optimize for slow connections** - many users may have slower internet
-- **Make it forgiving** - easy to undo mistakes, clear error messages
-- **Use local language** - simple English, avoid jargon
-- **Mobile-first** - many will access on phones
-
-Build production-grade interfaces that feel professional yet approachable for non-technical users.
+Failure on batch keeps product saved — **toast error** only for batch step.
+
+### Global batches page `/batches`
+
+`app/(dashboard)/batches/page.tsx` pulls:
+
+- **`fetchBatches({ limit: 100 })`** main table,
+- **`fetchExpiringBatches`**, **`fetchExpiredBatches`**, **`removeExpiredBatch`** for sidebar cards.
+
+Shows **`b.product?.name`** when batch embeds product stub — **navigation** relies on **`Link`/product name**, not mandatory link to SKU.
+
+### Detail page batches tab
+
+Renders **`product.batches`** from **`GET /products/:id`**: displays `remainingQuantity ?? quantity`, `expiryDate`, expired badge vs active.
+
+Batch listing API **`fetchBatches`** supports **`productId`, `from`, `to`** query keys — **`/batches` page does not pass `productId` today** (global list).
+
+---
+
+## 2.9 Product detail (`/products/[id]`)
+
+### Header actions
+
+- **View inventory events** (`InventoryEventHistorySheet`) → `GET .../inventory-events`; rows show `HubInventoryEvent` (`eventType`, `quantityChange`, staff, referenceId/type).
+- **Duplicate**, **Edit**, **Delete** (confirmation: “hidden from new sales”).
+
+### Stock history tab
+
+Loads **`fetchStockHistory(id)`** when tab selected; entries **`HubStockAdjustment`**: displays `quantityChange` colouring, **`type`** (underscores → spaces), `user`, notes.
+
+### Stock history vs inventory events
+
+| Source | Intended story (per UI copy) |
+| --- | --- |
+| **Stock history** | Adjustment-style audit |
+| **Inventory events sheet** | *“Mobile-posted audit trail: sales, returns, adjustments, restocks”* |
+
+Different endpoints and normalizers — engineers should keep both when debugging “missing line” reports.
+
+### Sales tab
+
+Label **“Sales (soon)”** — static muted text · **no `GET`-by-product line items wired**.
+
+---
+
+## 2.10 Low stock alerts (`/inventory/alerts`)
+
+1. Try **`fetchLowStockProducts()`**.
+2. If response non-throwing and **length &gt; 0** → display.
+3. Else on **axios 404** only → **`fetchProducts()`** (≤500 aggregated helper), **`isActive !== false`**, filter where **`getStockStatus` ∈ { low, out }**.
+
+**Shortfall helper** displays gap between **`reorderLevel`** and qty; if reorder null uses **`max(0, 5 − q)`** aligned with heuristic.
+
+---
+
+## 2.11 Expiring soon (`/products/expiring`)
+
+1. Try **`fetchExpiringSoonProducts()`**.
+2. If **length &gt; 0**, use API list.
+3. Else if **404** → **`fetchProducts()`**, active products, **`nearestExpiryDate` within 90 days** (and ≥ today via `daysUntil`).
+
+Badge severity: **`≤30` days destructive**, else secondary.
+
+---
+
+## 2.12 Stock takes (effect on catalog quantity)
+
+Modal **`StockTakeRecordModal`** (`components/inventory/stock-take-record-modal.tsx`):
+
+**POST `/inventory/stock-takes`** with `{ productId, physicalCount, notes?, branchId? }`.
+
+Shows **system stock** via **`productQuantity(product)`**.
+
+**Branches:** `fetchBranchesList` (`GET /branches`) via React Query **`enabled: open`**. **`activeBranches`**, branch `<select>` only if **more than one** branch returned; otherwise hidden. **`/branches` hub page remains a backend placeholder**, but **`/branches` list API** — if absent — yields empty branch list gracefully.
+
+Success toast summarizes **`quantityBefore` → `quantityAfter` (Δ)** from parsed **`StockTakeRow`**.
+
+**History:** `/inventory/stock-take` lists paginated takes with **`product.id`, `product.name`, `product.sku`**, variance and financial aggregates when returned.
+
+Stock take capability on product rows / nav matches **`canManageStockTakes`** — same rule as **`/inventory/stock-take`**.
+
+---
+
+## 2.13 Stock adjustments log (`/inventory/adjustments`)
+
+**`fetchInventoryAdjustmentsPage`** reads **`GET /inventory/adjustments`** with dates + pagination + **`staffId`**.
+
+Rows are **`Record<string, unknown>`**: UI renders **generic key/value formatting** (`cellDisplay`). **Whether each row exposes `productId` / SKU depends entirely on backend shape** — the hub **does not** enforce a typed product slice here.
+
+Interpretation for products: adjustments are organisation-level deltas; correlate with **`HubInventoryEvent` per product** on the sheet when SKU-level investigation is needed.
+
+---
+
+## 2.14 Temporary items (pre-catalog products sold at till)
+
+`/inventory/temporary-items` — **`GET /products/temporary`**.
+
+Normalized fields include **`quantitySold`** (alternate keys `temporarySoldCount`), **`firstSoldAt`**, **`aggregateId`**.
+
+**Promote**
+
+- Opens dialog; requires **category**, **positive cost**, valid sell, **`stock_quantity` integer ≥ 0**, **trimmed barcode & name**.
+- **`promoteFromTemporary`** uses **snake_case** JSON (`cost_price`, `category_id`, `stock_quantity`, `barcode`, `selling_price`, `name`).
+
+**Ignore / dismiss**
+
+- Calls **`deleteProduct(ignoreTarget.id)`** — backend model treats temporary IDs as removable via product delete semantics; UI toast: *removed from queue*.
+
+Deep links from notifications (§2.16) scroll/highlight **`highlightProductId` / `aggregateId`**.
+
+---
+
+## 2.15 Sales hub vs product stock (what happens when sold)
+
+**Point-of-sale** lives on mobile; tenant hub **`/sales`** lists **`HubSale`** rows (pagination, totals, filters) via **`fetchSalesPage`** (`GET /sales`). **`HubSale`** has **aggregate** sale fields (**`totalAmount`, `receiptNumber`, `soldAt`, `createdBy`**...) — **not per-line SKU payload** on that type.
+
+Impact on **`HubProduct.stockQuantity/currentStock`** is **computed server-side** when sales sync; **`HubInventoryEvent` `eventType`** may read **`SALE`** (plus `RETURN`, `ADJUSTMENT`, `RESTOCK`). That is how the hub **surfaces stock impact** tied to catalogue entries without reinventing ledger math in TS.
+
+Sales **export** CSV: separate endpoint blob download — unrelated to SKU detail view.
+
+---
+
+## 2.16 Returns (`/returns`)
+
+**`HubReturnDetail`** exposes **`returnedItems[]`** optionally with **`productId`, `productName`, quantity, unitPrice`** (`lib/types/phase2.ts`). Refunds/restocks are processed server-side; hub UI focuses on reconciliation not batch editing (`returns` routes under `sales/...` for specifics).
+
+---
+
+## 2.17 Dashboard KPIs referencing products (`/`)
+
+`fetchDashboardSummary` (`lib/api/dashboard.ts`):
+
+Primary path **`GET /dashboard/summary`** for **`inventoryCount`, `lowStockCount`, `expiringSoonCount`, totalSales`** etc.
+
+When that returns **404**, client **fallback** runs:
+
+| Metric | Fallback logic |
+| --- | --- |
+| `inventoryCount` | **`fetchProducts()`** then count **`isActive !== false`** |
+| `lowStockCount` | Same list + **`countRestockAttention`** = **low OR out** tones (§2.5) |
+| `expiringSoonCount` | Active products whose **`nearestExpiryDate` &lt; now+90d and &gt; now** |
+| `totalSales` | **`fetchSalesStats`** this_month keys heuristically, else **`fetchSalesPage` limit 500** sum |
+
+Thus product API shape directly affects KPI accuracy in environments without **`/dashboard/summary`**.
+
+---
+
+## 2.18 Notifications bridging to catalogue
+
+`lib/navigation/notification-href.ts` maps **`TEMPORARY_ITEM_SOLD`** notifications to **`/inventory/temporary-items`** with **`productId`** or **`aggregateId`** highlight query params (`metadata.productId`, etc.), unless **`actionUrl`** overrides.
+
+Owners land from header notification menu onto **temporary item review**.
+
+---
+
+## 2.19 API surface present but orphaned in UI (products domain)
+
+These exist in **`lib/api/products.ts`** / **`categories.ts`** but have **zero component imports**:
+
+| Capability | Evidence |
+| --- | --- |
+| `updateProductPricing` | Only defined — no page/mutation imports |
+| `fetchCategoryProducts` | Only exported — catalogue filters use **`GET /products?categoryId=`** instead |
+
+---
+
+## 2.20 Delete semantics (copy vs backend guarantee)
+
+Dialogs state product will be **“removed” / hidden from sales** (`deleteProduct` = HTTP DELETE soft-delete semantics **assumed** — exact DB behaviour is whichever your Nest/layer exposes).
+
+---
+
+## 3. Other tenant areas — single-line map
+
+Brief pointer only:
+
+| Routes | Topic |
+| --- | --- |
+| `/sales`, `/returns` | Receipt-level sales + returns drill-down |
+| `/staff`, `/settings` | People + organisation profile |
+| `/reports`, `/audit` | Reporting & activity |
+| `/branches` | **Placeholder hub page** pending backend **`GET /branches`** parity |
+| `/operations/*` | Device/reliability (role-gated) |
+
+---
+
+## 4. Verification checklist
+
+- Product create + optional first batch persists; redirects to **`/products/:id`**.
+- Edit PATCH updates category + stock via **`currentStock`**.
+- Duplicate returns new **`id`** and navigates/list refreshes.
+- Low stock page works with or without **`/products/low-stock`** route.
+- Expiring page works with or without **`/products/expiring-soon`** route.
+- Stock take adjusts quantity and **`/inventory/stock-take`** reflects new row.
+- Temporary promote + ignore behaviours succeed/fail loudly with **`sonner`** toasts.
+- SUPER_ADMIN tenant cannot linger on **`/`**, tenant roles cannot open **`/platform`** (gates).
+
+---
+
+## 5. Target users & UX principles (tenant hub)
+
+Small/medium merchants; favour **clear language**, destructive confirmations, **`GHS`/org currency formatting**, skeletons/loaders for async, **`MobileBottomNav` + sidebar** responsiveness, **`DEFAULT_LOW_STOCK_MAX`** aligning “we warn early” expectation when reorder omitted.

@@ -1,6 +1,7 @@
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import type { InventoryLogListParams, PaginatedInventoryRows } from "@/lib/types/inventory-logs";
+import type { HubStockAdjustment } from "@/lib/types/domain";
 
 function unwrap(resData: unknown): { rows: unknown[]; meta: Record<string, unknown> } {
   if (Array.isArray(resData)) return { rows: resData, meta: {} };
@@ -24,7 +25,7 @@ function parseMeta(meta: Record<string, unknown>, dataLen: number) {
 
 export async function fetchInventoryAdjustmentsPage(
   params: InventoryLogListParams = {},
-): Promise<PaginatedInventoryRows> {
+): Promise<PaginatedInventoryRows<HubStockAdjustment>> {
   const res = await api.get(endpoints.inventoryAdjustments, {
     params: {
       startDate: params.startDate,
@@ -32,12 +33,15 @@ export async function fetchInventoryAdjustmentsPage(
       page: params.page,
       limit: params.limit,
       staffId: params.staffId,
+      type: params.type || undefined,
     },
   });
   const { rows, meta } = unwrap(res.data);
   const m = parseMeta(meta, rows.length);
   return {
-    data: rows.map((r) => (r && typeof r === "object" ? (r as Record<string, unknown>) : {})),
+    data: rows.map((r) =>
+      r && typeof r === "object" ? (r as HubStockAdjustment) : ({} as HubStockAdjustment),
+    ),
     page: m.page,
     limit: m.limit,
     total: m.total,

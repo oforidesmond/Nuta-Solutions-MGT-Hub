@@ -4,6 +4,8 @@ export interface InventoryLogListParams {
   page?: number;
   limit?: number;
   staffId?: string;
+  /** e.g. BULK_TO_SINGLES — server returns only that adjustment type */
+  type?: string;
 }
 
 export interface PaginatedInventoryRows<T = Record<string, unknown>> {

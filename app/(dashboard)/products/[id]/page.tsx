@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, Copy, Link2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,13 +26,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  deleteProductConversion,
+  fetchProductConversions,
+  updateProductConversion,
+} from "@/lib/api/product-conversions";
 import { deleteProduct, duplicateProduct, fetchProduct, fetchStockHistory } from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
+import { canManageInventoryConversions } from "@/lib/inventory-access";
+import type { ProductConversion } from "@/lib/types/conversions";
 import { formatCurrency } from "@/lib/format";
 import { formatDateDMY, formatTime12h } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
 import { useAuthStore } from "@/stores/auth-store";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { HubProduct, HubStockAdjustment } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 import { InventoryEventHistorySheet } from "@/components/inventory/inventory-event-history-sheet";
@@ -47,8 +57,11 @@ function stockBadgeClass(tone: ReturnType<typeof getStockStatus>) {
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const id = params.id as string;
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const role = useAuthStore((s) => s.user?.role);
+  const canConv = canManageInventoryConversions(role);
 
   const [product, setProduct] = useState<HubProduct | null>(null);
   const [history, setHistory] = useState<HubStockAdjustment[]>([]);
@@ -57,6 +70,18 @@ export default function ProductDetailPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editConv, setEditConv] = useState<ProductConversion | null>(null);
+  const [editRatio, setEditRatio] = useState("");
+  const [savingRatio, setSavingRatio] = useState(false);
+  const [deleteConvId, setDeleteConvId] = useState<string | null>(null);
+  const [deletingConv, setDeletingConv] = useState(false);
+
+  const conversionsQuery = useQuery({
+    queryKey: ["product-conversions", id],
+    queryFn: () => fetchProductConversions(id),
+    enabled: !!id && !!product,
+    staleTime: 30_000,
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -118,6 +143,41 @@ export default function ProductDetailPage() {
     }
   }
 
+  async function onSaveRatio() {
+    if (!editConv) return;
+    const n = parseFloat(editRatio);
+    if (!Number.isFinite(n) || n < 0.001) {
+      toast.error("Enter a valid ratio (minimum 0.001).");
+      return;
+    }
+    setSavingRatio(true);
+    try {
+      await updateProductConversion(editConv.id, { conversionRatio: n });
+      toast.success("Conversion ratio updated");
+      setEditConv(null);
+      void queryClient.invalidateQueries({ queryKey: ["product-conversions", id] });
+    } catch (e) {
+      toast.error(handleApiError(e));
+    } finally {
+      setSavingRatio(false);
+    }
+  }
+
+  async function onConfirmDeleteConv() {
+    if (!deleteConvId) return;
+    setDeletingConv(true);
+    try {
+      await deleteProductConversion(deleteConvId);
+      toast.success("Packaging link removed");
+      setDeleteConvId(null);
+      void queryClient.invalidateQueries({ queryKey: ["product-conversions", id] });
+    } catch (e) {
+      toast.error(handleApiError(e));
+    } finally {
+      setDeletingConv(false);
+    }
+  }
+
   if (loading || !product) {
     return (
       <div className="space-y-4">
@@ -133,6 +193,13 @@ export default function ProductDetailPage() {
   const sell = Number(product.sellingPrice ?? 0);
   const marginPct = cost > 0 && Number.isFinite(sell) ? ((sell - cost) / cost) * 100 : null;
   const batches = product.batches ?? [];
+  const convData = conversionsQuery.data;
+  const convLoading = conversionsQuery.isPending;
+  const asParent = convData?.asParent ?? [];
+  const asChild = convData?.asChild ?? [];
+  const hasAnyConv =
+    asParent.some((c) => c.isActive && c.childProduct) ||
+    asChild.some((c) => c.isActive && c.parentProduct);
 
   return (
     <div className="space-y-6">
@@ -300,6 +367,139 @@ export default function ProductDetailPage() {
         </Card>
       </div>
 
+      <Card className="border-border/40 bg-card/80 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Link2 className="size-4 shrink-0" aria-hidden />
+            Linked products
+          </CardTitle>
+          <CardDescription>Pack and singles linked for inventory conversion.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {convLoading ? (
+            <p className="text-sm text-muted-foreground">Loading links…</p>
+          ) : !hasAnyConv ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              <p>No linked products</p>
+              {canConv ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 min-h-9"
+                  render={<Link href={`/products/${id}/edit#packaging`} />}
+                >
+                  Set up conversion
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {asParent.filter((c) => c.isActive && c.childProduct).length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">This pack breaks down into</p>
+                  {asParent
+                    .filter((c) => c.isActive && c.childProduct)
+                    .map((conv) => (
+                      <div
+                        key={conv.id}
+                        className="flex flex-col gap-3 rounded-lg border border-border/40 bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium">
+                            <Link href={`/products/${conv.childProduct!.id}`} className="text-primary underline-offset-2 hover:underline">
+                              {conv.childProduct!.name}
+                            </Link>
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {conv.childProduct!.sku ? `SKU: ${conv.childProduct!.sku} · ` : null}
+                            1 pack = {conv.conversionRatio} singles
+                          </p>
+                        </div>
+                        {canConv ? (
+                          <div className="flex shrink-0 flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="min-h-9"
+                              onClick={() => {
+                                setEditConv(conv);
+                                setEditRatio(conv.conversionRatio);
+                              }}
+                            >
+                              Edit ratio
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="min-h-9 text-destructive hover:text-destructive"
+                              onClick={() => setDeleteConvId(conv.id)}
+                            >
+                              <Trash2 className="size-4" aria-hidden />
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                </div>
+              ) : null}
+              {asChild.filter((c) => c.isActive && c.parentProduct).length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">This product comes from</p>
+                  {asChild
+                    .filter((c) => c.isActive && c.parentProduct)
+                    .map((conv) => (
+                      <div
+                        key={conv.id}
+                        className="flex flex-col gap-3 rounded-lg border border-border/40 bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium">
+                            <Link href={`/products/${conv.parentProduct!.id}`} className="text-primary underline-offset-2 hover:underline">
+                              {conv.parentProduct!.name}
+                            </Link>
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {conv.parentProduct!.sku ? `SKU: ${conv.parentProduct!.sku} · ` : null}
+                            1 pack = {conv.conversionRatio} singles
+                          </p>
+                        </div>
+                        {canConv ? (
+                          <div className="flex shrink-0 flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="min-h-9"
+                              onClick={() => {
+                                setEditConv(conv);
+                                setEditRatio(conv.conversionRatio);
+                              }}
+                            >
+                              Edit ratio
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="min-h-9 text-destructive hover:text-destructive"
+                              onClick={() => setDeleteConvId(conv.id)}
+                            >
+                              <Trash2 className="size-4" aria-hidden />
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                </div>
+              ) : null}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -312,6 +512,67 @@ export default function ProductDetailPage() {
             </Button>
             <Button type="button" variant="destructive" disabled={deleting} onClick={() => void onDelete()}>
               {deleting ? "Removing…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editConv} onOpenChange={(o) => !o && setEditConv(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit conversion ratio</DialogTitle>
+            <DialogDescription>
+              {product.name}
+              {editConv?.childProduct
+                ? ` → ${editConv.childProduct.name}`
+                : editConv?.parentProduct
+                  ? ` ← ${editConv.parentProduct.name}`
+                  : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="detail-ratio">Singles per pack</Label>
+              <Input
+                id="detail-ratio"
+                className="min-h-11"
+                inputMode="decimal"
+                step={0.001}
+                min={0.001}
+                value={editRatio}
+                onChange={(e) => setEditRatio(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:text-amber-100">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <p>This affects future conversions only, not past stock movements.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditConv(null)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={savingRatio} onClick={() => void onSaveRatio()}>
+              {savingRatio ? "Saving…" : "Update ratio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteConvId} onOpenChange={(o) => !o && setDeleteConvId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove packaging link?</DialogTitle>
+            <DialogDescription>
+              You can set it up again from the product edit screen. Past inventory adjustments stay in the log.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteConvId(null)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" disabled={deletingConv} onClick={() => void onConfirmDeleteConv()}>
+              {deletingConv ? "Removing…" : "Remove link"}
             </Button>
           </DialogFooter>
         </DialogContent>

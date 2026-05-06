@@ -94,6 +94,14 @@ export interface HubBatch {
   product?: Pick<HubProduct, "id" | "name" | "sku"> | null;
 }
 
+/** Nested leg on conversion-related adjustments from GET /inventory/adjustments */
+export interface HubLinkedAdjustmentSummary {
+  id: string;
+  type?: string;
+  quantityChange?: string | number | null;
+  product?: { id: string; name: string; sku: string | null };
+}
+
 export interface HubStockAdjustment {
   id: string;
   type?: string;
@@ -106,6 +114,9 @@ export interface HubStockAdjustment {
   referenceType?: string | null;
   createdAt?: string | null;
   user?: { id: string; firstName?: string | null; lastName?: string | null; email?: string } | null;
+  linkedAdjustmentId?: string | null;
+  linkedAdjustment?: HubLinkedAdjustmentSummary | null;
+  product?: { id: string; name: string; sku?: string | null };
 }
 
 export interface HubSale {
