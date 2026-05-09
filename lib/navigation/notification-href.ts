@@ -41,6 +41,17 @@ export function resolveNotificationHref(n: HubNotification): string | null {
       if (staffId) return `/staff/${String(staffId)}/devices`;
       return null;
     }
+    case "STOCK_VARIANCE_SALE": {
+      // Backend contract: relatedEntityType is `sale` (lowercase) and relatedEntityId
+      // is the sale UUID. metadata holds receiptNumber/varianceLineCount/soldAt for
+      // display only — never a routing fallback.
+      const type = (n.relatedEntityType ?? "").toLowerCase();
+      const id = n.relatedEntityId?.trim();
+      if (type === "sale" && id) {
+        return `/sales/${id}?highlightVariance=1`;
+      }
+      return null;
+    }
     default:
       return null;
   }

@@ -12,6 +12,7 @@ import {
   Database,
   Bug,
   AlertTriangle,
+  PackageX,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { fetchDashboardSummary } from "@/lib/api/dashboard";
+import { fetchSalesWithVariancesPage } from "@/lib/api/sales";
 import { fetchReliabilityHomeSummary, mergeReliabilityForHome } from "@/lib/api/staff-reliability";
 import { formatCurrency, formatDate, toNumericAmount } from "@/lib/format";
 import { formatRelativeUpdated } from "@/lib/format-relative-updated";
@@ -42,6 +44,31 @@ export default function DashboardHomePage() {
     queryKey: ["dashboard", "reliability-summary"],
     queryFn: fetchReliabilityHomeSummary,
     enabled: canReliability,
+    refetchInterval: () => refetchIntervalWhenVisible(POLL_DASHBOARD_MS),
+  });
+
+  const variance7dRange = useMemo(() => {
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(end.getDate() - 6);
+    const toIso = (d: Date) => {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    };
+    return { startDate: toIso(start), endDate: toIso(end) };
+  }, []);
+
+  const varianceQuery = useQuery({
+    queryKey: ["dashboard", "variance-7d", variance7dRange],
+    queryFn: () =>
+      fetchSalesWithVariancesPage({
+        startDate: variance7dRange.startDate,
+        endDate: variance7dRange.endDate,
+        page: 1,
+        limit: 1,
+      }),
     refetchInterval: () => refetchIntervalWhenVisible(POLL_DASHBOARD_MS),
   });
 
@@ -151,6 +178,17 @@ export default function DashboardHomePage() {
             />
           </div>
         )}
+      </section>
+
+      <section aria-label="Stock variance (last 7 days)">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <VarianceLinkCard
+            href="/sales"
+            isLoading={varianceQuery.isPending && !varianceQuery.data}
+            isError={varianceQuery.isError}
+            value={varianceQuery.data?.total}
+          />
+        </div>
       </section>
 
       {canReliability && !summaryQuery.isPending ? (
@@ -336,6 +374,54 @@ function ReliabilityLinkCard({
         </CardHeader>
         <CardContent className="space-y-1">
           <p className="text-2xl font-semibold tracking-tight">{value}</p>
+          <p className="text-xs text-muted-foreground">{hint}</p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function VarianceLinkCard({
+  href,
+  isLoading,
+  isError,
+  value,
+}: {
+  href: string;
+  isLoading: boolean;
+  isError: boolean;
+  value: number | undefined;
+}) {
+  const total = typeof value === "number" ? value : 0;
+  const display = isLoading ? "…" : isError ? "—" : String(total);
+  const hint = isError
+    ? "Variance feed unavailable. Open Sales to retry."
+    : isLoading
+      ? "Loading variance count…"
+      : total > 0
+        ? "Sales with at least one sell-anyway line"
+        : "No variance sales in the last 7 days";
+  return (
+    <Link href={href} className="block">
+      <Card className="relative h-full border-border/40 bg-card/80 shadow-sm backdrop-blur-sm transition-shadow duration-200 hover:shadow-md">
+        {!isLoading && !isError && total > 0 ? (
+          <Badge
+            className="absolute right-3 top-3 min-w-7 justify-center border-amber-600/50 bg-amber-500 px-1.5 text-xs font-semibold tabular-nums text-amber-950 dark:bg-amber-500 dark:text-amber-950"
+            variant="secondary"
+          >
+            {total > 99 ? "99+" : total}
+          </Badge>
+        ) : null}
+        <CardHeader className="relative pb-2">
+          <div className="flex items-center gap-2">
+            <PackageX className="size-4 text-muted-foreground" aria-hidden />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Variance sales (7d)
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          <p className="text-2xl font-semibold tracking-tight">{display}</p>
           <p className="text-xs text-muted-foreground">{hint}</p>
         </CardContent>
       </Card>

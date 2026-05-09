@@ -1,4 +1,4 @@
-import type { HubSale } from "@/lib/types/domain";
+import type { HubSale, VarianceReason } from "@/lib/types/domain";
 
 export interface SalesListParams {
   startDate?: string;
@@ -10,6 +10,16 @@ export interface SalesListParams {
   staffId?: string;
   branchId?: string;
   paymentMethod?: string;
+}
+
+export interface SalesVarianceListParams {
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+  branchId?: string;
+  productId?: string;
+  varianceReason?: VarianceReason;
 }
 
 export type SalesExportParams = Pick<

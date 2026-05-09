@@ -15,6 +15,14 @@ function unwrapNotifications(raw: unknown): HubNotification[] {
 function normalizeNotification(row: unknown): HubNotification {
   const r = (row && typeof row === "object" ? row : {}) as Record<string, unknown>;
   const meta = r.metadata;
+  const relatedEntityType =
+    (r.relatedEntityType as string | undefined) ??
+    (r.related_entity_type as string | undefined) ??
+    null;
+  const relatedEntityId =
+    (r.relatedEntityId as string | undefined) ??
+    (r.related_entity_id as string | undefined) ??
+    null;
   return {
     id: String(r.id ?? ""),
     type: String(r.type ?? "UNKNOWN"),
@@ -29,6 +37,8 @@ function normalizeNotification(row: unknown): HubNotification {
       (r.actionUrl as string | undefined) ??
       (r.action_url as string | undefined) ??
       null,
+    relatedEntityType,
+    relatedEntityId,
     metadata: meta && typeof meta === "object" ? (meta as Record<string, unknown>) : null,
   };
 }

@@ -119,9 +119,40 @@ export interface HubStockAdjustment {
   product?: { id: string; name: string; sku?: string | null };
 }
 
+/** Stock variance reasons — exact API enum literals. Mirror mobile copy via VARIANCE_REASON_LABELS. */
+export type VarianceReason =
+  | "PHYSICAL_STOCK_PRESENT"
+  | "PACK_BROKEN"
+  | "STOCK_NOT_RECEIVED"
+  | "EMERGENCY_SALE"
+  | "SYSTEM_ERROR"
+  | "OTHER";
+
+/** A single sale line as serialized by the API (financials remain strings). */
+export interface HubSaleLine {
+  id?: string;
+  productId?: string | null;
+  productName?: string | null;
+  productSku?: string | null;
+  quantity?: string | number | null;
+  unitPrice?: string | number | null;
+  lineTotal?: string | number | null;
+  /** True only for lines that sold short vs system stock at sync time. */
+  hasStockVariance?: boolean;
+  varianceReason?: VarianceReason | null;
+  varianceNote?: string | null;
+  varianceApprovedById?: string | null;
+  varianceApprovedAt?: string | null;
+  /** Human-readable staffProfile.staffId (e.g. STF-001) when resolvable. */
+  varianceApprovedStaffId?: string | null;
+}
+
 export interface HubSale {
   id: string;
   totalAmount: string | number;
+  /** Pre-tax/discount subtotal when API emits it. */
+  subtotal?: string | number | null;
+  paymentMethod?: string | null;
   soldAt?: string | null;
   /** When the sale was persisted/synced server-side — required for delayed-sync UI. */
   syncedAt?: string | null;
@@ -130,6 +161,14 @@ export interface HubSale {
   createdById?: string;
   /** From `receipt_number` / `receiptNumber` on the API after normalization. */
   receiptNumber?: string;
+  /** Mobile-issued receipt alias (`receipt_number_mobile`). */
+  receiptNumberMobile?: string | null;
+  /** Server-flagged delayed sync passthrough (when API includes it on serializeSale). */
+  isDelayedSync?: boolean;
+  /** True if any line on the sale was recorded as a stock variance. */
+  hasStockVariance?: boolean;
+  /** Present on `GET /sales`, `GET /sales/with-variances`, and `GET /sales/:id`. */
+  items?: HubSaleLine[];
 }
 
 /** Optional Phase 3 block when backend extends `GET /dashboard/summary`. */

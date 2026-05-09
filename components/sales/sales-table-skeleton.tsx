@@ -9,6 +9,7 @@ export function SalesTableSkeleton({ rows = 8 }: { rows?: number }) {
       <TableHeader>
         <TableRow>
           <TableHead className="w-10" />
+          <TableHead className="w-10" />
           <TableHead>Receipt</TableHead>
           <TableHead className="text-right">Total</TableHead>
           <TableHead>Date</TableHead>
@@ -18,6 +19,9 @@ export function SalesTableSkeleton({ rows = 8 }: { rows?: number }) {
       <TableBody>
         {Array.from({ length: rows }).map((_, i) => (
           <TableRow key={i}>
+            <TableCell>
+              <Skeleton className="size-6 rounded-md" />
+            </TableCell>
             <TableCell>
               <Skeleton className="size-6 rounded-md" />
             </TableCell>

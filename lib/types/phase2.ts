@@ -4,6 +4,7 @@ export type HubNotificationType =
   | "TEMPORARY_ITEM_SOLD"
   | "RETURN_PROCESSED"
   | "STAFF_TIME_WARNING"
+  | "STOCK_VARIANCE_SALE"
   | string;
 
 export interface HubNotification {
@@ -14,6 +15,10 @@ export interface HubNotification {
   read?: boolean;
   createdAt?: string | null;
   actionUrl?: string | null;
+  /** Lowercase entity slug from API (e.g. `sale`). */
+  relatedEntityType?: string | null;
+  /** UUID of the related entity (e.g. sale id for STOCK_VARIANCE_SALE). */
+  relatedEntityId?: string | null;
   metadata?: Record<string, unknown> | null;
 }
 

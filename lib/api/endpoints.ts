@@ -58,6 +58,8 @@ export const endpoints = {
   sales: "/sales",
   salesStats: "/sales/stats",
   salesExport: "/sales/export",
+  salesWithVariances: "/sales/with-variances",
+  saleById: (id: string) => `/sales/${id}` as const,
   saleReturn: (saleId: string, returnId: string) =>
     `/sales/${saleId}/return/${returnId}` as const,
   returns: "/returns",

@@ -101,6 +101,19 @@ export function NotificationsMenu() {
                           }
                         }
                         if (!href) {
+                          if (n.type === "STOCK_VARIANCE_SALE") {
+                            const receipt =
+                              typeof n.metadata?.receiptNumber === "string"
+                                ? n.metadata.receiptNumber
+                                : null;
+                            toast.info(
+                              receipt
+                                ? `Open Sales to find receipt ${receipt}.`
+                                : "Open Sales to find this variance receipt.",
+                            );
+                            router.push("/sales");
+                            return;
+                          }
                           toast.info("This notification has no link yet.");
                           return;
                         }
