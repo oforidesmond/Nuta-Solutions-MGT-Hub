@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { bareApi } from "@/lib/api/bare-client";
 import { endpoints } from "@/lib/api/endpoints";
 import { normalizeTokensPayload } from "@/lib/api/normalize";
-import { parseMePayload } from "@/lib/api/me";
+import { parseMePayload, unwrapOrganizationPayload } from "@/lib/api/me";
 import { getRefreshToken, setRefreshToken } from "@/lib/auth/token-storage";
 import type { HubOrganization, HubUser } from "@/lib/types/domain";
 
@@ -90,14 +90,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const user = parsed.user;
       let organization = parsed.organization;
       const oid = user.organizationId ?? organization?.id;
-      if (oid && !organization) {
+      if (oid) {
         try {
           const orgRes = await bareApi.get(endpoints.organizations.me, {
             headers: { Authorization: `Bearer ${tokens.accessToken}` },
           });
-          organization = orgRes.data as HubOrganization;
+          organization = unwrapOrganizationPayload(orgRes.data);
         } catch {
-          organization = null;
+          /* keep partial org from /users/me if present */
         }
       }
 

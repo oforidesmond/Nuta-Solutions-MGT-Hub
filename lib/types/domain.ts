@@ -145,12 +145,18 @@ export interface DashboardReliabilitySummary {
 }
 
 export interface DashboardSummary {
+  /** All-time count of recorded sales/transactions — not monetary. */
   totalSales: number;
+  /** All-time revenue (decimals); never substitute `totalSales` for currency KPIs. */
+  totalRevenue: number;
+  /** Active catalogue SKUs; prefer over `inventoryCount` when backend provides it (`inventoryCount` may be units on hand). */
+  totalActiveProducts?: number;
   inventoryCount: number;
   lowStockCount: number;
   expiringSoonCount: number;
-  /** Optional when API grows */
   todaySales?: number;
+  todayRevenue?: number;
+  /** Optional when API grows */
   inventoryValue?: number;
   /** Phase 3 — may be nested under `reliability` or flattened with snake_case from API */
   reliability?: DashboardReliabilitySummary | null;

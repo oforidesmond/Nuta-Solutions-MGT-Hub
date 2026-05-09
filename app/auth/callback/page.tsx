@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { consumeHandoffRequest } from "@/lib/api/auth-requests";
+import { fetchOrganizationMe } from "@/lib/api/users";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,15 @@ function CallbackContent() {
           await consumeHandoffRequest(code);
         if (cancelled) return;
         setSession({ accessToken, refreshToken, user, organization });
+        const oid = user.organizationId ?? organization?.id;
+        if (oid) {
+          try {
+            const full = await fetchOrganizationMe();
+            useAuthStore.getState().setOrganization(full);
+          } catch {
+            /* keep org from handoff payload */
+          }
+        }
         router.replace(postLoginRedirect(user));
       } catch {
         if (cancelled) return;

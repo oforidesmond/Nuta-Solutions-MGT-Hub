@@ -1,7 +1,7 @@
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
-import { parseMePayload, type MeResponse } from "@/lib/api/me";
-import type { HubOrganization, HubUser } from "@/lib/types/domain";
+import { parseMePayload, unwrapOrganizationPayload, type MeResponse } from "@/lib/api/me";
+import type { HubUser } from "@/lib/types/domain";
 
 export type { MeResponse };
 
@@ -12,7 +12,7 @@ export async function fetchMe(): Promise<MeResponse> {
 
 export async function fetchOrganizationMe() {
   const res = await api.get(endpoints.organizations.me);
-  return res.data as HubOrganization;
+  return unwrapOrganizationPayload(res.data);
 }
 
 export interface CreateStaffInput {

@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { fetchDashboardSummary } from "@/lib/api/dashboard";
 import { fetchReliabilityHomeSummary, mergeReliabilityForHome } from "@/lib/api/staff-reliability";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, toNumericAmount } from "@/lib/format";
 import { formatRelativeUpdated } from "@/lib/format-relative-updated";
 import { canViewStaffReliability } from "@/lib/operations-access";
 import { POLL_DASHBOARD_MS, refetchIntervalWhenVisible } from "@/lib/query/poll-intervals";
@@ -52,6 +52,26 @@ export default function DashboardHomePage() {
     "there";
 
   const summary = summaryQuery.data ?? null;
+
+  const totalRevenueNumber = summary ? toNumericAmount(summary.totalRevenue) : 0;
+  const activeCatalogCount =
+    summary != null
+      ? (summary.totalActiveProducts ?? summary.inventoryCount ?? 0)
+      : 0;
+
+  const revenueHint = useMemo(() => {
+    if (!summary) return "";
+    const parts: string[] = [];
+    if (summary.todayRevenue != null || summary.todaySales != null) {
+      const tr =
+        summary.todayRevenue != null ? toNumericAmount(summary.todayRevenue) : null;
+      const ts = summary.todaySales != null ? summary.todaySales : null;
+      if (tr != null) parts.push(`Today: ${formatCurrency(tr, organization?.currency)}`);
+      if (ts != null) parts.push(`${ts} sales today`);
+    }
+    parts.push(`${summary.totalSales ?? 0} sales all-time`);
+    return parts.join(" · ");
+  }, [summary, organization?.currency]);
 
   const reliabilityMerged =
     canReliability && summary ? mergeReliabilityForHome(reliabilityQuery.data ?? null, summary) : null;
@@ -106,14 +126,14 @@ export default function DashboardHomePage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
-              title="Money from sales"
-              value={formatCurrency(summary?.totalSales ?? 0, organization?.currency)}
-              hint="All recorded sales added together"
+              title="Total revenue"
+              value={formatCurrency(totalRevenueNumber, organization?.currency)}
+              hint={revenueHint || "All-time revenue from recorded sales"}
             />
             <MetricCard
-              title="Items you sell"
-              value={String(summary?.inventoryCount ?? 0)}
-              hint="Active products in your catalog"
+              title="Active products"
+              value={String(activeCatalogCount)}
+              hint="Items in your active catalogue"
             />
             <MetricCard
               title="Running low or out"

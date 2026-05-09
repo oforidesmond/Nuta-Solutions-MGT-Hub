@@ -17,6 +17,7 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  /** Same tenant as `/users/me` + JWT org scope — must match Platform org routes (no default-org fallback). */
   const tenantId = auth.organization?.id ?? auth.user?.organizationId;
   if (tenantId && !config.headers["X-Tenant-ID"]) {
     config.headers["X-Tenant-ID"] = tenantId;

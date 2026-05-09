@@ -2,6 +2,7 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import type { HubOrganization } from "@/lib/types/domain";
 import axios from "axios";
+import { unwrapOrganizationPayload } from "@/lib/api/me";
 
 export type OrganizationPatch = Partial<
   Pick<
@@ -23,7 +24,7 @@ export type OrganizationPatch = Partial<
 export async function patchOrganization(body: OrganizationPatch) {
   try {
     const res = await api.patch(endpoints.organizations.me, body);
-    return res.data as HubOrganization;
+    return unwrapOrganizationPayload(res.data);
   } catch (e) {
     if (
       axios.isAxiosError(e) &&
@@ -43,7 +44,7 @@ export async function patchOrganization(body: OrganizationPatch) {
         businessLocation: body.businessLocation,
       };
       const res = await api.patch(endpoints.organizations.me, fallback);
-      return res.data as HubOrganization;
+      return unwrapOrganizationPayload(res.data);
     }
     throw e;
   }

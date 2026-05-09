@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +10,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { patchOrganization } from "@/lib/api/organization-update";
 import { handleApiError } from "@/lib/api/errors";
+import { fetchOrganizationMe } from "@/lib/api/users";
 import { useAuthStore } from "@/stores/auth-store";
 
 export default function SettingsPage() {
   const organization = useAuthStore((s) => s.organization);
   const setOrganization = useAuthStore((s) => s.setOrganization);
+
+  const orgQuery = useQuery({
+    queryKey: ["organization", "me"],
+    queryFn: fetchOrganizationMe,
+    enabled: !!organization?.id,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (orgQuery.data) setOrganization(orgQuery.data);
+  }, [orgQuery.data, setOrganization]);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -101,6 +114,12 @@ export default function SettingsPage() {
           <span className="font-medium text-foreground">{organization.name}</span>.
         </p>
       </div>
+      {orgQuery.isError ? (
+        <p className="text-sm text-amber-800 dark:text-amber-200">
+          Could not refresh organization details ({handleApiError(orgQuery.error)}). Showing last known values —
+          retry or reload the page.
+        </p>
+      ) : null}
       <form onSubmit={onSave} className="space-y-6">
         <Card className="border-border/40 bg-card/80 shadow-sm backdrop-blur-sm">
           <CardHeader>

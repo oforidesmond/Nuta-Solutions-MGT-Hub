@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { loginRequest } from "@/lib/api/auth-requests";
+import { fetchOrganizationMe } from "@/lib/api/users";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,15 @@ export default function LoginPage() {
       const { accessToken, refreshToken, user, organization } =
         await loginRequest(email, password);
       setSession({ accessToken, refreshToken, user, organization });
+      const oid = user.organizationId ?? organization?.id;
+      if (oid) {
+        try {
+          const full = await fetchOrganizationMe();
+          useAuthStore.getState().setOrganization(full);
+        } catch {
+          /* keep org from login payload */
+        }
+      }
       toast.success("Signed in");
       router.replace(postLoginRedirect(user));
     } catch {

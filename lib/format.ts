@@ -1,3 +1,13 @@
+/** Single parse step before `formatCurrency` — avoids double-formatting decimals. */
+export function toNumericAmount(value: string | number | null | undefined): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const n = parseFloat(value.trim());
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
 export function formatCurrency(
   amount: number,
   currency: string = "GHS",
