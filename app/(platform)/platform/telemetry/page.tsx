@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Cpu, FlaskConical, HeartPulse } from "lucide-react";
+import { Activity, Cpu, FlaskConical, HeartPulse, RefreshCwOff } from "lucide-react";
 import { fetchDeviceHealth, fetchCrashReports } from "@/lib/api/platform/telemetry";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -66,6 +66,12 @@ export default function TelemetryHubPage() {
           icon={HeartPulse}
           title="Device health"
           description="SQLite storage warnings, backups, DB errors."
+        />
+        <NavCard
+          href="/platform/telemetry/sync-failures"
+          icon={RefreshCwOff}
+          title="Sync failures"
+          description="Diagnose failed staff sale uploads and resolve DLQ items."
         />
       </div>
     </div>

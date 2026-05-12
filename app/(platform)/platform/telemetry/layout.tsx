@@ -9,6 +9,7 @@ const SUB_NAV = [
   { href: "/platform/telemetry/crashes", label: "Crash reports" },
   { href: "/platform/telemetry/performance", label: "Performance" },
   { href: "/platform/telemetry/device-health", label: "Device health" },
+  { href: "/platform/telemetry/sync-failures", label: "Sync failures" },
 ];
 
 export default function TelemetryLayout({ children }: { children: React.ReactNode }) {

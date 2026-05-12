@@ -30,6 +30,14 @@ export interface PaginatedResponse<T> {
   meta: PageMeta;
 }
 
+export type JsonPrimitive = string | number | boolean | null;
+
+export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+
+export interface JsonObject {
+  [key: string]: JsonValue | undefined;
+}
+
 /* ──────────────────────────────────────────────────────────────────────
  * Organizations
  * ──────────────────────────────────────────────────────────────────── */
@@ -455,6 +463,110 @@ export interface DeviceHealthResponse {
     devicesWithoutBackups: number;
     averageBackupAgeMs: number;
   };
+}
+
+export type PlatformSyncFailureStatus =
+  | "OPEN"
+  | "RESOLVED_RETRY"
+  | "ARCHIVED"
+  | "APPLIED";
+
+export type PlatformSyncFailureResolutionAction =
+  | "RETRY"
+  | "IGNORE_CLEAR"
+  | "FIX_AND_APPLY";
+
+export type PlatformSyncFailureEntityType = "SALE" | string;
+
+export interface PlatformSyncFailureListParams {
+  organizationId: string;
+  status?: PlatformSyncFailureStatus;
+  errorCode?: string;
+  entityType?: PlatformSyncFailureEntityType;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PlatformSyncFailureRequestSummaryItem {
+  id?: string | null;
+  productId?: string | null;
+  productName?: string | null;
+  productSku?: string | null;
+  quantity?: string | number | null;
+  unitPrice?: string | number | null;
+  lineTotal?: string | number | null;
+  [key: string]: JsonValue | undefined;
+}
+
+export interface PlatformSyncFailureRequestSummary {
+  receiptNumber?: string | null;
+  receiptNumberMobile?: string | null;
+  totalAmount?: string | number | null;
+  subtotal?: string | number | null;
+  soldAt?: string | null;
+  paymentMethod?: string | null;
+  items?: PlatformSyncFailureRequestSummaryItem[] | null;
+  [key: string]: JsonValue | undefined;
+}
+
+export interface PlatformSyncFailurePersonRef {
+  id?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
+  role?: UserRole;
+}
+
+export interface PlatformSyncFailureDeviceRef {
+  id?: string | null;
+  deviceUuid?: string | null;
+  deviceName?: string | null;
+  deviceModel?: string | null;
+  deviceOs?: string | null;
+}
+
+export interface PlatformSyncFailureOrganizationRef {
+  id: string;
+  name: string;
+  email?: string | null;
+  currency?: string | null;
+}
+
+export interface PlatformSyncFailure {
+  id: string;
+  organizationId: string;
+  staffUserId: string;
+  deviceId?: string | null;
+  entityType: PlatformSyncFailureEntityType;
+  entityId: string;
+  endpoint?: string | null;
+  requestPayload?: JsonValue;
+  requestSummary?: PlatformSyncFailureRequestSummary | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  httpStatusCode?: number | null;
+  status: PlatformSyncFailureStatus;
+  resolutionAction?: PlatformSyncFailureResolutionAction | null;
+  resolutionNotes?: string | null;
+  resolvedByAdminUser?: PlatformSyncFailurePersonRef | null;
+  resolvedAt?: string | null;
+  appliedSaleId?: string | null;
+  createdAt: string;
+  organization?: PlatformSyncFailureOrganizationRef | null;
+  staffUser?: PlatformSyncFailurePersonRef | null;
+  user?: PlatformSyncFailurePersonRef | null;
+  device?: PlatformSyncFailureDeviceRef | null;
+}
+
+export type PlatformSyncFailureDetail = PlatformSyncFailure;
+
+export interface ResolvePlatformSyncFailureDto {
+  action: PlatformSyncFailureResolutionAction;
+  notes?: string;
+  patchedPayload?: JsonObject;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
