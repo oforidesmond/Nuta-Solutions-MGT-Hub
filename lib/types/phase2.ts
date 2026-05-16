@@ -1,8 +1,16 @@
 /** Phase 2 — staff mobile / Management Hub DTOs (align with Nest). */
 
+/** Mirror of Prisma `NotificationType` — keep in sync with backend. */
 export type HubNotificationType =
   | "TEMPORARY_ITEM_SOLD"
+  | "RETURN_REQUESTED"
   | "RETURN_PROCESSED"
+  | "DISCOUNT_ALERT"
+  | "EXPIRY_WARNING"
+  | "LOW_STOCK"
+  | "TRIAL_LIMIT_WARNING"
+  | "PLAN_UPGRADE_REQUIRED"
+  | "SYSTEM_ALERT"
   | "STAFF_TIME_WARNING"
   | "STOCK_VARIANCE_SALE"
   | string;
@@ -12,14 +20,24 @@ export interface HubNotification {
   type: HubNotificationType;
   title?: string | null;
   message: string;
+  /** Authoritative read state from API (personal + broadcast receipts). */
+  isRead?: boolean;
+  readAt?: string | null;
+  /** @deprecated Use `isRead` — kept for legacy callers during migration. */
   read?: boolean;
   createdAt?: string | null;
   actionUrl?: string | null;
+  actionLabel?: string | null;
   /** Lowercase entity slug from API (e.g. `sale`). */
   relatedEntityType?: string | null;
   /** UUID of the related entity (e.g. sale id for STOCK_VARIANCE_SALE). */
   relatedEntityId?: string | null;
   metadata?: Record<string, unknown> | null;
+  dedupKey?: string | null;
+  /** Merged event count for deduped types; always >= 1 (show badge when > 1). */
+  aggregateCount: number;
+  lastAggregatedAt?: string | null;
+  expiresAt?: string | null;
 }
 
 export interface HubTemporaryItem {

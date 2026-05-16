@@ -1,0 +1,411 @@
+# Notifications system — integration guide (REST + Socket.IO)
+
+This document is the **single deep-dive** for frontend and mobile clients integrating with the enhanced notifications stack: **per-user read state for org-wide (“broadcast”) rows**, **aggregated / deduplicated types**, **cached unread counts**, **Socket.IO hints**, and **optional expiry sweeps**. REST responses are authoritative; WebSocket events are **hints** to refetch.
+
+**New to Redis/WebSockets or deploying to production?** Start with the layperson-oriented [`Notifications_Setup_and_Production_Guide.md`](./Notifications_Setup_and_Production_Guide.md).
+
+---
+
+## 1. Architecture at a glance
+
+| Layer | Responsibility |
+|--------|----------------|
+| **PostgreSQL** | Source of truth: `Notification`, `NotificationReadReceipt`, dedup fields (`dedupKey`, `aggregateCount`, …), `expiresAt`. |
+| **REST `/api/v1/notifications`** | List (cursor), unread-count, mark-read. Tenant-scoped JWT (`organizationId` on token). |
+| **Redis (optional)** | Per-user cache for `GET /notifications/unread-count` (~30s TTL). Failures fall back to DB; **never** surfaces as 503 on mark-read. |
+| **Socket.IO `/notifications`** | Same host as API; JWT on connect. Emits **lightweight** payloads; clients merge or refetch via REST. |
+
+**Design rule:** After any successful **DB** write (e.g. mark read), the API returns **200** even if cache invalidation (`DEL`) fails. The badge may be **stale for up to ~30s** (unread-count cache TTL).
+
+---
+
+## 2. Backend behaviour changes (what the UI must model)
+
+### 2.1 Visibility (who sees what)
+
+- **Broadcast** (`userId === null`): visible to org **ADMIN** and **MANAGER** (per controller guards). Read state is **per user** via `NotificationReadReceipt`, **not** the row’s `isRead`.
+- **Personal** (`userId` set): visible only to that user. Read state uses the row’s `isRead` / `readAt`.
+
+List API already returns a **unified** `isRead` / `readAt` for both cases (see **List endpoint** below).
+
+### 2.2 Deduplication and aggregation
+
+These types may **merge into an existing unread row** within a configurable time window (`NOTIFICATION_DEDUP_WINDOW_MINUTES`, default **60**):
+
+- `LOW_STOCK`
+- `EXPIRY_WARNING`
+- `STOCK_VARIANCE_SALE`
+- `RETURN_REQUESTED`
+
+Dedup key is derived from `type`, `relatedEntityType`, `relatedEntityId`, and `userId` (or `"BROADCAST"`). Updates bump `aggregateCount` and refresh title/message/metadata. Realtime emits **`notification:new`** (personal) or **`notification:broadcast`** (org) with the **updated** row — clients should **merge by `id`**.
+
+### 2.3 Default `expiresAt` (retention hints)
+
+New notifications get `expiresAt` from type (calendar days from creation, **UTC**). Types **without** an entry in the map keep `expiresAt = null` (no automatic removal).
+
+| `NotificationType` | Default days until `expiresAt` |
+|--------------------|-------------------------------|
+| `SYSTEM_ALERT` | 90 |
+| `EXPIRY_WARNING` | 60 |
+| `LOW_STOCK` | 30 |
+| `TEMPORARY_ITEM_SOLD` | 7 |
+| `DISCOUNT_ALERT` | 30 |
+| `RETURN_REQUESTED` | 14 |
+| `RETURN_PROCESSED` | 14 |
+| `TRIAL_LIMIT_WARNING` | 60 |
+| `PLAN_UPGRADE_REQUIRED` | **never** (`null`) |
+| `STAFF_TIME_WARNING` | 7 |
+| `STOCK_VARIANCE_SALE` | 30 |
+
+**Sweep:** If env `NOTIFICATION_EXPIRY_SWEEP_ENABLED` is `true` or `1`, a **daily** job (02:00 UTC) runs `DELETE` where `expiresAt < now()`. Rows with `expiresAt` null are **not** deleted by this job.
+
+### 2.4 Temporary-item daily notification (lazy + cron)
+
+Listing notifications **may** trigger materialization of “yesterday’s” temporary-item summary for the org (safety net if cron missed). Frontend does not call anything special — expect occasional **new** rows after opening the inbox.
+
+### 2.5 Unread count semantics
+
+- **Unread** = personal rows with `isRead === false` **or** broadcast rows **without** a read receipt for the current user.
+- **`hasCritical`** = `true` if any unread has type `SYSTEM_ALERT` or `PLAN_UPGRADE_REQUIRED`.
+
+---
+
+## 3. `NotificationType` (Prisma enum — mirror in clients)
+
+Use the same string literals as the API (JSON preserves enum names):
+
+```typescript
+/** Mirror of Prisma `NotificationType` — keep in sync with backend. */
+export type NotificationType =
+  | 'TEMPORARY_ITEM_SOLD'
+  | 'RETURN_REQUESTED'
+  | 'RETURN_PROCESSED'
+  | 'DISCOUNT_ALERT'
+  | 'EXPIRY_WARNING'
+  | 'LOW_STOCK'
+  | 'TRIAL_LIMIT_WARNING'
+  | 'PLAN_UPGRADE_REQUIRED'
+  | 'SYSTEM_ALERT'
+  | 'STAFF_TIME_WARNING'
+  | 'STOCK_VARIANCE_SALE';
+```
+
+---
+
+## 4. REST API (`/api/v1/notifications`)
+
+**Auth:** `Authorization: Bearer <access_jwt>`  
+**Guards:** tenant context + roles **ADMIN** or **MANAGER** only.
+
+**Errors (typical):**
+
+- **401** — missing/invalid/expired token → refresh token flow.
+- **403** — wrong role or tenant guard failure.
+- **400** — validation (e.g. invalid UUID on mark-read path).
+- **200** on mark-read when the DB update succeeded — **even if Redis cache delete failed** (do not show “service unavailable” for mark-read).
+
+### 4.1 `GET /api/v1/notifications/unread-count`
+
+**Response shape (authoritative):**
+
+```typescript
+export interface NotificationsUnreadCountResponse {
+  unreadCount: number;
+  /** Counts only types that appear in the unread set; omitted types = 0. */
+  unreadByType: Partial<Record<NotificationType, number>>;
+  /** True if any unread is SYSTEM_ALERT or PLAN_UPGRADE_REQUIRED. */
+  hasCritical: boolean;
+}
+```
+
+**Caching (server-side):**
+
+- If `REDIS_HOST` is set, responses may be served from Redis for the same user key for **~30 seconds**.
+- On cache miss or Redis read/write error, the server computes from the DB and still returns **200**.
+- **`PATCH .../read`** triggers a **best-effort** cache `DEL` for that user; no need for the client to vary behaviour when Redis is down.
+
+**Client usage:** Poll when Socket.IO is disabled; on `notification:count-updated`, debounce and call this once (see **Reconnection and token refresh** and **Performance best practices**).
+
+### 4.2 `GET /api/v1/notifications`
+
+**Query parameters:**
+
+| Param | Type | Default | Notes |
+|--------|------|---------|--------|
+| `unread` | string | — | If `true` or `1`, only unread rows for this user. |
+| `limit` | number | `50` | Clamped to **1–100**. |
+| `cursor` | UUID string | — | Opaque: **notification `id`** of the last item from the previous page. |
+
+**Response:**
+
+```typescript
+export interface NotificationListItem {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  relatedEntityType: string | null;
+  relatedEntityId: string | null;
+  actionUrl: string | null;
+  actionLabel: string | null;
+  /** Merged event count for deduped types; always >= 1. */
+  aggregateCount: number;
+  /** JSON from DB — structure varies by `type` / producer. */
+  metadata: unknown;
+  /** Derived: broadcast = presence of read receipt; personal = row.isRead */
+  isRead: boolean;
+  readAt: string | null; // ISO 8601 or null
+  createdAt: string; // ISO 8601
+}
+
+export interface NotificationListResponse {
+  data: NotificationListItem[];
+  /** Pass as `cursor` for the next page; omit when undefined. */
+  nextCursor?: string;
+}
+```
+
+**Pagination:** Cursor is the **last** returned item’s `id`. If `nextCursor` is absent, there is no next page.
+
+**Side effect:** First list load may materialize “yesterday’s” temporary-items batch notification for the org (idempotent server-side).
+
+### 4.3 `PATCH /api/v1/notifications/:id/read`
+
+**Response:**
+
+```typescript
+export interface NotificationMarkReadResponse {
+  /** 1 if a row/receipt was written; 0 if id not visible or wrong user. */
+  updated: number;
+}
+```
+
+**Behaviour:**
+
+- **Personal:** updates `isRead` / `readAt` if `notification.userId === currentUser`.
+- **Broadcast:** upserts `NotificationReadReceipt` for (`notificationId`, `userId`).
+- Triggers unread-count cache invalidation (**best-effort**) and may emit **`notification:count-updated`** over Socket.IO (see **Socket.IO** below).
+
+---
+
+## 5. Socket.IO (`/notifications` namespace)
+
+### 5.1 Connection
+
+- **Engine:** Socket.IO **v4**
+- **Namespace:** `/notifications`
+- **URL:** same origin as API, e.g. `https://api.example.com` with namespace path `/notifications` (client: `io(url, { path: '/socket.io/', ... })` — use your deployment’s actual Socket.IO path if customized; default is `/socket.io/`).
+
+**Auth** (same **access** JWT as REST):
+
+- Preferred: `auth: { token: accessJwt }` on the client `io()` options, **or**
+- Header on handshake: `Authorization: Bearer <accessJwt>`
+
+The server **disconnects** immediately if:
+
+- token missing / invalid JWT
+- payload `type !== 'access'`
+- `organizationId` is **null** on the token (e.g. platform super-admin without org — Hub tenant features unavailable)
+
+On success the socket joins rooms: `org:<organizationId>` and `user:<sub>`.
+
+### 5.2 CORS
+
+Env **`WEBSOCKET_CORS_ORIGIN`**: comma-separated allowed origins for this gateway. If empty, falls back to **`CORS_ORIGINS`**, then permissive behaviour in dev-style setups.
+
+### 5.3 Event payload types (exact TypeScript)
+
+Server → client only (no client → server notification API on this namespace).
+
+**Shared “single notification” payload** (mirrors `NotificationRealtimePayload` in `notifications-realtime.service.ts`). **Does not include `metadata`** — refetch list or keep existing merged state for full detail. Includes **`aggregateCount`** so the UI can update dedup badges on merge without a full list refetch.
+
+```typescript
+export interface NotificationRealtimePayload {
+  id: string;
+  organizationId: string;
+  userId: string | null;
+  type: NotificationType;
+  title: string;
+  message: string;
+  actionUrl: string | null;
+  actionLabel: string | null;
+  aggregateCount: number;
+  createdAt: string; // ISO 8601
+}
+```
+
+**Platform bulk broadcast digest** (after `createMany` per org):
+
+```typescript
+export interface NotificationAdminBroadcastDigestPayload {
+  organizationId: string;
+  bulk: true;
+  type: NotificationType;
+  title: string;
+  message: string;
+  /** Number of notification rows created for this org in that batch. */
+  recipientCount: number;
+}
+```
+
+**Unread hint** (cheap fan-out for org tabs):
+
+```typescript
+export interface NotificationCountUpdatedPayload {
+  organizationId: string;
+}
+```
+
+### 5.4 Events reference
+
+| Event | Delivered to | Payload type | Client action |
+|--------|----------------|-------------|----------------|
+| `notification:new` | Room `user:<userId>` only | `NotificationRealtimePayload` | Upsert into inbox for **personal** notifications; refresh badge (debounced). |
+| `notification:broadcast` | Room `org:<organizationId>` | `NotificationRealtimePayload` **or** `NotificationAdminBroadcastDigestPayload` | If `'bulk' in payload && payload.bulk`, refetch list (or show summary toast + refetch). Else upsert row by `id`. |
+| `notification:count-updated` | Room `org:<organizationId>` | `NotificationCountUpdatedPayload` | Debounced `GET .../unread-count`; optionally refresh visible list. |
+
+**Type guard example:**
+
+```typescript
+function isAdminDigest(
+  p: NotificationRealtimePayload | NotificationAdminBroadcastDigestPayload,
+): p is NotificationAdminBroadcastDigestPayload {
+  return 'bulk' in p && p.bulk === true;
+}
+```
+
+---
+
+## 6. Client implementation examples
+
+### 6.1 Browser / Vite / React — Socket.IO client
+
+Dependencies: `socket.io-client@4`.
+
+```typescript
+import { io, type Socket } from 'socket.io-client';
+
+const API_ORIGIN = import.meta.env.VITE_API_URL; // e.g. https://api.example.com
+
+export function createNotificationsSocket(getAccessToken: () => string | null): Socket {
+  const token = getAccessToken();
+  if (!token) throw new Error('No access token');
+
+  return io(`${API_ORIGIN}/notifications`, {
+    path: '/socket.io/',
+    transports: ['websocket', 'polling'],
+    auth: { token },
+    autoConnect: true,
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 30_000,
+    randomizationFactor: 0.5,
+  });
+}
+```
+
+**Handlers (sketch):**
+
+```typescript
+import { useEffect, useRef } from 'react';
+
+useEffect(() => {
+  const socket = createNotificationsSocket(() => localStorage.getItem('accessToken'));
+
+  socket.on('notification:new', (payload: NotificationRealtimePayload) => {
+    queryClient.setQueryData(['notifications', 'list'], (old: NotificationListResponse | undefined) => mergeUpsert(old, payload));
+    void queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+  });
+
+  socket.on('notification:broadcast', (payload: NotificationRealtimePayload | NotificationAdminBroadcastDigestPayload) => {
+    if (isAdminDigest(payload)) {
+      void queryClient.invalidateQueries({ queryKey: ['notifications', 'list'] });
+    } else {
+      queryClient.setQueryData(['notifications', 'list'], (old) => mergeUpsert(old, payload));
+    }
+    void queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+  });
+
+  let countDebounce: ReturnType<typeof setTimeout> | undefined;
+  socket.on('notification:count-updated', () => {
+    clearTimeout(countDebounce);
+    countDebounce = setTimeout(() => {
+      void queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+    }, 400);
+  });
+
+  return () => {
+    socket.removeAllListeners();
+    socket.disconnect();
+  };
+}, [queryClient]);
+```
+
+Implement `mergeUpsert` by **replacing or prepending** the item with matching `id` in `data` (preserve `metadata` from REST if the WS payload omitted it).
+
+### 6.2 Native / React Native
+
+Use the same URL, `auth: { token }`, and prefer **websocket** transport where supported. Handle app foreground: **reconnect** and run **`GET /unread-count`** once (WS may have missed events).
+
+---
+
+## 7. Reconnection and token refresh
+
+| Scenario | Recommended behaviour |
+|----------|----------------------|
+| Socket disconnect | Rely on Socket.IO built-in backoff (`reconnectionDelay`, `reconnectionDelayMax`). |
+| Access token expiring soon | Proactively refresh; **disconnect** socket and create a **new** instance with `auth.token` updated (Socket.IO does not always re-send fresh auth on reconnect depending on version/config). |
+| 401 from REST | Refresh tokens, then reconnect socket with new JWT. |
+| Missed events while offline | On reconnect or app resume: **`GET /notifications/unread-count`** + **`GET /notifications?unread=true&limit=…`** (full sync if needed). |
+| Duplicate refetches | Debounce `notification:count-updated` (300–500 ms); dedupe in-flight fetches (e.g. React Query `staleTime`). |
+
+---
+
+## 8. Error handling guidance
+
+- **REST 401 / 403:** Do not treat as “notification bug”; fix auth/session. After refresh, replay pending mark-read if idempotent (`updated: 0` means nothing changed).
+- **Mark-read returns `{ updated: 0 }`:** Item not visible to user, wrong org, or wrong personal recipient — remove from UI or refetch list; do not retry blindly.
+- **Socket immediate disconnect:** Usually invalid/missing token or no `organizationId` on token — show “live updates unavailable” and fall back to polling.
+- **Redis / cache:** No user-facing error for mark-read or unread-count from cache failures; if counts “jump” after ≤30s, that is expected when Redis was stale.
+
+---
+
+## 9. Performance best practices
+
+- **Badge:** Prefer **`GET /unread-count`** over scanning the list; cache in React Query with short `staleTime` (e.g. 15–30s) and invalidate on socket hints.
+- **List:** Use **cursor** pagination; avoid refetching all pages on every hint — invalidate first page only, or merge single-row WS payloads.
+- **Broadcast bulk:** `NotificationAdminBroadcastDigestPayload` means **many** DB rows; avoid building a fake row without refetch unless you show a toast only.
+- **Debouncing:** Coalesce `notification:count-updated` within one frame / 400 ms to avoid storms when many org members receive events.
+- **Personal vs org:** `notification:new` is targeted — use it to avoid excessive org-wide list churn when only one manager should see a row.
+
+---
+
+## 10. Environment variables (reference for DevOps / frontend config)
+
+| Variable | Effect |
+|----------|--------|
+| `REDIS_HOST` | Optional; enables Redis-backed unread-count cache (~30s TTL). |
+| `REDIS_PORT` / `REDIS_PASSWORD` | Redis connection. |
+| `NOTIFICATION_DEDUP_WINDOW_MINUTES` | Dedup/aggregate lookback (default 60). |
+| `WEBSOCKET_CORS_ORIGIN` | Socket.IO CORS allowlist for `/notifications`. |
+| `NOTIFICATION_EXPIRY_SWEEP_ENABLED` | `true`/`1` enables nightly deletion of expired notifications. |
+
+---
+
+## 11. Source-of-truth code map (for maintainers / agents)
+
+| Concern | Location |
+|---------|----------|
+| HTTP routes | `src/modules/notifications/notifications.controller.ts` |
+| List / unread / mark-read | `src/modules/notifications/notifications.service.ts` |
+| WS gateway + JWT | `src/modules/notifications/notifications.gateway.ts` |
+| Event payloads + emit helpers | `src/modules/notifications/notifications-realtime.service.ts` |
+| Default `expiresAt` | `src/modules/notifications/notification-expiry.ts` |
+| Nightly sweep | `src/modules/notifications/notifications-expiry.service.ts` |
+| JWT payload shape | `src/common/interfaces/jwt-payload.interface.ts` |
+| IoAdapter registration | `src/main.ts` |
+
+---
+
+*This guide reflects the notifications enhancement (read receipts, dedup, Redis cache semantics, Socket.IO hints, expiry). If REST schemas change, update this file alongside `notifications.controller.ts` and `notifications.service.ts`.*

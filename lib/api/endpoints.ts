@@ -72,6 +72,7 @@ export const endpoints = {
   },
   auditEvents: "/audit/events",
   notifications: "/notifications",
+  notificationsUnreadCount: "/notifications/unread-count",
   notificationRead: (id: string) => `/notifications/${id}/read` as const,
   analyticsPerformance: "/analytics/performance",
   analyticsCrash: "/analytics/crash",

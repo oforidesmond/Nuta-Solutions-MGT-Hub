@@ -7,3 +7,11 @@ export function refetchIntervalWhenVisible(ms: number): number | false {
   if (typeof document === "undefined") return ms;
   return document.visibilityState === "hidden" ? false : ms;
 }
+
+export function notificationsRefetchInterval(
+  ms: number,
+  socketConnected: boolean,
+): number | false {
+  if (socketConnected) return false;
+  return refetchIntervalWhenVisible(ms);
+}
