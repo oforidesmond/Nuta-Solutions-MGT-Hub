@@ -11,7 +11,8 @@ This document is the **single deep-dive** for frontend and mobile clients integr
 | Layer | Responsibility |
 |--------|----------------|
 | **PostgreSQL** | Source of truth: `Notification`, `NotificationReadReceipt`, dedup fields (`dedupKey`, `aggregateCount`, …), `expiresAt`. |
-| **REST `/api/v1/notifications`** | List (cursor), unread-count, mark-read. Tenant-scoped JWT (`organizationId` on token). |
+| **REST `/api/v1/notifications`** | Hub: list (cursor), unread-count, mark-read. Tenant-scoped JWT (`organizationId` on token). |
+| **REST `/api/v1/platform/notifications/broadcast`** | Super Admin: create notifications in tenant orgs (org-wide, by role, or `targetUserIds`). |
 | **Redis (optional)** | Per-user cache for `GET /notifications/unread-count` (~30s TTL). Failures fall back to DB; **never** surfaces as 503 on mark-read. |
 | **Socket.IO `/notifications`** | Same host as API; JWT on connect. Emits **lightweight** payloads; clients merge or refetch via REST. |
 
@@ -36,26 +37,24 @@ These types may **merge into an existing unread row** within a configurable time
 - `EXPIRY_WARNING`
 - `STOCK_VARIANCE_SALE`
 - `RETURN_REQUESTED`
+- `REORDER_SUGGESTION`
+- `BATCH_EXPIRED`
 
 Dedup key is derived from `type`, `relatedEntityType`, `relatedEntityId`, and `userId` (or `"BROADCAST"`). Updates bump `aggregateCount` and refresh title/message/metadata. Realtime emits **`notification:new`** (personal) or **`notification:broadcast`** (org) with the **updated** row — clients should **merge by `id`**.
 
 ### 2.3 Default `expiresAt` (retention hints)
 
-New notifications get `expiresAt` from type (calendar days from creation, **UTC**). Types **without** an entry in the map keep `expiresAt = null` (no automatic removal).
+New notifications get `expiresAt` from type (calendar days from creation, **UTC**). Unmapped enum members fall back to **`OTHER`** (30 days). **`null`** means never expire.
 
-| `NotificationType` | Default days until `expiresAt` |
-|--------------------|-------------------------------|
-| `SYSTEM_ALERT` | 90 |
-| `EXPIRY_WARNING` | 60 |
-| `LOW_STOCK` | 30 |
-| `TEMPORARY_ITEM_SOLD` | 7 |
-| `DISCOUNT_ALERT` | 30 |
-| `RETURN_REQUESTED` | 14 |
-| `RETURN_PROCESSED` | 14 |
-| `TRIAL_LIMIT_WARNING` | 60 |
-| `PLAN_UPGRADE_REQUIRED` | **never** (`null`) |
-| `STAFF_TIME_WARNING` | 7 |
-| `STOCK_VARIANCE_SALE` | 30 |
+| Retention | `NotificationType` values |
+|-----------|-------------------------|
+| **Never** (`null`) | `PAYMENT_FAILED`, `ACCOUNT_SUSPENDED`, `DATA_BREACH_NOTICE`, `PLAN_UPGRADE_REQUIRED` |
+| **7 days** | `TEMPORARY_ITEM_SOLD`, `STAFF_TIME_WARNING`, `DAILY_SALES_SUMMARY` |
+| **14 days** | `RETURN_REQUESTED`, `RETURN_PROCESSED`, `REFUND_PROCESSED`, `BATCH_EXPIRED` |
+| **30 days** | `LOW_STOCK`, `DISCOUNT_ALERT`, `STOCK_VARIANCE_SALE`, `REORDER_SUGGESTION`, `STOCKTAKE_OVERDUE`, `HIGH_VALUE_SALE`, staff/security/billing/account/service/system ops types (see `notification-expiry.ts`), `OTHER` |
+| **60 days** | `EXPIRY_WARNING`, `TRIAL_LIMIT_WARNING` |
+| **90 days** | `SYSTEM_ALERT`, `MILESTONE_ACHIEVED`, `COMPLIANCE_UPDATE` |
+| **180 days** | `TRAINING_AVAILABLE`, `RECOMMENDATION_AVAILABLE` |
 
 **Sweep:** If env `NOTIFICATION_EXPIRY_SWEEP_ENABLED` is `true` or `1`, a **daily** job (02:00 UTC) runs `DELETE` where `expiresAt < now()`. Rows with `expiresAt` null are **not** deleted by this job.
 
@@ -66,28 +65,93 @@ Listing notifications **may** trigger materialization of “yesterday’s” tem
 ### 2.5 Unread count semantics
 
 - **Unread** = personal rows with `isRead === false` **or** broadcast rows **without** a read receipt for the current user.
-- **`hasCritical`** = `true` if any unread has type `SYSTEM_ALERT` or `PLAN_UPGRADE_REQUIRED`.
+- **`hasCritical`** = `true` if any unread row has one of these types:
+  - `SYSTEM_ALERT`, `PLAN_UPGRADE_REQUIRED`
+  - `PAYMENT_FAILED`, `ACCOUNT_SUSPENDED`, `DATA_BREACH_NOTICE`
+  - `SECURITY_ALERT`, `SUSPICIOUS_ACTIVITY`, `DEVICE_UNAUTHORIZED`
+  - `BACKUP_FAILED`, `USAGE_LIMIT_REACHED`, `SERVICE_MAINTENANCE`
+
+Use `hasCritical` for badge styling or a “urgent” filter — do not hard-code only the two legacy types.
+
+### 2.6 Permissive `type` on create (platform + internal)
+
+The API accepts **any non-empty string** for `type` on platform broadcast. At persistence:
+
+- Known enum values → stored as-is.
+- Unknown values → stored as **`OTHER`** with `metadata.originalType` set to the requested string (server logs a warning).
+
+Clients listing notifications should:
+
+- Render using `type` for known values (icons, copy, routing).
+- For `OTHER`, read `metadata.originalType` if present for display/debugging.
 
 ---
 
 ## 3. `NotificationType` (Prisma enum — mirror in clients)
 
-Use the same string literals as the API (JSON preserves enum names):
+Use the same string literals as the API (JSON preserves enum names). **40 values** + fallback:
 
 ```typescript
-/** Mirror of Prisma `NotificationType` — keep in sync with backend. */
+/** Mirror of Prisma `NotificationType` — keep in sync with backend schema. */
 export type NotificationType =
+  // Inventory & operations
   | 'TEMPORARY_ITEM_SOLD'
+  | 'LOW_STOCK'
+  | 'EXPIRY_WARNING'
+  | 'BATCH_EXPIRED'
+  | 'REORDER_SUGGESTION'
+  | 'STOCKTAKE_OVERDUE'
+  | 'STOCK_VARIANCE_SALE'
+  // Sales & returns
   | 'RETURN_REQUESTED'
   | 'RETURN_PROCESSED'
+  | 'REFUND_PROCESSED'
   | 'DISCOUNT_ALERT'
-  | 'EXPIRY_WARNING'
-  | 'LOW_STOCK'
+  | 'HIGH_VALUE_SALE'
+  // Staff & security
+  | 'STAFF_TIME_WARNING'
+  | 'STAFF_ROLE_CHANGED'
+  | 'SUSPICIOUS_ACTIVITY'
+  | 'SECURITY_ALERT'
+  | 'DEVICE_UNAUTHORIZED'
+  // Billing & subscription
+  | 'PAYMENT_FAILED'
+  | 'PAYMENT_METHOD_EXPIRING'
+  | 'SUBSCRIPTION_RENEWED'
+  | 'INVOICE_READY'
   | 'TRIAL_LIMIT_WARNING'
   | 'PLAN_UPGRADE_REQUIRED'
+  | 'USAGE_LIMIT_REACHED'
+  // Account & service
+  | 'ACCOUNT_SUSPENDED'
+  | 'ACCOUNT_REACTIVATED'
+  | 'SERVICE_MAINTENANCE'
+  | 'FEATURE_ENABLED'
+  | 'FEATURE_DISABLED'
+  // System & admin
   | 'SYSTEM_ALERT'
-  | 'STAFF_TIME_WARNING'
-  | 'STOCK_VARIANCE_SALE';
+  | 'BACKUP_FAILED'
+  | 'DATA_EXPORT_READY'
+  // Compliance & legal
+  | 'DATA_BREACH_NOTICE'
+  | 'COMPLIANCE_UPDATE'
+  | 'TAX_RATE_CHANGED'
+  // Engagement & insights
+  | 'MILESTONE_ACHIEVED'
+  | 'DAILY_SALES_SUMMARY'
+  | 'RECOMMENDATION_AVAILABLE'
+  | 'TRAINING_AVAILABLE'
+  // Fallback (unknown types from future clients)
+  | 'OTHER';
+```
+
+**`metadata` for `OTHER` rows:**
+
+```typescript
+interface NotificationMetadataOther {
+  originalType?: string; // e.g. "FUTURE_TYPE_2027" from platform broadcast
+  [key: string]: unknown;
+}
 ```
 
 ---
@@ -113,7 +177,7 @@ export interface NotificationsUnreadCountResponse {
   unreadCount: number;
   /** Counts only types that appear in the unread set; omitted types = 0. */
   unreadByType: Partial<Record<NotificationType, number>>;
-  /** True if any unread is SYSTEM_ALERT or PLAN_UPGRADE_REQUIRED. */
+  /** True if any unread matches server critical types (billing, security, legal, etc.). */
   hasCritical: boolean;
 }
 ```
@@ -150,7 +214,10 @@ export interface NotificationListItem {
   actionLabel: string | null;
   /** Merged event count for deduped types; always >= 1. */
   aggregateCount: number;
-  /** JSON from DB — structure varies by `type` / producer. */
+  /**
+   * JSON from DB — structure varies by `type` / producer.
+   * When `type === 'OTHER'`, check `metadata.originalType` for the requested label.
+   */
   metadata: unknown;
   /** Derived: broadcast = presence of read receipt; personal = row.isRead */
   isRead: boolean;
@@ -188,9 +255,109 @@ export interface NotificationMarkReadResponse {
 
 ---
 
-## 5. Socket.IO (`/notifications` namespace)
+## 5. Platform Super Admin — send notifications (`POST /api/v1/platform/notifications/broadcast`)
 
-### 5.1 Connection
+**Auth:** `SUPER_ADMIN` JWT (platform routes — not the tenant Hub `/notifications` routes).  
+**Full API reference:** [`SUPER_ADMIN_API.md`](../SUPER_ADMIN_API.md).
+
+This endpoint creates notification rows in tenant orgs. Realtime: affected orgs receive **`notification:broadcast`** (digest with `bulk: true`) or **`notification:new`** for personal rows.
+
+### 5.1 Request body
+
+```typescript
+export interface PlatformBroadcastNotificationRequest {
+  title: string;       // max 200
+  message: string;     // max 1000
+  type: string;        // any non-empty string; unknown → stored as OTHER
+  targetOrganizations?: string[]; // org UUIDs; omit = all active orgs (role/org-wide modes)
+  targetRoles?: UserRole[];       // ADMIN | MANAGER | STAFF | …
+  targetUserIds?: string[];       // user UUIDs — cross-org individual targeting
+}
+```
+
+### 5.2 Recipient resolution (priority order)
+
+| Priority | Fields set | Result |
+|----------|------------|--------|
+| **1** | `targetUserIds` | One **personal** row per user (`userId` set), any active org. `targetRoles` ignored. Optional `targetOrganizations` scopes eligible users. |
+| **2** | `targetRoles` (no `targetUserIds`) | One row per active user matching roles in the org filter. |
+| **3** | Neither | One **org-wide** row per org (`userId: null`) — visible to all Hub admins/managers. |
+
+**Org filter** (modes 2–3): `targetOrganizations` omitted → all `isActive=true` organizations.
+
+### 5.3 Examples
+
+**All orgs — maintenance banner (org-wide):**
+
+```json
+{
+  "title": "Scheduled maintenance",
+  "message": "Maintenance 02:00–03:00 GMT.",
+  "type": "SERVICE_MAINTENANCE"
+}
+```
+
+**Specific orgs — managers only (personal rows):**
+
+```json
+{
+  "title": "Policy update",
+  "message": "Please review the updated refund policy.",
+  "type": "COMPLIANCE_UPDATE",
+  "targetOrganizations": ["org-uuid-1"],
+  "targetRoles": ["ADMIN", "MANAGER"]
+}
+```
+
+**Individual users across organizations (user picker):**
+
+```json
+{
+  "title": "Account notice",
+  "message": "Please contact support regarding your account.",
+  "type": "ACCOUNT_SUSPENDED",
+  "targetUserIds": ["user-uuid-1", "user-uuid-2"]
+}
+```
+
+Optional scope: same payload with `targetOrganizations: ["org-uuid-1"]` so only users in that org are eligible.
+
+### 5.4 Responses and errors
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "notificationsSent": 2,
+  "recipientCount": 2
+}
+```
+
+**Invalid user IDs (400)** when using `targetUserIds`:
+
+```json
+{
+  "message": "One or more targetUserIds are invalid, inactive, or not in an active organization",
+  "invalidUserIds": ["bad-uuid"]
+}
+```
+
+Users must be **active** with a non-null `organizationId` on an **active** organization.
+
+### 5.5 Platform UI integration notes
+
+- **User picker:** collect UUIDs → send `targetUserIds` only (do not also send `targetRoles`).
+- **Role blast:** `targetOrganizations` + `targetRoles`.
+- **Org-wide announcement:** `targetOrganizations` only (or omit for all orgs).
+- **Type field:** send new enum strings (e.g. `PAYMENT_FAILED`) directly; no backend deploy needed for types already in the enum. Truly unknown strings persist as `OTHER` + `metadata.originalType`.
+- **Hub clients** in those orgs: personal targets get `notification:new`; bulk org-wide/platform batches often emit org-room digest with `bulk: true` — **refetch list** (see Socket.IO below).
+
+---
+
+## 6. Socket.IO (`/notifications` namespace)
+
+### 6.1 Connection
 
 - **Engine:** Socket.IO **v4**
 - **Namespace:** `/notifications`
@@ -209,11 +376,11 @@ The server **disconnects** immediately if:
 
 On success the socket joins rooms: `org:<organizationId>` and `user:<sub>`.
 
-### 5.2 CORS
+### 6.2 CORS
 
 Env **`WEBSOCKET_CORS_ORIGIN`**: comma-separated allowed origins for this gateway. If empty, falls back to **`CORS_ORIGINS`**, then permissive behaviour in dev-style setups.
 
-### 5.3 Event payload types (exact TypeScript)
+### 6.3 Event payload types (exact TypeScript)
 
 Server → client only (no client → server notification API on this namespace).
 
@@ -256,7 +423,7 @@ export interface NotificationCountUpdatedPayload {
 }
 ```
 
-### 5.4 Events reference
+### 6.4 Events reference
 
 | Event | Delivered to | Payload type | Client action |
 |--------|----------------|-------------|----------------|
@@ -276,9 +443,9 @@ function isAdminDigest(
 
 ---
 
-## 6. Client implementation examples
+## 7. Client implementation examples
 
-### 6.1 Browser / Vite / React — Socket.IO client
+### 7.1 Browser / Vite / React — Socket.IO client
 
 Dependencies: `socket.io-client@4`.
 
@@ -344,13 +511,13 @@ useEffect(() => {
 
 Implement `mergeUpsert` by **replacing or prepending** the item with matching `id` in `data` (preserve `metadata` from REST if the WS payload omitted it).
 
-### 6.2 Native / React Native
+### 7.2 Native / React Native
 
 Use the same URL, `auth: { token }`, and prefer **websocket** transport where supported. Handle app foreground: **reconnect** and run **`GET /unread-count`** once (WS may have missed events).
 
 ---
 
-## 7. Reconnection and token refresh
+## 8. Reconnection and token refresh
 
 | Scenario | Recommended behaviour |
 |----------|----------------------|
@@ -362,7 +529,7 @@ Use the same URL, `auth: { token }`, and prefer **websocket** transport where su
 
 ---
 
-## 8. Error handling guidance
+## 9. Error handling guidance
 
 - **REST 401 / 403:** Do not treat as “notification bug”; fix auth/session. After refresh, replay pending mark-read if idempotent (`updated: 0` means nothing changed).
 - **Mark-read returns `{ updated: 0 }`:** Item not visible to user, wrong org, or wrong personal recipient — remove from UI or refetch list; do not retry blindly.
@@ -371,7 +538,7 @@ Use the same URL, `auth: { token }`, and prefer **websocket** transport where su
 
 ---
 
-## 9. Performance best practices
+## 10. Performance best practices
 
 - **Badge:** Prefer **`GET /unread-count`** over scanning the list; cache in React Query with short `staleTime` (e.g. 15–30s) and invalidate on socket hints.
 - **List:** Use **cursor** pagination; avoid refetching all pages on every hint — invalidate first page only, or merge single-row WS payloads.
@@ -381,7 +548,7 @@ Use the same URL, `auth: { token }`, and prefer **websocket** transport where su
 
 ---
 
-## 10. Environment variables (reference for DevOps / frontend config)
+## 11. Environment variables (reference for DevOps / frontend config)
 
 | Variable | Effect |
 |----------|--------|
@@ -393,19 +560,24 @@ Use the same URL, `auth: { token }`, and prefer **websocket** transport where su
 
 ---
 
-## 11. Source-of-truth code map (for maintainers / agents)
+## 12. Source-of-truth code map (for maintainers / agents)
 
 | Concern | Location |
 |---------|----------|
-| HTTP routes | `src/modules/notifications/notifications.controller.ts` |
-| List / unread / mark-read | `src/modules/notifications/notifications.service.ts` |
+| Hub HTTP routes | `src/modules/notifications/notifications.controller.ts` |
+| List / unread / mark-read / dedup / critical | `src/modules/notifications/notifications.service.ts` |
+| Type normalization (`OTHER` + `originalType`) | `src/modules/notifications/notification-type.util.ts` |
+| Platform broadcast + `targetUserIds` | `src/modules/platform-admin/platform-admin-notifications.service.ts` |
+| Broadcast DTO | `src/modules/platform-admin/dto/broadcast-notification.dto.ts` |
 | WS gateway + JWT | `src/modules/notifications/notifications.gateway.ts` |
 | Event payloads + emit helpers | `src/modules/notifications/notifications-realtime.service.ts` |
 | Default `expiresAt` | `src/modules/notifications/notification-expiry.ts` |
 | Nightly sweep | `src/modules/notifications/notifications-expiry.service.ts` |
+| Prisma enum | `prisma/schema.prisma` → `NotificationType` |
+| Platform API doc | `SUPER_ADMIN_API.md` |
 | JWT payload shape | `src/common/interfaces/jwt-payload.interface.ts` |
 | IoAdapter registration | `src/main.ts` |
 
 ---
 
-*This guide reflects the notifications enhancement (read receipts, dedup, Redis cache semantics, Socket.IO hints, expiry). If REST schemas change, update this file alongside `notifications.controller.ts` and `notifications.service.ts`.*
+*This guide reflects the notifications stack: read receipts, dedup, expanded `NotificationType`, permissive type normalization, Redis cache semantics, Socket.IO hints, expiry, and platform super-admin broadcast (including `targetUserIds`). Update this file when changing `notifications.service.ts`, `notification-type.util.ts`, or `platform-admin-notifications.service.ts`.*

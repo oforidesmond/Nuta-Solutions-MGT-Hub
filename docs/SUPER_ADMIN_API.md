@@ -387,16 +387,24 @@ Body (`BroadcastNotificationDto`):
   "message": "Maintenance window 2026-05-15 02:00–03:00 GMT",
   "type": "SYSTEM_ALERT",
   "targetOrganizations": ["uuid", "uuid"],
-  "targetRoles": ["ADMIN", "MANAGER"]
+  "targetRoles": ["ADMIN", "MANAGER"],
+  "targetUserIds": ["user-uuid", "user-uuid"]
 }
 ```
 
-Behavior:
+Behavior (recipient resolution, in order):
+
+1. **`targetUserIds` set** → one personal notification per listed user
+   (`userId` set). Users must be active with an active organization.
+   `targetOrganizations` optionally scopes eligible users. `targetRoles` is
+   ignored. Unknown/ineligible IDs → `400` with `invalidUserIds`.
+2. Else **`targetRoles` set** → one row per matching active user in the
+   org filter (see below).
+3. Else → one org-wide row per org (`userId=null`).
+
+Org filter (when not using `targetUserIds` alone):
 
 - `targetOrganizations` omitted → all `isActive=true` orgs.
-- `targetRoles` omitted → one notification per org with `userId=null`
-  (org-wide admin notification). Otherwise fans out one row per matching
-  active user.
 - Uses `prisma.notification.createMany`, wrapped in a transaction with the
   audit row.
 

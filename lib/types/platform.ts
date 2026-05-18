@@ -14,12 +14,42 @@ export type PlanStatus =
 
 export type DeviceStatus = "ACTIVE" | "SUSPENDED" | "REVOKED";
 
+/** Prisma `NotificationType` values exposed in the platform console. */
 export type PlatformNotificationType =
   | "SYSTEM_ALERT"
-  | "INFO"
-  | "WARNING"
-  | "ERROR"
+  | "SUSPICIOUS_ACTIVITY"
+  | "SECURITY_ALERT"
+  | "DEVICE_UNAUTHORIZED"
+  | "PAYMENT_FAILED"
+  | "SUBSCRIPTION_RENEWED"
+  | "TRIAL_LIMIT_WARNING"
+  | "USAGE_LIMIT_REACHED"
+  | "PLAN_UPGRADE_REQUIRED"
+  | "DATA_BREACH_NOTICE"
+  | "MILESTONE_ACHIEVED"
+  | "STOCKTAKE_OVERDUE"
+  | "OTHER"
   | string;
+
+/** Labels for platform broadcast / filter UI — values must match backend enum. */
+export const PLATFORM_NOTIFICATION_TYPE_OPTIONS: {
+  value: PlatformNotificationType;
+  label: string;
+}[] = [
+  { value: "SYSTEM_ALERT", label: "System alert" },
+  { value: "SUSPICIOUS_ACTIVITY", label: "Suspicious activity" },
+  { value: "SECURITY_ALERT", label: "Security alert" },
+  { value: "DEVICE_UNAUTHORIZED", label: "Device unauthorized" },
+  { value: "PAYMENT_FAILED", label: "Payment failed" },
+  { value: "SUBSCRIPTION_RENEWED", label: "Subscription renewed" },
+  { value: "TRIAL_LIMIT_WARNING", label: "Trial limit warning" },
+  { value: "USAGE_LIMIT_REACHED", label: "Usage limit reached" },
+  { value: "PLAN_UPGRADE_REQUIRED", label: "Plan upgrade required" },
+  { value: "DATA_BREACH_NOTICE", label: "Data breach notice" },
+  { value: "MILESTONE_ACHIEVED", label: "Milestone achieved" },
+  { value: "STOCKTAKE_OVERDUE", label: "Stocktake overdue" },
+  { value: "OTHER", label: "Other" },
+];
 
 /* ──────────────────────────────────────────────────────────────────────
  * Generic envelope for paginated platform responses.
@@ -634,6 +664,7 @@ export interface BroadcastNotificationDto {
   type?: PlatformNotificationType;
   targetOrganizations?: string[];
   targetRoles?: UserRole[];
+  targetUserIds?: string[];
 }
 
 export interface BroadcastNotificationResponse {

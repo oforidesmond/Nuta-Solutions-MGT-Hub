@@ -14,26 +14,29 @@ import {
 } from "@/components/platform/multi-select-dropdown";
 import { OrgFilterPicker } from "@/components/platform/org-filter-picker";
 import { PaginationBar } from "@/components/pagination/pagination-bar";
-import { BroadcastNotificationModal } from "@/components/platform/notifications/broadcast-notification-modal";
+import { CreateNotificationModal } from "@/components/platform/notifications/broadcast-notification-modal";
+import { PlatformNotificationReadBadge } from "@/components/platform/notifications/platform-notification-read-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { handleApiError } from "@/lib/api/errors";
 import { formatDate } from "@/lib/format";
-import type { PlatformNotificationType } from "@/lib/types/platform";
+import {
+  PLATFORM_NOTIFICATION_TYPE_OPTIONS,
+  type PlatformNotificationType,
+} from "@/lib/types/platform";
 
 type ReadFilter = "all" | "read" | "unread";
 
-const TYPE_OPTIONS: MultiSelectOption<PlatformNotificationType>[] = [
-  { value: "SYSTEM_ALERT", label: "System alert" },
-  { value: "INFO", label: "Info" },
-  { value: "WARNING", label: "Warning" },
-  { value: "ERROR", label: "Error" },
-];
+const TYPE_OPTIONS: MultiSelectOption<PlatformNotificationType>[] =
+  PLATFORM_NOTIFICATION_TYPE_OPTIONS.map((opt) => ({
+    value: opt.value,
+    label: opt.label,
+  }));
 
 const DEFAULT_LIMIT = 25;
 
 export default function PlatformNotificationsPage() {
-  const [broadcastOpen, setBroadcastOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [organizationId, setOrganizationId] = useState<string | undefined>(undefined);
   const [types, setTypes] = useState<PlatformNotificationType[]>([]);
@@ -67,11 +70,11 @@ export default function PlatformNotificationsPage() {
             Notifications
           </h1>
           <p className="text-sm text-muted-foreground">
-            Fan-out banners created on-tenant · broadcast new alerts to many orgs at once.
+            Fan-out banners created on-tenant · broadcast rows show delivery status; tenants mark read in their hub inbox.
           </p>
         </div>
-        <Button type="button" size="sm" onClick={() => setBroadcastOpen(true)}>
-          Broadcast
+        <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
+          New Notification
         </Button>
       </div>
 
@@ -125,7 +128,7 @@ export default function PlatformNotificationsPage() {
         <EmptyState
           icon={<Bell className="size-10" />}
           title="Nothing in inbox"
-          description="Broaden filters or send a broadcast."
+          description="Broaden filters or send a notification."
         />
       ) : (
         <ul className="flex flex-col gap-3">
@@ -140,9 +143,7 @@ export default function PlatformNotificationsPage() {
                     {n.type}
                   </Badge>
                   <span className="font-medium text-foreground">{n.title}</span>
-                  <Badge variant={n.isRead ? "secondary" : "default"}>
-                    {n.isRead ? "Read" : "Unread"}
-                  </Badge>
+                  <PlatformNotificationReadBadge notification={n} />
                 </div>
                 <span className="text-xs text-muted-foreground">{formatDate(n.createdAt)}</span>
               </div>
@@ -175,7 +176,7 @@ export default function PlatformNotificationsPage() {
         />
       ) : null}
 
-      <BroadcastNotificationModal open={broadcastOpen} onOpenChange={setBroadcastOpen} />
+      <CreateNotificationModal open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }

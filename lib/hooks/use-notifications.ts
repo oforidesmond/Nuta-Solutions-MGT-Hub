@@ -13,6 +13,7 @@ import {
   notificationsListQueryKey,
   notificationsUnreadCountQueryKey,
 } from "@/lib/notifications/query-keys";
+import { isCriticalNotificationType } from "@/lib/notifications/critical-notification";
 import {
   notificationsRefetchInterval,
   POLL_NOTIFICATIONS_MS,
@@ -78,21 +79,27 @@ export function useMarkNotificationRead() {
       );
 
       const now = new Date().toISOString();
-      queryClient.setQueryData<HubNotification[]>(notificationsListQueryKey, (old) =>
-        old?.map((n) =>
+      let nextList: HubNotification[] | undefined;
+      queryClient.setQueryData<HubNotification[]>(notificationsListQueryKey, (old) => {
+        nextList = old?.map((n) =>
           n.id === id ? { ...n, isRead: true, read: true, readAt: now } : n,
-        ),
-      );
+        );
+        return nextList;
+      });
 
       queryClient.setQueryData<NotificationsUnreadCountResponse>(
         notificationsUnreadCountQueryKey,
         (old) => {
           if (!old) return old;
           const nextCount = Math.max(0, old.unreadCount - 1);
+          const hasCritical =
+            nextList?.some(
+              (n) => isNotificationUnread(n) && isCriticalNotificationType(n.type),
+            ) ?? false;
           return {
             ...old,
             unreadCount: nextCount,
-            hasCritical: nextCount === 0 ? false : old.hasCritical,
+            hasCritical,
           };
         },
       );
@@ -109,8 +116,9 @@ export function useMarkNotificationRead() {
       toast.error("Failed to mark notification as read");
     },
     onSettled: () => {
+      // Refresh list only. Skip unread-count invalidation here — server cache can
+      // stay stale ~30s and would overwrite the optimistic badge decrement.
       void queryClient.invalidateQueries({ queryKey: notificationsListQueryKey });
-      void queryClient.invalidateQueries({ queryKey: notificationsUnreadCountQueryKey });
     },
   });
 }
