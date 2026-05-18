@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import axios from "axios";
-import { MoreHorizontal } from "lucide-react";
+import { Bell, MoreHorizontal } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -53,6 +53,7 @@ import type {
   StaffActivityEntry,
   StaffCredentialsPayload,
 } from "@/lib/types/staff";
+import { SendStaffNotificationModal } from "@/components/notifications/send-staff-notification-modal";
 import { useAuthStore } from "@/stores/auth-store";
 import { useStaffStore } from "@/stores/staff-store";
 import { cn } from "@/lib/utils";
@@ -217,6 +218,7 @@ export default function StaffPage() {
   const [activityLoading, setActivityLoading] = useState(false);
 
   const [deactivateTarget, setDeactivateTarget] = useState<HubStaffMember | null>(null);
+  const [notifyOpen, setNotifyOpen] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
 
   const [perfFrom, setPerfFrom] = useState("");
@@ -458,7 +460,12 @@ export default function StaffPage() {
           </p>
         </div>
         {canManageStaff(me?.role) ? (
-          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => setNotifyOpen(true)}>
+              <Bell className="size-4" aria-hidden />
+              Send notification
+            </Button>
+            <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <Button type="button" className="shrink-0" onClick={() => setAddOpen(true)}>
               Add staff
             </Button>
@@ -553,6 +560,8 @@ export default function StaffPage() {
               </form>
             </DialogContent>
           </Dialog>
+            <SendStaffNotificationModal open={notifyOpen} onOpenChange={setNotifyOpen} />
+          </div>
         ) : null}
       </div>
 

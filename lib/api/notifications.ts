@@ -1,6 +1,15 @@
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
-import type { HubNotification, HubNotificationType } from "@/lib/types/phase2";
+import { unwrapList } from "@/lib/api/response";
+import type { PageMeta } from "@/lib/types/domain";
+import type {
+  HubNotification,
+  HubNotificationType,
+  SendNotificationDto,
+  SendNotificationResponse,
+  SentNotification,
+  SentNotificationListParams,
+} from "@/lib/types/phase2";
 
 function unwrapNotifications(raw: unknown): HubNotification[] {
   if (Array.isArray(raw)) return raw.map(normalizeNotification);
@@ -155,6 +164,93 @@ export async function fetchUnreadCount(): Promise<NotificationsUnreadCountRespon
 
 export async function markNotificationRead(id: string): Promise<void> {
   await api.patch(endpoints.notificationRead(id), {});
+}
+
+const listParamsSerializer: NonNullable<
+  import("axios").AxiosRequestConfig["paramsSerializer"]
+> = {
+  indexes: null,
+};
+
+function normalizeSentNotification(row: unknown): SentNotification {
+  const r = (row && typeof row === "object" ? row : {}) as Record<string, unknown>;
+  const recipientRaw = r.recipient ?? r.user;
+  let recipient: SentNotification["recipient"] = null;
+  if (recipientRaw && typeof recipientRaw === "object") {
+    const u = recipientRaw as Record<string, unknown>;
+    recipient = {
+      id: String(u.id ?? r.userId ?? ""),
+      firstName: (u.firstName as string | null | undefined) ?? null,
+      lastName: (u.lastName as string | null | undefined) ?? null,
+      email: (u.email as string | null | undefined) ?? null,
+      role: (u.role as string | null | undefined) ?? null,
+    };
+  }
+  const isRead =
+    typeof r.isRead === "boolean"
+      ? r.isRead
+      : typeof r.read === "boolean"
+        ? r.read
+        : false;
+  return {
+    id: String(r.id ?? ""),
+    type: String(r.type ?? "OTHER"),
+    title: String(r.title ?? ""),
+    message: String(r.message ?? ""),
+    userId: String(r.userId ?? recipient?.id ?? ""),
+    isRead,
+    readAt:
+      (r.readAt as string | undefined) ??
+      (r.read_at as string | undefined) ??
+      null,
+    createdAt: String(r.createdAt ?? r.created_at ?? ""),
+    metadata:
+      r.metadata && typeof r.metadata === "object"
+        ? (r.metadata as Record<string, unknown>)
+        : null,
+    recipient,
+  };
+}
+
+export async function fetchSentNotificationsPage(
+  params: SentNotificationListParams = {},
+): Promise<{ items: SentNotification[]; meta: PageMeta }> {
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 25;
+  const res = await api.get(endpoints.notificationsSent, {
+    params: {
+      page,
+      limit,
+      type: params.type?.length ? params.type : undefined,
+      isRead: params.isRead,
+      userId: params.userId,
+    },
+    paramsSerializer: listParamsSerializer,
+  });
+  const { items, meta } = unwrapList<unknown>(res.data, page, limit);
+  return {
+    items: items.map(normalizeSentNotification),
+    meta,
+  };
+}
+
+export async function sendStaffNotification(
+  dto: SendNotificationDto,
+): Promise<SendNotificationResponse> {
+  const res = await api.post(endpoints.notificationsSend, dto);
+  const data = res.data as Record<string, unknown>;
+  const sent = data.sent;
+  const recipientIds = data.recipientIds ?? data.recipient_ids;
+  const notificationIds = data.notificationIds ?? data.notification_ids;
+  return {
+    sent: typeof sent === "number" && Number.isFinite(sent) ? sent : 0,
+    recipientIds: Array.isArray(recipientIds)
+      ? recipientIds.filter((id): id is string => typeof id === "string")
+      : [],
+    notificationIds: Array.isArray(notificationIds)
+      ? notificationIds.filter((id): id is string => typeof id === "string")
+      : [],
+  };
 }
 
 /** Map Socket.IO payload to HubNotification (defaults to unread, aggregateCount >= 1). */

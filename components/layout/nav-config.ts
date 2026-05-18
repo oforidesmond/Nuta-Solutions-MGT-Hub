@@ -21,6 +21,7 @@ import {
   Bug,
   Undo2,
   Shield,
+  Bell,
 } from "lucide-react";
 
 export type NavItem = {
@@ -64,6 +65,7 @@ export const navSections: NavSection[] = [
       { href: "/sales", label: "Sales", icon: Receipt },
       { href: "/returns", label: "Returns", icon: Undo2 },
       { href: "/staff", label: "Staff", icon: Users },
+      { href: "/notifications", label: "Staff notifications", icon: Bell },
       { href: "/branches", label: "Branches", icon: GitBranch },
       { href: "/reports", label: "Reports", icon: LineChart },
       { href: "/audit", label: "Activity log", icon: Shield },

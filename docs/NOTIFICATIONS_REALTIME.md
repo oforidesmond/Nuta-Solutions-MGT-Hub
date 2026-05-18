@@ -11,7 +11,7 @@ This document is the **single deep-dive** for frontend and mobile clients integr
 | Layer | Responsibility |
 |--------|----------------|
 | **PostgreSQL** | Source of truth: `Notification`, `NotificationReadReceipt`, dedup fields (`dedupKey`, `aggregateCount`, …), `expiresAt`. |
-| **REST `/api/v1/notifications`** | Hub: list (cursor), unread-count, mark-read. Tenant-scoped JWT (`organizationId` on token). |
+| **REST `/api/v1/notifications`** | Hub + mobile: list, unread-count, mark-read. **`POST /notifications/send`** (ADMIN/MANAGER → staff). Tenant JWT. |
 | **REST `/api/v1/platform/notifications/broadcast`** | Super Admin: create notifications in tenant orgs (org-wide, by role, or `targetUserIds`). |
 | **Redis (optional)** | Per-user cache for `GET /notifications/unread-count` (~30s TTL). Failures fall back to DB; **never** surfaces as 503 on mark-read. |
 | **Socket.IO `/notifications`** | Same host as API; JWT on connect. Emits **lightweight** payloads; clients merge or refetch via REST. |
@@ -24,10 +24,11 @@ This document is the **single deep-dive** for frontend and mobile clients integr
 
 ### 2.1 Visibility (who sees what)
 
-- **Broadcast** (`userId === null`): visible to org **ADMIN** and **MANAGER** (per controller guards). Read state is **per user** via `NotificationReadReceipt`, **not** the row’s `isRead`.
-- **Personal** (`userId` set): visible only to that user. Read state uses the row’s `isRead` / `readAt`.
+- **Broadcast** (`userId === null`): visible to org **ADMIN** and **MANAGER** only. Read state is **per user** via `NotificationReadReceipt`, **not** the row’s `isRead`.
+- **Personal** (`userId` set): visible only to that user (`userId === currentUser`). Read state uses the row’s `isRead` / `readAt`.
+- **Staff mobile** (`STAFF`, `SALES_AGENT`): **personal inbox only** — they do **not** see org-wide (`userId: null`) rows. Owner → staff messages are always created with `userId` set.
 
-List API already returns a **unified** `isRead` / `readAt` for both cases (see **List endpoint** below).
+List API returns a **unified** `isRead` / `readAt` for both personal and broadcast cases (see **List endpoint** below).
 
 ### 2.2 Deduplication and aggregation
 
@@ -49,11 +50,11 @@ New notifications get `expiresAt` from type (calendar days from creation, **UTC*
 | Retention | `NotificationType` values |
 |-----------|-------------------------|
 | **Never** (`null`) | `PAYMENT_FAILED`, `ACCOUNT_SUSPENDED`, `DATA_BREACH_NOTICE`, `PLAN_UPGRADE_REQUIRED` |
-| **7 days** | `TEMPORARY_ITEM_SOLD`, `STAFF_TIME_WARNING`, `DAILY_SALES_SUMMARY` |
-| **14 days** | `RETURN_REQUESTED`, `RETURN_PROCESSED`, `REFUND_PROCESSED`, `BATCH_EXPIRED` |
-| **30 days** | `LOW_STOCK`, `DISCOUNT_ALERT`, `STOCK_VARIANCE_SALE`, `REORDER_SUGGESTION`, `STOCKTAKE_OVERDUE`, `HIGH_VALUE_SALE`, staff/security/billing/account/service/system ops types (see `notification-expiry.ts`), `OTHER` |
+| **7 days** | `TEMPORARY_ITEM_SOLD`, `STAFF_TIME_WARNING`, `DAILY_SALES_SUMMARY`, `SHIFT_SCHEDULE`, `TRAINING_REMINDER` |
+| **14 days** | `RETURN_REQUESTED`, `RETURN_PROCESSED`, `REFUND_PROCESSED`, `BATCH_EXPIRED`, `STORE_ANNOUNCEMENT` |
+| **30 days** | `LOW_STOCK`, `DISCOUNT_ALERT`, `STOCK_VARIANCE_SALE`, `REORDER_SUGGESTION`, `STOCKTAKE_OVERDUE`, `HIGH_VALUE_SALE`, staff/security/billing/account/service/system ops types, `POLICY_UPDATE`, `OWNER_MESSAGE`, `OTHER` (see `notification-expiry.ts`) |
 | **60 days** | `EXPIRY_WARNING`, `TRIAL_LIMIT_WARNING` |
-| **90 days** | `SYSTEM_ALERT`, `MILESTONE_ACHIEVED`, `COMPLIANCE_UPDATE` |
+| **90 days** | `SYSTEM_ALERT`, `MILESTONE_ACHIEVED`, `COMPLIANCE_UPDATE`, `PERFORMANCE_FEEDBACK` |
 | **180 days** | `TRAINING_AVAILABLE`, `RECOMMENDATION_AVAILABLE` |
 
 **Sweep:** If env `NOTIFICATION_EXPIRY_SWEEP_ENABLED` is `true` or `1`, a **daily** job (02:00 UTC) runs `DELETE` where `expiresAt < now()`. Rows with `expiresAt` null are **not** deleted by this job.
@@ -141,8 +142,30 @@ export type NotificationType =
   | 'DAILY_SALES_SUMMARY'
   | 'RECOMMENDATION_AVAILABLE'
   | 'TRAINING_AVAILABLE'
+  // Owner → staff (Hub manual)
+  | 'SHIFT_SCHEDULE'
+  | 'POLICY_UPDATE'
+  | 'STORE_ANNOUNCEMENT'
+  | 'OWNER_MESSAGE'
+  | 'TRAINING_REMINDER'
+  | 'PERFORMANCE_FEEDBACK'
   // Fallback (unknown types from future clients)
   | 'OTHER';
+```
+
+**`metadata` for Hub manual sends (`source: 'hub_manual'`):**
+
+```typescript
+interface NotificationMetadataHubManual {
+  sender?: {
+    userId: string;
+    displayName: string;
+    role: string;
+  };
+  source: 'hub_manual';
+  sentAt: string; // ISO 8601
+  [key: string]: unknown;
+}
 ```
 
 **`metadata` for `OTHER` rows:**
@@ -159,7 +182,12 @@ interface NotificationMetadataOther {
 ## 4. REST API (`/api/v1/notifications`)
 
 **Auth:** `Authorization: Bearer <access_jwt>`  
-**Guards:** tenant context + roles **ADMIN** or **MANAGER** only.
+**Guards:** tenant context (`organizationId` on token).
+
+| Route | Roles |
+|-------|--------|
+| `POST /notifications/send`, `GET /notifications/sent` | **ADMIN**, **MANAGER** |
+| `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/:id/read` | **ADMIN**, **MANAGER**, **STAFF**, **SALES_AGENT** |
 
 **Errors (typical):**
 
@@ -234,9 +262,103 @@ export interface NotificationListResponse {
 
 **Pagination:** Cursor is the **last** returned item’s `id`. If `nextCursor` is absent, there is no next page.
 
-**Side effect:** First list load may materialize “yesterday’s” temporary-items batch notification for the org (idempotent server-side).
+**Side effect (ADMIN/MANAGER only):** First list load may materialize “yesterday’s” temporary-items batch notification for the org (idempotent server-side). Staff list skips this.
 
-### 4.3 `PATCH /api/v1/notifications/:id/read`
+### 4.3 `POST /api/v1/notifications/send` (Owner → staff)
+
+Allows business owners to send **personal** notifications to staff in the same organization.
+
+**Request:**
+
+```typescript
+export interface SendNotificationRequest {
+  title: string;       // max 200
+  message: string;     // max 1000
+  type: string;        // prefer OWNER_MESSAGE, STORE_ANNOUNCEMENT, etc.
+  targetUserIds?: string[];
+  targetRoles?: UserRole[];   // exact match; SUPER_ADMIN not allowed
+  targetAllStaff?: boolean;   // STAFF + SALES_AGENT only
+  actionUrl?: string;
+  actionLabel?: string;
+  metadata?: Record<string, unknown>;
+}
+```
+
+**Targeting (at least one required; first match wins):**
+
+| Priority | Field | Result |
+|----------|-------|--------|
+| 1 | `targetUserIds` | One row per user in caller’s org |
+| 2 | `targetRoles` | One row per active user with matching role |
+| 3 | `targetAllStaff: true` | All active `STAFF` and `SALES_AGENT` |
+
+**Success (200):**
+
+```json
+{
+  "sent": 2,
+  "recipientIds": ["uuid-1", "uuid-2"],
+  "notificationIds": ["uuid-a", "uuid-b"]
+}
+```
+
+**Errors:**
+
+- **400** — no targeting / no recipients / invalid `targetUserIds` → `{ message, invalidUserIds }`
+- **403** — not ADMIN or MANAGER
+
+Each create invalidates the recipient’s unread-count cache and emits **`notification:new`** with optional **`senderName`** (from sender display name).
+
+### 4.4 `GET /api/v1/notifications/sent` (Owner outbox)
+
+Lists **personal** notifications the caller sent to staff (`metadata.source === 'hub_manual'`, `metadata.sender.userId ===` current user). Read state reflects each **recipient’s** inbox (`isRead` / `readAt` on the row).
+
+**Query parameters:**
+
+| Param | Type | Default | Notes |
+|--------|------|---------|--------|
+| `page` | number | `1` | 1-based page index. |
+| `limit` | number | `25` | Clamped to **1–100**. |
+| `type` | `NotificationType[]` | — | Repeat param or array; filter by stored enum `type`. |
+| `isRead` | boolean | — | Filter by recipient read state. |
+| `userId` | UUID | — | Filter to a single recipient (`notification.userId`). |
+
+**Response:**
+
+```typescript
+export interface SentNotificationRecipient {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  role: string;
+}
+
+export interface SentNotificationListItem {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  userId: string | null;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+  metadata: unknown;
+  recipient: SentNotificationRecipient | null;
+}
+
+export interface SentNotificationListResponse {
+  data: SentNotificationListItem[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+```
+
+### 4.5 `PATCH /api/v1/notifications/:id/read`
 
 **Response:**
 
@@ -398,6 +520,8 @@ export interface NotificationRealtimePayload {
   actionLabel: string | null;
   aggregateCount: number;
   createdAt: string; // ISO 8601
+  /** Present for Hub manual sends to staff; use for in-app banner label. */
+  senderName?: string | null;
 }
 ```
 
@@ -565,6 +689,8 @@ Use the same URL, `auth: { token }`, and prefer **websocket** transport where su
 | Concern | Location |
 |---------|----------|
 | Hub HTTP routes | `src/modules/notifications/notifications.controller.ts` |
+| Owner → staff send | `src/modules/notifications/notifications-send.service.ts` |
+| Send DTO | `src/modules/notifications/dto/send-notification.dto.ts` |
 | List / unread / mark-read / dedup / critical | `src/modules/notifications/notifications.service.ts` |
 | Type normalization (`OTHER` + `originalType`) | `src/modules/notifications/notification-type.util.ts` |
 | Platform broadcast + `targetUserIds` | `src/modules/platform-admin/platform-admin-notifications.service.ts` |
@@ -580,4 +706,4 @@ Use the same URL, `auth: { token }`, and prefer **websocket** transport where su
 
 ---
 
-*This guide reflects the notifications stack: read receipts, dedup, expanded `NotificationType`, permissive type normalization, Redis cache semantics, Socket.IO hints, expiry, and platform super-admin broadcast (including `targetUserIds`). Update this file when changing `notifications.service.ts`, `notification-type.util.ts`, or `platform-admin-notifications.service.ts`.*
+*This guide reflects the notifications stack: read receipts, dedup, expanded `NotificationType`, permissive type normalization, Redis cache semantics, Socket.IO hints, expiry, platform super-admin broadcast, and tenant Hub send to staff (`POST /notifications/send`). Update when changing `notifications.service.ts`, `notifications-send.service.ts`, `notification-type.util.ts`, or `platform-admin-notifications.service.ts`.*

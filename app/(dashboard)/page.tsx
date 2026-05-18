@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Package,
   LineChart,
   Boxes,
   Plus,
+  Mail,
   CloudUpload,
   HardDrive,
   Database,
@@ -26,6 +27,8 @@ import { formatCurrency, formatDate, toNumericAmount } from "@/lib/format";
 import { formatRelativeUpdated } from "@/lib/format-relative-updated";
 import { canViewStaffReliability } from "@/lib/operations-access";
 import { POLL_DASHBOARD_MS, refetchIntervalWhenVisible } from "@/lib/query/poll-intervals";
+import { SendStaffNotificationModal } from "@/components/notifications/send-staff-notification-modal";
+import { canSendStaffNotifications } from "@/lib/notifications/can-send-staff-notifications";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +36,8 @@ export default function DashboardHomePage() {
   const organization = useAuthStore((s) => s.organization);
   const user = useAuthStore((s) => s.user);
   const canReliability = canViewStaffReliability(user?.role);
+  const canNotifyStaff = canSendStaffNotifications(user?.role);
+  const [notifyOpen, setNotifyOpen] = useState(false);
 
   const summaryQuery = useQuery({
     queryKey: ["dashboard", "summary"],
@@ -314,6 +319,17 @@ export default function DashboardHomePage() {
             <Plus className="size-4" aria-hidden />
             Add product
           </Button>
+          {canNotifyStaff ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 justify-center sm:min-w-[11rem]"
+              onClick={() => setNotifyOpen(true)}
+            >
+              <Mail className="size-4" aria-hidden />
+              Message staff
+            </Button>
+          ) : null}
           <Button variant="outline" className="min-h-11 justify-center sm:min-w-[11rem]" render={<Link href="/inventory" />}>
             <Boxes className="size-4" aria-hidden />
             Stock overview
@@ -328,6 +344,10 @@ export default function DashboardHomePage() {
           </Button>
         </div>
       </div>
+
+      {canNotifyStaff ? (
+        <SendStaffNotificationModal open={notifyOpen} onOpenChange={setNotifyOpen} />
+      ) : null}
     </div>
   );
 }

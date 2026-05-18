@@ -13,7 +13,81 @@ export type HubNotificationType =
   | "SYSTEM_ALERT"
   | "STAFF_TIME_WARNING"
   | "STOCK_VARIANCE_SALE"
+  | "OWNER_MESSAGE"
+  | "STORE_ANNOUNCEMENT"
+  | "SHIFT_SCHEDULE"
+  | "POLICY_UPDATE"
+  | "TRAINING_REMINDER"
+  | "PERFORMANCE_FEEDBACK"
   | string;
+
+/** Hub manual send types (POST /notifications/send). */
+export type HubManualNotificationType =
+  | "OWNER_MESSAGE"
+  | "STORE_ANNOUNCEMENT"
+  | "SHIFT_SCHEDULE"
+  | "POLICY_UPDATE"
+  | "TRAINING_REMINDER"
+  | "PERFORMANCE_FEEDBACK";
+
+export const HUB_MANUAL_NOTIFICATION_TYPE_OPTIONS: {
+  value: HubManualNotificationType;
+  label: string;
+}[] = [
+  { value: "OWNER_MESSAGE", label: "Owner message" },
+  { value: "STORE_ANNOUNCEMENT", label: "Store announcement" },
+  { value: "SHIFT_SCHEDULE", label: "Shift schedule" },
+  { value: "POLICY_UPDATE", label: "Policy update" },
+  { value: "TRAINING_REMINDER", label: "Training reminder" },
+  { value: "PERFORMANCE_FEEDBACK", label: "Performance feedback" },
+];
+
+export type StaffNotificationTargetRole = "STAFF" | "SALES_AGENT";
+
+export interface SendNotificationDto {
+  title: string;
+  message: string;
+  type: string;
+  targetUserIds?: string[];
+  targetRoles?: StaffNotificationTargetRole[];
+  targetAllStaff?: boolean;
+}
+
+export interface SendNotificationResponse {
+  sent: number;
+  recipientIds: string[];
+  notificationIds: string[];
+}
+
+/** Row from `GET /notifications/sent` (owner outbox) — see NOTIFICATIONS_REALTIME.md §4.4. */
+export interface SentNotificationRecipient {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  role?: string | null;
+}
+
+export interface SentNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  userId: string;
+  isRead: boolean;
+  readAt?: string | null;
+  createdAt: string;
+  metadata?: Record<string, unknown> | null;
+  recipient?: SentNotificationRecipient | null;
+}
+
+export interface SentNotificationListParams {
+  page?: number;
+  limit?: number;
+  type?: HubManualNotificationType[];
+  isRead?: boolean;
+  userId?: string;
+}
 
 export interface HubNotification {
   id: string;

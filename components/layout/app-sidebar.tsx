@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { navSections } from "@/components/layout/nav-config";
 import { canManageStockTakes } from "@/lib/inventory-access";
+import { canSendStaffNotifications } from "@/lib/notifications/can-send-staff-notifications";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/stores/auth-store";
@@ -12,21 +13,25 @@ import { useAuthStore } from "@/stores/auth-store";
 type AppSidebarProps = { onNavigate?: () => void };
 
 const STOCK_TAKE_HREF = "/inventory/stock-take";
+const STAFF_NOTIFICATIONS_HREF = "/notifications";
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const pathname = usePathname();
   const role = useAuthStore((s) => s.user?.role);
   const showStockTake = canManageStockTakes(role);
+  const showStaffNotifications = canSendStaffNotifications(role);
 
   const filteredSections = useMemo(
     () =>
       navSections.map((section) => ({
         ...section,
-        items: section.items.filter(
-          (item) => showStockTake || item.href !== STOCK_TAKE_HREF,
-        ),
+        items: section.items.filter((item) => {
+          if (!showStockTake && item.href === STOCK_TAKE_HREF) return false;
+          if (!showStaffNotifications && item.href === STAFF_NOTIFICATIONS_HREF) return false;
+          return true;
+        }),
       })),
-    [showStockTake],
+    [showStockTake, showStaffNotifications],
   );
 
   function isActive(href: string) {
