@@ -144,9 +144,7 @@ export default function DeviceBackupsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Device backups</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          SQLite backups uploaded from staff devices for support-led restore. Backups can be large;
-          use a stable connection before downloading. Device id is the client stable id from the device, not
-          necessarily the server Device UUID.
+          SQLite backups uploaded from staff devices for support-led restores.
         </p>
       </div>
 
@@ -158,13 +156,7 @@ export default function DeviceBackupsPage() {
 
       <Card className="border-border/40">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Filters</CardTitle>
-          <CardDescription>
-            Query parameters: <span className="font-mono text-xs">from</span>,{" "}
-            <span className="font-mono text-xs">to</span>, <span className="font-mono text-xs">userId</span>,{" "}
-            <span className="font-mono text-xs">deviceId</span>, <span className="font-mono text-xs">limit</span> (1–100,
-            default 20), <span className="font-mono text-xs">cursor</span>.
-          </CardDescription>
+          <CardTitle className="text-base">Backup filters</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
@@ -216,7 +208,6 @@ export default function DeviceBackupsPage() {
       <Card className="border-border/40">
         <CardHeader>
           <CardTitle className="text-base">Uploads</CardTitle>
-          <CardDescription>Received time is server-side; client time is from the device.</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {loading ? (
@@ -294,9 +285,6 @@ export default function DeviceBackupsPage() {
         <Link href="/" className="underline underline-offset-2">
           Dashboard
         </Link>{" "}
-        · Staff app uploads via POST <code className="rounded bg-muted px-1">/staff/backup</code>; hub lists with{" "}
-        <code className="rounded bg-muted px-1">GET /staff/backups</code> and downloads with{" "}
-        <code className="rounded bg-muted px-1">GET /staff/backup/:id</code>.
       </p>
 
       <Dialog open={confirmId !== null} onOpenChange={(o) => !o && setConfirmId(null)}>

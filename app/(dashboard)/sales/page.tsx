@@ -33,7 +33,9 @@ import {
   VARIANCE_REASON_VALUES,
 } from "@/lib/variance-reason-labels";
 import { useAuthStore } from "@/stores/auth-store";
+import { FORCED_SALES_UI } from "@/lib/copy/forced-sales-ui";
 import { formatRelativeUpdated } from "@/lib/format-relative-updated";
+import { cn } from "@/lib/utils";
 
 const PAYMENT_OPTIONS = [
   { value: "", label: "All methods" },
@@ -42,6 +44,12 @@ const PAYMENT_OPTIONS = [
   { value: "MOMO", label: "Mobile money" },
   { value: "OTHER", label: "Other" },
 ];
+
+const selectClassName =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60";
+
+const refineSelectClassName =
+  "flex h-9 w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function salesListQueryKey(args: Record<string, unknown>) {
   return ["sales", "list", args] as const;
@@ -170,7 +178,7 @@ export default function SalesPage() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Sales</h1>
-          <p className="text-sm text-muted-foreground">Transactions with filters and export (up to 50,000 rows).</p>
+          <p className="text-sm text-muted-foreground">Sales transactions, filters, and export.</p>
           {activeQuery.dataUpdatedAt ? (
             <p className="text-xs text-muted-foreground">Updated {formatRelativeUpdated(activeQuery.dataUpdatedAt)}</p>
           ) : null}
@@ -198,18 +206,38 @@ export default function SalesPage() {
                 </Button>
               </span>
             </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              Uses the same date, staff, branch, and payment filters as the table. Server cap: 50,000 rows. No paging
-              or sort on export. Variance columns are not included in the server CSV today; the variance toggle
-              filters the table only.
-            </TooltipContent>
+            <TooltipContent className="max-w-xs">{FORCED_SALES_UI.exportTooltip}</TooltipContent>
           </Tooltip>
         </div>
       </div>
 
       <Card className="border-border/40 bg-card/80 shadow-sm backdrop-blur-sm">
         <CardHeader className="space-y-4">
-          <CardTitle className="text-base font-medium">Filters</CardTitle>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <CardTitle className="text-base font-medium">Filters</CardTitle>
+            <label
+              htmlFor="variance-only"
+              className={cn(
+                "flex min-h-10 cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 transition-colors duration-200",
+                varianceOnly
+                  ? "border-amber-500/35 bg-amber-500/8 text-foreground"
+                  : "border-border/40 bg-muted/25 text-muted-foreground hover:bg-muted/40",
+              )}
+            >
+              <Checkbox
+                id="variance-only"
+                checked={varianceOnly}
+                onCheckedChange={(v) => onVarianceOnlyChange(v === true)}
+                className="pointer-events-none"
+              />
+              <span className="flex flex-col gap-0 leading-tight">
+                <span className="text-sm font-medium">{FORCED_SALES_UI.onlyFilter}</span>
+                <span className="text-[0.65rem] font-normal text-muted-foreground">
+                  {FORCED_SALES_UI.onlyFilterHint}
+                </span>
+              </span>
+            </label>
+          </div>
           <DateRangePresetToolbar
             preset={preset}
             onPresetChange={onPresetChange}
@@ -229,7 +257,7 @@ export default function SalesPage() {
               <Label htmlFor="staff-filter">Staff</Label>
               <select
                 id="staff-filter"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                className={selectClassName}
                 value={staffId}
                 disabled={varianceOnly}
                 onChange={(e) => {
@@ -249,7 +277,7 @@ export default function SalesPage() {
               <Label htmlFor="branch-filter">Branch ID</Label>
               <input
                 id="branch-filter"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={selectClassName}
                 placeholder="Optional UUID"
                 value={branchId}
                 onChange={(e) => {
@@ -262,7 +290,7 @@ export default function SalesPage() {
               <Label htmlFor="pay-filter">Payment</Label>
               <select
                 id="pay-filter"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                className={selectClassName}
                 value={paymentMethod}
                 disabled={varianceOnly}
                 onChange={(e) => {
@@ -278,54 +306,51 @@ export default function SalesPage() {
               </select>
             </div>
           </div>
-          <div className="flex flex-col gap-3 border-t border-border/40 pt-4 sm:flex-row sm:items-end sm:gap-6">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="variance-only"
-                checked={varianceOnly}
-                onCheckedChange={(v) => onVarianceOnlyChange(v === true)}
-              />
-              <Label htmlFor="variance-only" className="cursor-pointer text-sm font-normal">
-                Variance only
-              </Label>
-            </div>
-            <div className="grid flex-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="variance-reason">Variance reason</Label>
-                <select
-                  id="variance-reason"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-                  value={varianceReason}
-                  disabled={!varianceOnly}
-                  onChange={(e) => {
-                    setVarianceReason((e.target.value as VarianceReason | "") || "");
-                    setPage(1);
-                  }}
-                >
-                  <option value="">Any reason</option>
-                  {VARIANCE_REASON_VALUES.map((r) => (
-                    <option key={r} value={r}>
-                      {VARIANCE_REASON_LABELS[r]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="variance-product">Product ID</Label>
-                <input
-                  id="variance-product"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-                  placeholder="Optional UUID"
-                  value={productId}
-                  disabled={!varianceOnly}
-                  onChange={(e) => {
-                    setProductId(e.target.value);
-                    setPage(1);
-                  }}
-                />
+          {varianceOnly ? (
+            <div className="rounded-lg border border-border/30 bg-muted/15 px-3 py-3">
+              <p className="mb-2.5 text-xs font-medium tracking-wide text-muted-foreground">
+                {FORCED_SALES_UI.refineSection}
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+                <div className="space-y-1 sm:w-44 sm:shrink-0">
+                  <Label htmlFor="variance-reason" className="text-xs text-muted-foreground">
+                    {FORCED_SALES_UI.reasonShort}
+                  </Label>
+                  <select
+                    id="variance-reason"
+                    className={refineSelectClassName}
+                    value={varianceReason}
+                    onChange={(e) => {
+                      setVarianceReason((e.target.value as VarianceReason | "") || "");
+                      setPage(1);
+                    }}
+                  >
+                    <option value="">Any reason</option>
+                    {VARIANCE_REASON_VALUES.map((r) => (
+                      <option key={r} value={r}>
+                        {VARIANCE_REASON_LABELS[r]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-0 flex-1 space-y-1 sm:max-w-xs">
+                  <Label htmlFor="variance-product" className="text-xs text-muted-foreground">
+                    Product ID
+                  </Label>
+                  <input
+                    id="variance-product"
+                    className={refineSelectClassName}
+                    placeholder="Optional UUID"
+                    value={productId}
+                    onChange={(e) => {
+                      setProductId(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
           {activeQuery.isError ? (

@@ -36,10 +36,8 @@ export default function LowStockAlertsPage() {
     try {
       try {
         const data = await fetchLowStockProducts();
-        if (data.length) {
-          setRows(data);
-          return;
-        }
+        setRows(data);
+        return;
       } catch (e) {
         if (!axios.isAxiosError(e) || e.response?.status !== 404) {
           throw e;

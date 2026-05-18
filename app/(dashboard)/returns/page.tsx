@@ -149,7 +149,7 @@ export default function ReturnsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Returns</h1>
-        <p className="text-sm text-muted-foreground">Refunds and return lines from the API.</p>
+        <p className="text-sm text-muted-foreground">Refunds and returns.</p>
       </div>
 
       <Card className="border-border/40 bg-card/80 shadow-sm">

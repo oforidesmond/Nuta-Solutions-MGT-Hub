@@ -14,3 +14,7 @@ export function getApiOrigin(): string {
 export function getHubBaseUrl(): string {
   return process.env.NEXT_PUBLIC_HUB_URL ?? "http://localhost:5174";
 }
+
+export function getMarketingSiteUrl(): string {
+  return process.env.NEXT_PUBLIC_MARKETING_URL ?? "http://localhost:4321";
+}

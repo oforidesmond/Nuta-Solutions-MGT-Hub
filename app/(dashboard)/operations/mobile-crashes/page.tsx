@@ -152,11 +152,7 @@ export default function MobileCrashesPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Mobile crash reports</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          JavaScript errors and unhandled rejections from the staff Expo app. The list omits{" "}
-          <span className="font-medium">stack</span>; open a row to load full detail via{" "}
-          <code className="rounded bg-muted px-1 font-mono text-xs">GET /analytics/crashes/:id</code>. If the API
-          rate-limits device uploads (POST), staff may see <span className="font-medium">429</span> — “Too many
-          reports from this device; try again later.”
+          JavaScript errors and unhandled rejections from the staff mobile app. Open a row to load full detail.
         </p>
       </div>
 
@@ -169,12 +165,6 @@ export default function MobileCrashesPage() {
       <Card className="border-border/40">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Filters</CardTitle>
-          <CardDescription>
-            <span className="font-mono text-xs">from</span>, <span className="font-mono text-xs">to</span>,{" "}
-            <span className="font-mono text-xs">userId</span>, <span className="font-mono text-xs">fatalOnly</span>,{" "}
-            <span className="font-mono text-xs">errorType</span>, <span className="font-mono text-xs">limit</span>,{" "}
-            <span className="font-mono text-xs">cursor</span>.
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
@@ -312,9 +302,7 @@ export default function MobileCrashesPage() {
       <p className="text-xs text-muted-foreground">
         <Link href="/reports" className="underline underline-offset-2">
           Reports
-        </Link>{" "}
-        · Devices POST to <code className="rounded bg-muted px-1">/analytics/crash</code>; this page lists via{" "}
-        <code className="rounded bg-muted px-1">GET /analytics/crashes</code>.
+        </Link>
       </p>
 
       <Sheet open={detail !== null} onOpenChange={(open) => !open && setDetail(null)}>

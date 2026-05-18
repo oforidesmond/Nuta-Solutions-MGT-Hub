@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield } from "lucide-react";
 import { platformNavSections } from "@/components/platform/nav-config";
+import { SidebarBrand } from "@/components/layout/sidebar-brand";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 
@@ -24,19 +24,7 @@ export function PlatformSidebar({ onNavigate }: PlatformSidebarProps) {
         "bg-sidebar/75 backdrop-blur-xl supports-[backdrop-filter]:bg-sidebar/60",
       )}
     >
-      <div className="mb-4 flex items-center gap-2 px-2 pt-1">
-        <span className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <Shield className="size-4" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="text-xs font-medium tracking-wide text-muted-foreground">
-            NutaPOS
-          </p>
-          <p className="truncate text-sm font-semibold text-foreground">
-            Platform Console
-          </p>
-        </div>
-      </div>
+      <SidebarBrand title="Platform Console" />
       <nav className="flex flex-1 flex-col gap-4 overflow-y-auto pb-4">
         {platformNavSections.map((section, si) => (
           <div key={si} className="space-y-1">

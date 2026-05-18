@@ -24,6 +24,7 @@ import { delayedSyncTooltipText, isSaleDelayedSync } from "@/lib/sale-sync";
 import type { HubSale, HubSaleLine } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
+import { FORCED_SALES_UI } from "@/lib/copy/forced-sales-ui";
 import { varianceReasonLabel } from "@/lib/variance-reason-labels";
 
 function createdByLabel(sale: HubSale): string {
@@ -125,7 +126,7 @@ export default function SaleDetailPage() {
           {variance ? (
             <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-300">
               <PackageX className="mr-1 size-3.5" aria-hidden />
-              Stock variance
+              {FORCED_SALES_UI.badge}
             </Badge>
           ) : null}
         </div>
@@ -198,13 +199,11 @@ export default function SaleDetailPage() {
 
         <Card className="border-border/40 bg-card/80 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base font-medium">Variance summary</CardTitle>
+            <CardTitle className="text-base font-medium">{FORCED_SALES_UI.summaryTitle}</CardTitle>
             <CardDescription>
               {variance
-                ? `${varianceLines.length} of ${items.length} ${
-                    items.length === 1 ? "line" : "lines"
-                  } recorded as sell-anyway.`
-                : "No stock variance on this sale."}
+                ? FORCED_SALES_UI.recordedAsForced(varianceLines.length, items.length)
+                : FORCED_SALES_UI.noOnSale}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
@@ -243,7 +242,7 @@ export default function SaleDetailPage() {
         <CardHeader>
           <CardTitle className="text-base font-medium">Line items</CardTitle>
           <CardDescription>
-            Variance fields are read-only and reflect the staff sell-anyway record.
+            {FORCED_SALES_UI.lineItemsNote}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -257,7 +256,7 @@ export default function SaleDetailPage() {
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Unit</TableHead>
                   <TableHead className="text-right">Line total</TableHead>
-                  <TableHead>Variance</TableHead>
+                  <TableHead>{FORCED_SALES_UI.tableColumn}</TableHead>
                   <TableHead>Reason</TableHead>
                   <TableHead>Note</TableHead>
                   <TableHead>Approved by</TableHead>

@@ -32,14 +32,14 @@ const allCards = [
   {
     href: "/inventory/adjustments",
     title: "Stock adjustments",
-    description: "View adjustment history from the API.",
+    description: "View adjustment history.",
     icon: ClipboardList,
     requiresStockTakeRole: false,
   },
   {
     href: "/inventory/stock-take",
-    title: "Stock takes",
-    description: "View physical count history from the API.",
+    title: "Stock counts",
+    description: "View physical count history.",
     icon: ClipboardPlus,
     requiresStockTakeRole: true,
   },

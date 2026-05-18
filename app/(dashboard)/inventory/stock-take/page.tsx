@@ -204,7 +204,7 @@ function KpiGrid({
   const hasSummary = summary != null;
 
   return (
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Stock take financial summary">
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Stock count financial summary">
       <KpiCard
         label="Total losses"
         description="Shrinkage at cost"
@@ -296,12 +296,12 @@ export default function StockTakePage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Stock takes</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Stock counts</h1>
           <p className="text-sm text-muted-foreground">Physical inventory count history.</p>
         </div>
         <EmptyState
           title="Restricted"
-          description="Only administrators and managers can view stock take history and record counts. This matches the API roles on inventory stock-take routes."
+          description="Only administrators and managers can view stock count history and record counts. This matches the API roles on inventory stock-take routes."
         />
       </div>
     );
@@ -311,9 +311,9 @@ export default function StockTakePage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Stock takes</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Stock counts</h1>
           <p className="text-sm text-muted-foreground">
-            Physical counts, value impact, and variance. Record counts from{" "}
+            Physical counts, value impact, and forced sale counts. Record on{" "}
             <Link className="font-medium text-primary underline-offset-2 hover:underline" href="/products">
               All products
             </Link>
@@ -326,7 +326,7 @@ export default function StockTakePage() {
           className="min-h-10 gap-2 self-start"
           onClick={() => void listQuery.refetch()}
           disabled={listQuery.isFetching}
-          aria-label={listQuery.isFetching ? "Refreshing stock takes" : "Refresh stock takes"}
+          aria-label={listQuery.isFetching ? "Refreshing stock counts" : "Refresh stock counts"}
         >
           {listQuery.isFetching ? (
             <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
@@ -422,15 +422,15 @@ export default function StockTakePage() {
           ) : null}
 
           {initialPayloadLoading ? (
-            <div className="space-y-2" aria-busy="true" aria-label="Loading stock takes table">
+            <div className="space-y-2" aria-busy="true" aria-label="Loading stock counts table">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton key={i} className="h-11 w-full rounded-lg" />
               ))}
             </div>
           ) : rows.length === 0 ? (
             <EmptyState
-              title="No stock takes in this range"
-              description="No stock takes recorded yet for these filters. Use the stock take action on each product row under All products to record physical counts."
+                title="No stock counts in this range"
+              description="No stock counts recorded yet for these filters. Use the stock count action on each product row under All products to record physical counts."
               action={{ label: "Go to products", onClick: () => router.push("/products") }}
             />
           ) : (

@@ -54,6 +54,7 @@ import { fetchCategories } from "@/lib/api/categories";
 import {
   deleteProduct,
   duplicateProduct,
+  fetchAllProducts,
   fetchProductsPaginated,
   type ProductQueryParams,
 } from "@/lib/api/products";
@@ -194,9 +195,7 @@ export default function ProductsPage() {
     setLoading(true);
     try {
       if (clientMode) {
-        const { items: raw } = await fetchProductsPaginated({
-          page: 1,
-          limit: 500,
+        const raw = await fetchAllProducts({
           search: debouncedSearch || undefined,
           categoryId: categoryId || undefined,
           lowStock: stockFilter === "low" ? true : undefined,
@@ -537,13 +536,13 @@ export default function ProductsPage() {
                                   variant="ghost"
                                   size="icon-sm"
                                   className="min-h-9 min-w-9"
-                                  aria-label={`Stock take for ${p.name}`}
+                                  aria-label={`Stock count for ${p.name}`}
                                   onClick={() => setStockTakeProduct(p)}
                                 >
                                   <ClipboardCheck className="size-4" aria-hidden />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Stock take</TooltipContent>
+                              <TooltipContent>Stock count</TooltipContent>
                             </Tooltip>
                           ) : null}
                           <DropdownMenu
@@ -560,7 +559,7 @@ export default function ProductsPage() {
                               <DropdownMenuItem render={<Link href={`/products/${p.id}`} />}>View details</DropdownMenuItem>
                               <DropdownMenuItem render={<Link href={`/products/${p.id}/edit`} />}>Edit</DropdownMenuItem>
                               {canStockTake ? (
-                                <DropdownMenuItem onClick={() => setStockTakeProduct(p)}>Stock take</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setStockTakeProduct(p)}>Stock count</DropdownMenuItem>
                               ) : null}
                               {canConvert && hasActiveConversionForMenuRow(p) ? (
                                 <DropdownMenuItem onClick={() => setConvertProduct(p)}>Convert</DropdownMenuItem>
@@ -619,7 +618,7 @@ export default function ProductsPage() {
                       <DropdownMenuContent align="start">
                         <DropdownMenuItem render={<Link href={`/products/${p.id}`} />}>View details</DropdownMenuItem>
                         {canStockTake ? (
-                          <DropdownMenuItem onClick={() => setStockTakeProduct(p)}>Stock take</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setStockTakeProduct(p)}>Stock count</DropdownMenuItem>
                         ) : null}
                         {canConvert && hasActiveConversionForMenuRow(p) ? (
                           <DropdownMenuItem onClick={() => setConvertProduct(p)}>Convert</DropdownMenuItem>

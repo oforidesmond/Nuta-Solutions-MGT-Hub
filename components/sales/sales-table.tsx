@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 import { formatCurrency, formatDateDMY, formatTime12h } from "@/lib/format";
 import { delayedSyncTooltipText, isSaleDelayedSync } from "@/lib/sale-sync";
+import { FORCED_SALES_UI } from "@/lib/copy/forced-sales-ui";
 import { cn } from "@/lib/utils";
 import type { HubSale } from "@/lib/types/domain";
 
@@ -45,7 +46,7 @@ export function SalesTable({
       <TableHeader>
         <TableRow>
           <TableHead className="w-10" aria-label="Sync" />
-          <TableHead className="w-10" aria-label="Variance" />
+          <TableHead className="w-10" aria-label={FORCED_SALES_UI.tableColumn} />
           <TableHead>Receipt</TableHead>
           <TableHead className="text-right">Total</TableHead>
           <TableHead>Date</TableHead>
@@ -69,8 +70,8 @@ export function SalesTable({
             const detailHref = s.id ? `/sales/${s.id}` : null;
             const tooltipText =
               lineCount != null && lineCount > 0
-                ? `Stock variance · ${lineCount} ${lineCount === 1 ? "line" : "lines"}`
-                : "Stock variance";
+                ? FORCED_SALES_UI.tooltipWithLines(lineCount)
+                : FORCED_SALES_UI.tooltip;
             return (
               <TableRow
                 key={s.id}

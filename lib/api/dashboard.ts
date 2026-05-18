@@ -1,7 +1,7 @@
 import axios from "axios";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
-import { fetchProductsPaginated } from "@/lib/api/products";
+import { fetchAllProducts } from "@/lib/api/products";
 import { fetchSalesPage, fetchSalesStats } from "@/lib/api/sales";
 import { rangeForPreset } from "@/lib/date-range-presets";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
@@ -93,21 +93,6 @@ function countRestockAttention(products: HubProduct[]): number {
   }).length;
 }
 
-async function fetchAllProductsForFallback(): Promise<HubProduct[]> {
-  const collected: HubProduct[] = [];
-  let page = 1;
-  const limit = 200;
-  for (;;) {
-    const { items, meta } = await fetchProductsPaginated({ page, limit });
-    collected.push(...items);
-    if (items.length === 0) break;
-    if (typeof meta.totalPages === "number" && page >= meta.totalPages) break;
-    if (items.length < limit) break;
-    page += 1;
-  }
-  return collected;
-}
-
 export async function fetchDashboardSummary(): Promise<DashboardSummary> {
   try {
     const res = await api.get(endpoints.dashboardSummary);
@@ -115,7 +100,7 @@ export async function fetchDashboardSummary(): Promise<DashboardSummary> {
   } catch (e) {
     if (axios.isAxiosError(e) && e.response?.status === 404) {
       const range = rangeForPreset("this_month");
-      const products = await fetchAllProductsForFallback();
+      const products = await fetchAllProducts();
       const active = products.filter((p) => p.isActive !== false);
       const totalActiveProducts = active.length;
       const inventoryCount = totalActiveProducts;

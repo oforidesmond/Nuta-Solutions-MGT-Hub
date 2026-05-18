@@ -101,7 +101,7 @@ export function StockTakeRecordModal(props: {
       const after = formatQtyLabel(row.quantityAfter);
       const ch = formatQtyLabel(row.quantityChange);
       const sign = Number(row.quantityChange) > 0 ? "+" : "";
-      toast.success(`Stock take saved. ${before} → ${after} (${sign}${ch}).`);
+      toast.success(`Stock count saved. ${before} → ${after} (${sign}${ch}).`);
       onOpenChange(false);
       await onRecorded();
     } catch (err) {
@@ -116,7 +116,7 @@ export function StockTakeRecordModal(props: {
       <DialogContent className="sm:max-w-md">
         <form onSubmit={(ev) => void handleSubmit(ev)}>
           <DialogHeader>
-            <DialogTitle>Record stock take</DialogTitle>
+            <DialogTitle>Record stock count</DialogTitle>
             <DialogDescription>
               Enter the physical count on hand. The system updates inventory to match.
             </DialogDescription>
@@ -208,7 +208,7 @@ export function StockTakeRecordModal(props: {
                   Saving…
                 </>
               ) : (
-                "Save stock take"
+                "Save stock count"
               )}
             </Button>
           </DialogFooter>

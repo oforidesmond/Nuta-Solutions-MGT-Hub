@@ -27,10 +27,8 @@ export default function ExpiringSoonProductsPage() {
     try {
       try {
         const data = await fetchExpiringSoonProducts();
-        if (data.length) {
-          setRows(data);
-          return;
-        }
+        setRows(data);
+        return;
       } catch (e) {
         if (!axios.isAxiosError(e) || e.response?.status !== 404) {
           throw e;

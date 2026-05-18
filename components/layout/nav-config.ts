@@ -56,7 +56,7 @@ export const navSections: NavSection[] = [
       { href: "/inventory", label: "Overview", icon: Boxes },
       { href: "/batches", label: "Batches & expiry", icon: CalendarClock },
       { href: "/inventory/adjustments", label: "Stock adjustments", icon: ClipboardList },
-      { href: "/inventory/stock-take", label: "Stock takes", icon: ClipboardPlus },
+      { href: "/inventory/stock-take", label: "Stock counts", icon: ClipboardPlus },
       { href: "/inventory/temporary-items", label: "Temporary items", icon: PackagePlus },
     ],
   },

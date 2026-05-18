@@ -122,11 +122,6 @@ export default function DatabaseWarningsPage() {
       <Card className="border-border/40">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Filters</CardTitle>
-          <CardDescription>
-            <span className="font-mono text-xs">from</span>, <span className="font-mono text-xs">to</span>,{" "}
-            <span className="font-mono text-xs">userId</span>, <span className="font-mono text-xs">limit</span>,{" "}
-            <span className="font-mono text-xs">cursor</span>.
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
           <div className="space-y-2 sm:min-w-[12rem]">

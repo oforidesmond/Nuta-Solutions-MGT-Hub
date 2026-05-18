@@ -456,7 +456,7 @@ export default function StaffPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Staff</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your team, roles, and till permissions. Your shop stays private — we never ask for your organization ID here.
+            Manage your team, roles, and permissions.
           </p>
         </div>
         {canManageStaff(me?.role) ? (
@@ -706,7 +706,7 @@ export default function StaffPage() {
         <CardHeader>
           <CardTitle className="text-base font-medium">Performance</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Sales totals from your backend. Optional dates filter the range when the API supports it.
+            Sales totals. Optional dates filter the range.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -944,7 +944,7 @@ export default function StaffPage() {
           <DialogHeader>
             <DialogTitle>Permissions</DialogTitle>
             <DialogDescription>
-              Stored as JSON on the staff profile. Toggle what this person can do in the till and hub.
+              Toggle what this person can do.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-72 space-y-3 overflow-y-auto py-2">

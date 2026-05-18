@@ -3,15 +3,22 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { LoginBrand } from "@/components/auth/login-brand";
+import { LoginShell } from "@/components/auth/login-shell";
 import { loginRequest } from "@/lib/api/auth-requests";
 import { fetchOrganizationMe } from "@/lib/api/users";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getMarketingSiteUrl } from "@/lib/constants";
 import { useAuthStore } from "@/stores/auth-store";
 import { postLoginRedirect } from "@/lib/platform-access";
+
+const fieldClassName =
+  "h-11 rounded-xl border-input/80 bg-background/90 px-3.5 text-base md:text-sm";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,14 +62,14 @@ export default function LoginPage() {
 
   if (status === "hydrating" || status === "idle") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50/90 p-4">
-        <Card className="w-full max-w-md border-border/40 bg-card/85 shadow-lg backdrop-blur-md">
-          <CardHeader>
-            <CardTitle>Sign in</CardTitle>
-            <CardDescription>Checking session…</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <LoginShell>
+        <LoginBrand description="Checking your session…" />
+        <div className="mt-8 space-y-4" aria-busy aria-label="Loading sign in">
+          <Skeleton className="h-11 w-full rounded-xl" />
+          <Skeleton className="h-11 w-full rounded-xl" />
+          <Skeleton className="h-11 w-full rounded-xl" />
+        </div>
+      </LoginShell>
     );
   }
 
@@ -71,56 +78,63 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50/90 p-4">
-      <Card className="w-full max-w-md border-border/40 bg-card/85 shadow-lg backdrop-blur-md transition-shadow hover:shadow-xl">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-xl font-semibold">NutaPOS Hub</CardTitle>
-          <CardDescription>
-            Sign in with the email and password for your organization.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-background/80"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-background/80"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Signing in…" : "Sign in"}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              New here? Start from the{" "}
-              <Link
-                href="http://localhost:4321"
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                marketing site
-              </Link>
-              .
-            </p>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <LoginShell>
+      <LoginBrand />
+      <form onSubmit={onSubmit} className="mt-8 space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium text-foreground">
+            Email
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@yourbusiness.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className={fieldClassName}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-sm font-medium text-foreground">
+            Password
+          </Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className={fieldClassName}
+          />
+        </div>
+        <Button
+          type="submit"
+          className="mt-1 h-11 w-full rounded-xl text-base font-medium shadow-sm"
+          disabled={submitting}
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+              Signing in…
+            </>
+          ) : (
+            "Sign in"
+          )}
+        </Button>
+        <p className="pt-1 text-center text-xs leading-relaxed text-muted-foreground">
+          New here?{" "}
+          <Link
+            href={getMarketingSiteUrl()}
+            className="font-medium text-primary underline-offset-4 transition-colors hover:underline"
+          >
+            Visit the marketing site
+          </Link>
+        </p>
+      </form>
+    </LoginShell>
   );
 }

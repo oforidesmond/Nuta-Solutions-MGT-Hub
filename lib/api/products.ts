@@ -4,6 +4,9 @@ import { unwrapList } from "@/lib/api/response";
 import type { HubProduct, HubStockAdjustment, PageMeta } from "@/lib/types/domain";
 import type { HubInventoryEvent, HubTemporaryItem } from "@/lib/types/phase2";
 
+/** Backend validation cap for `GET /products` `limit` query param. */
+export const PRODUCTS_API_LIMIT_MAX = 100;
+
 export type ProductSortBy = "name" | "createdAt" | "stockQuantity" | "sellingPrice";
 
 export type ProductQueryParams = {
@@ -23,17 +26,38 @@ function unwrapEntity<T>(data: unknown): T {
   return data as T;
 }
 
-/** Backward-compatible: all active products (high limit). */
+/** Backward-compatible: all products (paginated at API max). */
 export async function fetchProducts(): Promise<HubProduct[]> {
-  const { items } = await fetchProductsPaginated({ page: 1, limit: 500 });
-  return items;
+  return fetchAllProducts();
+}
+
+/** Fetch every page of products (respects API `limit` cap). */
+export async function fetchAllProducts(
+  params: Omit<ProductQueryParams, "page" | "limit"> = {},
+): Promise<HubProduct[]> {
+  const collected: HubProduct[] = [];
+  let page = 1;
+  for (;;) {
+    const { items, meta } = await fetchProductsPaginated({
+      ...params,
+      page,
+      limit: PRODUCTS_API_LIMIT_MAX,
+    });
+    collected.push(...items);
+    if (items.length === 0) break;
+    if (typeof meta.totalPages === "number" && page >= meta.totalPages) break;
+    if (items.length < PRODUCTS_API_LIMIT_MAX) break;
+    page += 1;
+  }
+  return collected;
 }
 
 export async function fetchProductsPaginated(
   params: ProductQueryParams = {},
 ): Promise<{ items: HubProduct[]; meta: PageMeta }> {
   const page = params.page ?? 1;
-  const limit = params.limit ?? 20;
+  const requestedLimit = params.limit ?? 20;
+  const limit = Math.min(Math.max(1, requestedLimit), PRODUCTS_API_LIMIT_MAX);
   const res = await api.get(endpoints.products, {
     params: {
       page,

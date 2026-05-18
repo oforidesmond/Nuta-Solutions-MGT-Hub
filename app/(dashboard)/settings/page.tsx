@@ -174,7 +174,7 @@ export default function SettingsPage() {
         <Card className="border-border/40 bg-card/80 shadow-sm backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-base font-medium">Tax</CardTitle>
-            <CardDescription>Default tax applied at the till when your products use the shop rate.</CardDescription>
+            <CardDescription>Default tax applied for all sales.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm md:col-span-2">
@@ -229,7 +229,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="text-base font-medium">Discount limits (staff)</CardTitle>
             <CardDescription>
-              Cap how much discount staff can give at the till. Matches your database fields when the API accepts them.
+              Cap how much discount staff can give.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">

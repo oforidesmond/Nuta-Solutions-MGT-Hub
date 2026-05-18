@@ -7,6 +7,7 @@ import { navSections } from "@/components/layout/nav-config";
 import { canManageStockTakes } from "@/lib/inventory-access";
 import { canSendStaffNotifications } from "@/lib/notifications/can-send-staff-notifications";
 import { cn } from "@/lib/utils";
+import { SidebarBrand } from "@/components/layout/sidebar-brand";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -46,10 +47,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         "bg-sidebar/75 backdrop-blur-xl supports-[backdrop-filter]:bg-sidebar/60",
       )}
     >
-      <div className="mb-4 px-2 pt-1">
-        <p className="text-xs font-medium tracking-wide text-muted-foreground">NutaPOS</p>
-        <p className="text-sm font-semibold text-foreground">Management Hub</p>
-      </div>
+      <SidebarBrand title="Management Hub" />
       <nav className="flex flex-1 flex-col gap-4 overflow-y-auto pb-4">
         {filteredSections.map((section, si) => (
           <div key={si} className="space-y-1">

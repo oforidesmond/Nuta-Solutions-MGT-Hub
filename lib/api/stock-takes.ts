@@ -113,6 +113,6 @@ export async function createStockTake(payload: CreateStockTakePayload): Promise<
     branchId: payload.branchId,
   });
   const row = parseStockTakeRow(res.data);
-  if (!row) throw new Error("Invalid stock take response");
+  if (!row) throw new Error("Invalid stock count response");
   return row;
 }

@@ -114,7 +114,7 @@ export default function SentNotificationsPage() {
         <div>
           <h1 className="font-heading text-2xl font-semibold text-foreground">Staff notifications</h1>
           <p className="text-sm text-muted-foreground">
-            Messages you sent to staff · read state reflects each recipient&apos;s inbox.
+            Messages you sent to staff · when they read them, you'll know.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

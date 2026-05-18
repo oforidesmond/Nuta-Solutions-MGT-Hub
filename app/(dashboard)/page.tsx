@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { fetchDashboardSummary } from "@/lib/api/dashboard";
 import { fetchSalesWithVariancesPage } from "@/lib/api/sales";
+import { FORCED_SALES_UI } from "@/lib/copy/forced-sales-ui";
 import { fetchReliabilityHomeSummary, mergeReliabilityForHome } from "@/lib/api/staff-reliability";
 import { formatCurrency, formatDate, toNumericAmount } from "@/lib/format";
 import { formatRelativeUpdated } from "@/lib/format-relative-updated";
@@ -185,7 +186,7 @@ export default function DashboardHomePage() {
         )}
       </section>
 
-      <section aria-label="Stock variance (last 7 days)">
+      <section aria-label={FORCED_SALES_UI.sectionAria7d}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <VarianceLinkCard
             href="/sales"
@@ -415,12 +416,12 @@ function VarianceLinkCard({
   const total = typeof value === "number" ? value : 0;
   const display = isLoading ? "…" : isError ? "—" : String(total);
   const hint = isError
-    ? "Variance feed unavailable. Open Sales to retry."
+    ? FORCED_SALES_UI.feedUnavailable
     : isLoading
-      ? "Loading variance count…"
+      ? FORCED_SALES_UI.loadingCount
       : total > 0
-        ? "Sales with at least one sell-anyway line"
-        : "No variance sales in the last 7 days";
+        ? FORCED_SALES_UI.hasSellAnywayLine
+        : FORCED_SALES_UI.noneIn7d;
   return (
     <Link href={href} className="block">
       <Card className="relative h-full border-border/40 bg-card/80 shadow-sm backdrop-blur-sm transition-shadow duration-200 hover:shadow-md">
@@ -436,7 +437,7 @@ function VarianceLinkCard({
           <div className="flex items-center gap-2">
             <PackageX className="size-4 text-muted-foreground" aria-hidden />
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Variance sales (7d)
+              {FORCED_SALES_UI.cardTitle7d}
             </CardTitle>
           </div>
         </CardHeader>

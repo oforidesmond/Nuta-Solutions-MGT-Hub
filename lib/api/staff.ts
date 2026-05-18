@@ -1,5 +1,6 @@
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
+import { toNumericAmount } from "@/lib/format";
 import type {
   HubStaffMember,
   StaffActivityPage,
@@ -260,14 +261,42 @@ export async function fetchStaffActivityLog(
   return { items: list.map(mapActivityRow), meta: undefined };
 }
 
-export async function fetchStaffPerformance(params?: {
-  from?: string;
-  to?: string;
-}): Promise<StaffPerformanceRow[]> {
-  const res = await api.get(endpoints.staff.performance, { params });
-  const rows = unwrapArray<Record<string, unknown>>(res.data);
-  return rows.map((row) => ({
-    id: row.id != null ? String(row.id) : undefined,
+function isPerformanceRowLike(row: Record<string, unknown>): boolean {
+  return (
+    row.userId != null ||
+    row.user_id != null ||
+    row.staffId != null ||
+    row.staff_id != null ||
+    row.salesCount != null ||
+    row.sales_count != null ||
+    row.totalAmount != null ||
+    row.total_amount != null
+  );
+}
+
+/** Unwrap list payloads; tolerate a single metrics object from the API. */
+function unwrapPerformanceRows(data: unknown): Record<string, unknown>[] {
+  const fromArray = unwrapArray<Record<string, unknown>>(data);
+  if (fromArray.length > 0) return fromArray;
+
+  const o = asRecord(data);
+  if (!o) return [];
+
+  const nested = o.data ?? o.items ?? o.results ?? o.performance ?? o.staff;
+  if (Array.isArray(nested)) return nested as Record<string, unknown>[];
+  const nestedRecord = asRecord(nested);
+  if (nestedRecord && isPerformanceRowLike(nestedRecord)) return [nestedRecord];
+
+  if (isPerformanceRowLike(o)) return [o];
+  return [];
+}
+
+function mapStaffPerformanceRow(row: Record<string, unknown>): StaffPerformanceRow {
+  const userId = row.userId ?? row.user_id;
+  const id = row.id ?? userId;
+
+  return {
+    id: id != null ? String(id) : undefined,
     staffName: (() => {
       const explicit = row.staffName ?? row.name;
       if (explicit) return String(explicit);
@@ -276,9 +305,33 @@ export async function fetchStaffPerformance(params?: {
       if (row.email) return String(row.email);
       return "—";
     })(),
-    totalSales: Number(row.totalSales ?? row.salesTotal ?? 0) || 0,
-    transactionCount:
-      Number(row.transactionCount ?? row.transactions ?? row.saleCount ?? 0) || 0,
-    staffId: row.staffId != null ? String(row.staffId) : null,
-  }));
+    totalSales: toNumericAmount(
+      (row.totalAmount ??
+        row.total_amount ??
+        row.totalSales ??
+        row.salesTotal ??
+        row.revenue) as string | number | null | undefined,
+    ),
+    transactionCount: toNumericAmount(
+      (row.salesCount ??
+        row.sales_count ??
+        row.transactionCount ??
+        row.transactions ??
+        row.saleCount) as string | number | null | undefined,
+    ),
+    staffId:
+      row.staffId != null
+        ? String(row.staffId)
+        : row.staff_id != null
+          ? String(row.staff_id)
+          : null,
+  };
+}
+
+export async function fetchStaffPerformance(params?: {
+  from?: string;
+  to?: string;
+}): Promise<StaffPerformanceRow[]> {
+  const res = await api.get(endpoints.staff.performance, { params });
+  return unwrapPerformanceRows(res.data).map(mapStaffPerformanceRow);
 }
