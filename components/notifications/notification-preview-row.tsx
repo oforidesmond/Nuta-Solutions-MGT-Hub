@@ -23,7 +23,7 @@ export function NotificationPreviewRow({ notification: n, className }: Notificat
   const showDestructive = unread && isCritical && !fromPlatformSupport;
 
   return (
-    <div className={cn("relative flex w-full gap-2.5", className)}>
+    <div className={cn("relative flex w-full min-w-0 max-w-full gap-2.5 overflow-hidden", className)}>
       <div className="flex w-2.5 shrink-0 justify-center pt-[0.35rem]" aria-hidden>
         <span
           className={cn(
@@ -52,13 +52,13 @@ export function NotificationPreviewRow({ notification: n, className }: Notificat
         ) : null}
 
         {fromPlatformSupport ? (
-          <PlatformSupportSenderLabel variant="compact" className="max-w-[calc(100%-2rem)]" />
+          <PlatformSupportSenderLabel variant="compact" className="max-w-full" />
         ) : null}
 
         {n.title ? (
           <span
             className={cn(
-              "line-clamp-1 pr-8 text-left text-sm leading-snug transition-[font-weight,color] duration-200",
+              "line-clamp-1 w-full break-words pr-8 text-left text-sm leading-snug [overflow-wrap:anywhere] transition-[font-weight,color] duration-200",
               unread && !isCritical && "font-semibold text-foreground",
               unread && isCritical && !fromPlatformSupport && "font-semibold text-destructive",
               unread && fromPlatformSupport && "font-semibold text-foreground",
@@ -70,7 +70,7 @@ export function NotificationPreviewRow({ notification: n, className }: Notificat
         ) : null}
         <span
           className={cn(
-            "line-clamp-2 text-left text-sm leading-snug transition-colors duration-200",
+            "line-clamp-2 w-full break-words text-left text-sm leading-snug [overflow-wrap:anywhere] transition-colors duration-200",
             "pr-8",
             n.title && unread && !isCritical && "text-slate-700 dark:text-slate-300",
             n.title && unread && isCritical && !fromPlatformSupport && "text-destructive/90",
@@ -89,7 +89,7 @@ export function NotificationPreviewRow({ notification: n, className }: Notificat
           {n.message || n.type.replace(/_/g, " ")}
         </span>
         {n.createdAt ? (
-          <span className="text-xs text-muted-foreground">{formatDate(n.createdAt)}</span>
+          <span className="w-full text-xs text-muted-foreground">{formatDate(n.createdAt)}</span>
         ) : null}
       </div>
     </div>
@@ -103,7 +103,7 @@ export function notificationPreviewRowClassName(n: HubNotification): string {
   const showDestructive = unread && isCritical && !fromPlatformSupport;
 
   return cn(
-    "relative w-full cursor-pointer rounded-md px-3 py-2.5 text-left transition-colors duration-200 ease-out",
+    "relative w-full min-w-0 max-w-full cursor-pointer overflow-hidden rounded-md px-3 py-2.5 text-left transition-colors duration-200 ease-out",
     "hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     unread && !isCritical && !fromPlatformSupport && "bg-primary/5 hover:bg-primary/10",
     unread &&

@@ -76,9 +76,9 @@ export function NotificationsMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-[min(100vw-2rem,22rem)] overflow-hidden p-0"
+        className="max-w-[min(100vw-2rem,22rem)] w-[min(100vw-2rem,22rem)] overflow-x-hidden overflow-y-hidden p-0"
       >
-        <DropdownMenuGroup className="max-h-[min(50vh,300px)] overflow-y-auto overscroll-contain">
+        <DropdownMenuGroup className="max-h-[min(50vh,300px)] min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain">
           <DropdownMenuLabel className="px-3 py-2.5 text-sm font-medium text-foreground">
             Notifications
           </DropdownMenuLabel>
@@ -109,7 +109,7 @@ export function NotificationsMenu() {
               You&apos;re all caught up.
             </div>
           ) : (
-            <div className="p-1">
+            <div className="min-w-0 overflow-hidden p-1">
               {items.map((n) => (
                 <NotificationMenuItem
                   key={n.id}

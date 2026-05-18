@@ -127,7 +127,7 @@ export function NotificationDetailSheet({
         <ScrollArea className="min-h-0 flex-1 px-4">
           <p
             className={cn(
-              "whitespace-pre-wrap pb-4 text-[0.9375rem] leading-relaxed text-foreground",
+              "whitespace-pre-wrap break-words pb-4 text-[0.9375rem] leading-relaxed [overflow-wrap:anywhere] text-foreground",
               isCritical && !fromPlatform && "text-destructive/95",
             )}
           >

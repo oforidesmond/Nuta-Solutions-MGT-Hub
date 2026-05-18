@@ -31,7 +31,7 @@ export default function NotificationsInboxPage() {
         </div>
         {showSentLink ? (
           <Button type="button" variant="outline" size="sm" render={<Link href="/notifications" />}>
-            <Bell className="mr-2 size-4" aria-hidden />
+            {/* <Bell className="mr-2 size-4" aria-hidden /> */}
             Staff notifications
           </Button>
         ) : null}
