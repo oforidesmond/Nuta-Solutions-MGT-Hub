@@ -18,6 +18,8 @@ import {
   isCriticalNotificationType,
   toastCriticalNotification,
 } from "@/lib/notifications/critical-notification";
+import { notificationToastDescription } from "@/lib/notifications/notification-toast-content";
+import { PLATFORM_SUPPORT_SOURCE } from "@/lib/notifications/platform-support-notification";
 import { clearDebounceInvalidateUnreadCount, debounceInvalidateUnreadCount } from "@/lib/notifications/debounce-invalidate";
 import { mergeNotificationIntoList } from "@/lib/notifications/merge-notification-list";
 import {
@@ -46,7 +48,12 @@ export function useNotificationsRealtime(): NotificationsRealtimeContextValue {
 
 function maybeToastCritical(notification: NotificationRealtimePayload): void {
   if (isCriticalNotificationType(notification.type)) {
-    toastCriticalNotification(notification.title, notification.message);
+    toastCriticalNotification(notification.title, notification.message, {
+      metadata: notification.senderName
+        ? { source: PLATFORM_SUPPORT_SOURCE, sender: { displayName: notification.senderName } }
+        : null,
+      senderName: notification.senderName,
+    });
   }
 }
 
@@ -92,8 +99,22 @@ export function NotificationsRealtimeProvider({ children }: { children: ReactNod
       onBroadcast: (payload) => {
         if (isAdminBroadcastDigest(payload)) {
           void queryClient.invalidateQueries({ queryKey: notificationsListQueryKey });
+          const digestMessage =
+            payload.recipientCount > 1
+              ? `${payload.message} (${payload.recipientCount} recipients)`
+              : payload.message;
           toast.info(payload.title, {
-            description: `${payload.message} (${payload.recipientCount} recipients)`,
+            description: notificationToastDescription(
+              {
+                metadata: {
+                  source: payload.source ?? PLATFORM_SUPPORT_SOURCE,
+                  sender: { displayName: payload.senderName ?? "NutaSolutions Support" },
+                },
+                message: digestMessage,
+                senderName: payload.senderName,
+              },
+              digestMessage,
+            ),
           });
         } else {
           queryClient.setQueryData<HubNotification[]>(notificationsListQueryKey, (old) =>

@@ -107,6 +107,8 @@ export interface HubNotification {
   /** UUID of the related entity (e.g. sale id for STOCK_VARIANCE_SALE). */
   relatedEntityId?: string | null;
   metadata?: Record<string, unknown> | null;
+  /** Socket.IO / platform sends — human-readable sender when metadata is not loaded yet. */
+  senderName?: string | null;
   dedupKey?: string | null;
   /** Merged event count for deduped types; always >= 1 (show badge when > 1). */
   aggregateCount: number;

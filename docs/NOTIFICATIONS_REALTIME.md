@@ -153,6 +153,21 @@ export type NotificationType =
   | 'OTHER';
 ```
 
+**`metadata` for platform super-admin broadcasts (`source: 'platform_support'`):**
+
+```typescript
+interface NotificationMetadataPlatformSupport {
+  source: 'platform_support';
+  sender: {
+    displayName: 'NutaSolutions Support';
+  };
+  originalType?: string; // when requested type was normalized to OTHER
+  [key: string]: unknown;
+}
+```
+
+Hub inbox UI should show **NutaSolutions Support** prominently for these rows (and for Socket.IO bulk digests with `senderName` / `source`).
+
 **`metadata` for Hub manual sends (`source: 'hub_manual'`):**
 
 ```typescript

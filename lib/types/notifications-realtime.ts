@@ -12,6 +12,8 @@ export interface NotificationRealtimePayload {
   /** Merged event count for deduped types; always >= 1. */
   aggregateCount: number;
   createdAt: string;
+  /** Hub manual or platform support attribution when present on the wire. */
+  senderName?: string | null;
 }
 
 export interface NotificationAdminBroadcastDigestPayload {
@@ -21,6 +23,8 @@ export interface NotificationAdminBroadcastDigestPayload {
   title: string;
   message: string;
   recipientCount: number;
+  senderName?: string | null;
+  source?: string;
 }
 
 export interface NotificationCountUpdatedPayload {

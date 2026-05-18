@@ -79,6 +79,10 @@ export function normalizeNotification(row: unknown): HubNotification {
     relatedEntityType,
     relatedEntityId,
     metadata: meta && typeof meta === "object" ? (meta as Record<string, unknown>) : null,
+    senderName:
+      (r.senderName as string | undefined) ??
+      (r.sender_name as string | undefined) ??
+      null,
     dedupKey:
       (r.dedupKey as string | undefined) ??
       (r.dedup_key as string | undefined) ??
@@ -267,5 +271,9 @@ export function notificationFromRealtimePayload(
     metadata: null,
     relatedEntityType: null,
     relatedEntityId: null,
+    senderName:
+      (p.senderName as string | undefined) ??
+      (p.sender_name as string | undefined) ??
+      null,
   });
 }

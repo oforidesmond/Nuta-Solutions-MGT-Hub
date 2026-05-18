@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, RotateCw } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import Link from "next/link";
+import { Bell, ChevronRight, RotateCw } from "lucide-react";
 import { NotificationMenuItem } from "@/components/layout/notification-menu-item";
+import { useNotificationDetailOpener } from "@/components/notifications/notifications-detail-context";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,61 +14,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  isNotificationUnread,
-  useMarkNotificationRead,
   useNotifications,
   useUnreadCount,
 } from "@/lib/hooks/use-notifications";
-import { resolveNotificationHref } from "@/lib/navigation/notification-href";
 import type { HubNotification } from "@/lib/types/phase2";
 import { cn } from "@/lib/utils";
 
 export function NotificationsMenu() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const { items, loading, error, reload } = useNotifications();
   const unreadQuery = useUnreadCount();
-  const markReadMutation = useMarkNotificationRead();
+  const { openDetail } = useNotificationDetailOpener();
 
   const unreadCount = unreadQuery.data?.unreadCount ?? 0;
   const hasCritical = unreadQuery.data?.hasCritical ?? false;
   const badgeRefreshing = unreadQuery.isFetching && !unreadQuery.isPending;
 
-  function handleNotificationClick(notification: HubNotification) {
-    const href = resolveNotificationHref(notification);
-    const unread = isNotificationUnread(notification);
-
-    if (unread && notification.id) {
-      markReadMutation.mutate(notification.id);
-    }
-
+  function handleOpenDetail(notification: HubNotification) {
+    openDetail(notification);
     setOpen(false);
-
-    if (href) {
-      router.push(href);
-      return;
-    }
-
-    if (notification.type === "STOCK_VARIANCE_SALE") {
-      const receipt =
-        typeof notification.metadata?.receiptNumber === "string"
-          ? notification.metadata.receiptNumber
-          : null;
-      toast.info(
-        receipt
-          ? `Open Sales to find receipt ${receipt}.`
-          : "Open Sales to find this variance receipt.",
-      );
-      router.push("/sales");
-      return;
-    }
-
-    toast.info(notification.title || "Notification", {
-      description: notification.message || undefined,
-    });
   }
 
   return (
@@ -108,12 +74,16 @@ export function NotificationsMenu() {
           </span>
         ) : null}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[min(100vw-2rem,22rem)] p-0">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="px-3 py-2 text-sm font-medium text-foreground">
+      <DropdownMenuContent
+        align="end"
+        className="w-[min(100vw-2rem,22rem)] overflow-hidden p-0"
+      >
+        <DropdownMenuGroup className="max-h-[min(50vh,300px)] overflow-y-auto overscroll-contain">
+          <DropdownMenuLabel className="px-3 py-2.5 text-sm font-medium text-foreground">
             Notifications
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+
           {loading ? (
             <div className="space-y-2 p-3">
               {[1, 2, 3].map((i) => (
@@ -135,23 +105,33 @@ export function NotificationsMenu() {
               </Button>
             </div>
           ) : items.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
+            <div className="px-3 py-6 text-center text-sm text-muted-foreground">
               You&apos;re all caught up.
             </div>
           ) : (
-            <ScrollArea className="max-h-[min(70vh,320px)]">
-              <div className="p-1">
-                {items.map((n) => (
-                  <NotificationMenuItem
-                    key={n.id}
-                    notification={n}
-                    onSelect={handleNotificationClick}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
+            <div className="p-1">
+              {items.map((n) => (
+                <NotificationMenuItem
+                  key={n.id}
+                  notification={n}
+                  onSelect={handleOpenDetail}
+                />
+              ))}
+            </div>
           )}
         </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+        <div className="border-t border-border/40 p-1">
+          <Link
+            href="/notifications/inbox"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            View all notifications
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          </Link>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

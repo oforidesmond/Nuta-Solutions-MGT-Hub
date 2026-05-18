@@ -25,6 +25,7 @@ export function mergeNotificationIntoList(
     message: incoming.message ?? existing.message,
     aggregateCount: incoming.aggregateCount,
     metadata: existing.metadata ?? incoming.metadata,
+    senderName: existing.senderName ?? incoming.senderName,
     relatedEntityType: incoming.relatedEntityType ?? existing.relatedEntityType,
     relatedEntityId: incoming.relatedEntityId ?? existing.relatedEntityId,
     isRead: existing.isRead === true ? true : incoming.isRead,

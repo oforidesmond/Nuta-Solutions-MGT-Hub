@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Bell, RotateCw } from "lucide-react";
+import { Bell, Inbox, RotateCw } from "lucide-react";
 import { fetchSentNotificationsPage } from "@/lib/api/notifications";
 import { fetchOrgUsers } from "@/lib/api/users";
 import { Button } from "@/components/ui/button";
@@ -117,9 +117,15 @@ export default function SentNotificationsPage() {
             Messages you sent to staff · read state reflects each recipient&apos;s inbox.
           </p>
         </div>
-        <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
-          New notification
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" render={<Link href="/notifications/inbox" />}>
+            <Inbox className="mr-2 size-4" aria-hidden />
+            Inbox
+          </Button>
+          <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
+            New notification
+          </Button>
+        </div>
       </div>
 
       <Card className="gap-4 p-4">

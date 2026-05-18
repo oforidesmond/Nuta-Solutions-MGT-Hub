@@ -14,7 +14,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { NotificationsErrorBoundary } from "@/components/layout/notifications-error-boundary";
 import { NotificationsMenu } from "@/components/layout/notifications-menu";
-import { NotificationsRealtimeProvider } from "@/components/layout/notifications-realtime-provider";
 import { useAuthStore } from "@/stores/auth-store";
 import { useRouter } from "next/navigation";
 
@@ -59,34 +58,32 @@ export function AppHeader() {
           </p>
         </div>
       </div>
-      <NotificationsRealtimeProvider>
-        <div className="flex items-center gap-1">
-          <NotificationsErrorBoundary>
-            <NotificationsMenu />
-          </NotificationsErrorBoundary>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "max-w-[12rem] truncate",
-              )}
+      <div className="flex items-center gap-1">
+        <NotificationsErrorBoundary>
+          <NotificationsMenu />
+        </NotificationsErrorBoundary>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "max-w-[12rem] truncate",
+            )}
+          >
+            {accountLabel}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              onClick={() => {
+                clearSession();
+                router.replace("/login");
+              }}
             >
-              {accountLabel}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem
-                onClick={() => {
-                  clearSession();
-                  router.replace("/login");
-                }}
-              >
-                <LogOut className="mr-2 size-4" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </NotificationsRealtimeProvider>
+              <LogOut className="mr-2 size-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 }

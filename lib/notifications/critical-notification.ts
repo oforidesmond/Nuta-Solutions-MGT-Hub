@@ -1,5 +1,6 @@
 import { toast } from "sonner";
-import type { HubNotificationType } from "@/lib/types/phase2";
+import { notificationToastDescription } from "@/lib/notifications/notification-toast-content";
+import type { HubNotification, HubNotificationType } from "@/lib/types/phase2";
 
 /** Mirrors server `hasCritical` / destructive list styling (NOTIFICATIONS_REALTIME §2.5). */
 const CRITICAL_TYPES = new Set<HubNotificationType>([
@@ -20,6 +21,13 @@ export function isCriticalNotificationType(type: string): boolean {
   return CRITICAL_TYPES.has(type as HubNotificationType);
 }
 
-export function toastCriticalNotification(title: string, message: string): void {
-  toast.info(title, { description: message });
+export function toastCriticalNotification(
+  title: string,
+  message: string,
+  attribution?: Pick<HubNotification, "metadata" | "senderName">,
+): void {
+  const notification = { message, ...attribution };
+  toast.info(title, {
+    description: notificationToastDescription(notification, message),
+  });
 }
