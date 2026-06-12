@@ -219,9 +219,11 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     if (Number.isFinite(cost) && Number.isFinite(sell) && sell < cost) {
       next.sellingPrice = "Selling price is lower than cost. Double-check your numbers.";
     }
-    const stock = parseFloat(initialStock);
-    if (initialStock !== "" && (!Number.isFinite(stock) || stock < 0)) {
-      next.initialStock = "Stock cannot be negative.";
+    if (mode === "create") {
+      const stock = parseFloat(initialStock);
+      if (initialStock !== "" && (!Number.isFinite(stock) || stock < 0)) {
+        next.initialStock = "Stock cannot be negative.";
+      }
     }
 
     if (canConv && hasConversion) {
@@ -364,7 +366,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         unit: unit.trim() || undefined,
         unitOfMeasure: unit.trim() || undefined,
       };
-      if (initialStock !== "") {
+      if (mode === "create" && initialStock !== "") {
         const q = parseFloat(initialStock);
         if (Number.isFinite(q)) body.currentStock = q;
       }
@@ -531,9 +533,16 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
               value={initialStock}
               onChange={(e) => setInitialStock(e.target.value)}
               placeholder="0"
+              disabled={mode === "edit"}
               aria-invalid={!!errors.initialStock}
+              aria-describedby={mode === "edit" ? "pf-stock-hint" : undefined}
             />
             {errors.initialStock ? <p className="text-sm text-destructive">{errors.initialStock}</p> : null}
+            {mode === "edit" ? (
+              <p id="pf-stock-hint" className="text-xs text-muted-foreground">
+                Stock quantity is read-only here. Use adjust stock, stock counts, or split/pack on the product page to adjust stock quantity.
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="pf-reorder">Reorder level</Label>

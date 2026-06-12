@@ -151,7 +151,7 @@ export function ConvertProductModal(props: {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(90vh,40rem)] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Convert product</DialogTitle>
+          <DialogTitle>Split/Pack product</DialogTitle>
           <DialogDescription>
             Move stock between pack and singles using your saved conversion ratio.
           </DialogDescription>

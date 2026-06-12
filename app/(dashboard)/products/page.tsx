@@ -8,12 +8,11 @@ import { toast } from "sonner";
 import {
   ChevronLeft,
   ChevronRight,
-  ClipboardCheck,
   LayoutGrid,
   List,
-  MoreHorizontal,
   Plus,
   Search,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,18 +28,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConvertProductModal } from "@/components/inventory/convert-product-modal";
+import { StockAdjustmentModal } from "@/components/inventory/stock-adjustment-modal";
 import { StockTakeRecordModal } from "@/components/inventory/stock-take-record-modal";
+import { ProductActionsMenu } from "@/components/products/product-actions-menu";
 import {
   Dialog,
   DialogContent,
@@ -141,6 +136,7 @@ export default function ProductsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [stockTakeProduct, setStockTakeProduct] = useState<HubProduct | null>(null);
+  const [adjustStockProduct, setAdjustStockProduct] = useState<HubProduct | null>(null);
   const [convertProduct, setConvertProduct] = useState<HubProduct | null>(null);
   const [actionsMenuProductId, setActionsMenuProductId] = useState<string | null>(null);
 
@@ -462,7 +458,7 @@ export default function ProductsPage() {
 
       {clientMode && (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
-          Filters for price and some stock levels use the first 500 matches. Ask your developer to add server filters when your catalog grows.
+          Filters for price and some stock levels use the first 500 matches. Add server filters later.
         </p>
       )}
 
@@ -536,43 +532,30 @@ export default function ProductsPage() {
                                   variant="ghost"
                                   size="icon-sm"
                                   className="min-h-9 min-w-9"
-                                  aria-label={`Stock count for ${p.name}`}
-                                  onClick={() => setStockTakeProduct(p)}
+                                  aria-label={`Adjust stock for ${p.name}`}
+                                  onClick={() => setAdjustStockProduct(p)}
                                 >
-                                  <ClipboardCheck className="size-4" aria-hidden />
+                                  <SlidersHorizontal className="size-4" aria-hidden />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Stock count</TooltipContent>
+                              <TooltipContent>Adjust stock</TooltipContent>
                             </Tooltip>
                           ) : null}
-                          <DropdownMenu
+                          <ProductActionsMenu
+                            product={p}
+                            canStockTake={canStockTake}
+                            canConvert={canConvert}
+                            hasConversion={hasActiveConversionForMenuRow(p)}
+                            conversionsLoading={conversionsLoadingForRow(p)}
+                            onAdjustStock={() => setAdjustStockProduct(p)}
+                            onStockCount={() => setStockTakeProduct(p)}
+                            onSplitPack={() => setConvertProduct(p)}
+                            onDuplicate={() => onDuplicate(p.id)}
+                            onDelete={() => setDeleteId(p.id)}
                             onOpenChange={(open) => {
                               setActionsMenuProductId(open ? p.id : null);
                             }}
-                          >
-                            <DropdownMenuTrigger
-                              render={<Button variant="ghost" size="icon-sm" className="min-h-9 min-w-9" aria-label={`Actions for ${p.name}`} />}
-                            >
-                              <MoreHorizontal className="size-4" />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem render={<Link href={`/products/${p.id}`} />}>View details</DropdownMenuItem>
-                              <DropdownMenuItem render={<Link href={`/products/${p.id}/edit`} />}>Edit</DropdownMenuItem>
-                              {canStockTake ? (
-                                <DropdownMenuItem onClick={() => setStockTakeProduct(p)}>Stock count</DropdownMenuItem>
-                              ) : null}
-                              {canConvert && hasActiveConversionForMenuRow(p) ? (
-                                <DropdownMenuItem onClick={() => setConvertProduct(p)}>Convert</DropdownMenuItem>
-                              ) : null}
-                              {canConvert && conversionsLoadingForRow(p) ? (
-                                <DropdownMenuItem disabled>Checking conversion…</DropdownMenuItem>
-                              ) : null}
-                              <DropdownMenuItem onClick={() => onDuplicate(p.id)}>Duplicate</DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(p.id)}>
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -609,29 +592,23 @@ export default function ProductsPage() {
                     <Button type="button" size="sm" variant="outline" render={<Link href={`/products/${p.id}/edit`} />}>
                       Edit
                     </Button>
-                    <DropdownMenu
+                    <ProductActionsMenu
+                      product={p}
+                      canStockTake={canStockTake}
+                      canConvert={canConvert}
+                      hasConversion={hasActiveConversionForMenuRow(p)}
+                      conversionsLoading={conversionsLoadingForRow(p)}
+                      onAdjustStock={() => setAdjustStockProduct(p)}
+                      onStockCount={() => setStockTakeProduct(p)}
+                      onSplitPack={() => setConvertProduct(p)}
+                      onDuplicate={() => onDuplicate(p.id)}
+                      onDelete={() => setDeleteId(p.id)}
                       onOpenChange={(open) => {
                         setActionsMenuProductId(open ? p.id : null);
                       }}
-                    >
-                      <DropdownMenuTrigger render={<Button variant="outline" size="sm" className="min-h-9" />}>More</DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuItem render={<Link href={`/products/${p.id}`} />}>View details</DropdownMenuItem>
-                        {canStockTake ? (
-                          <DropdownMenuItem onClick={() => setStockTakeProduct(p)}>Stock count</DropdownMenuItem>
-                        ) : null}
-                        {canConvert && hasActiveConversionForMenuRow(p) ? (
-                          <DropdownMenuItem onClick={() => setConvertProduct(p)}>Convert</DropdownMenuItem>
-                        ) : null}
-                        {canConvert && conversionsLoadingForRow(p) ? (
-                          <DropdownMenuItem disabled>Checking conversion…</DropdownMenuItem>
-                        ) : null}
-                        <DropdownMenuItem onClick={() => onDuplicate(p.id)}>Duplicate</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(p.id)}>
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      triggerVariant="labelled"
+                      align="start"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -688,6 +665,15 @@ export default function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <StockAdjustmentModal
+        open={!!adjustStockProduct}
+        onOpenChange={(open) => {
+          if (!open) setAdjustStockProduct(null);
+        }}
+        product={adjustStockProduct}
+        onAdjusted={() => loadProducts()}
+      />
 
       <StockTakeRecordModal
         open={!!stockTakeProduct}

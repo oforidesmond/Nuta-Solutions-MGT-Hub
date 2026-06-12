@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, Copy, Link2, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, Copy, Link2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { HubProduct, HubStockAdjustment } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
+import { ConvertProductModal } from "@/components/inventory/convert-product-modal";
 import { InventoryEventHistorySheet } from "@/components/inventory/inventory-event-history-sheet";
 
 type Tab = "batches" | "history" | "sales";
@@ -75,6 +76,7 @@ export default function ProductDetailPage() {
   const [savingRatio, setSavingRatio] = useState(false);
   const [deleteConvId, setDeleteConvId] = useState<string | null>(null);
   const [deletingConv, setDeletingConv] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
 
   const conversionsQuery = useQuery({
     queryKey: ["product-conversions", id],
@@ -368,12 +370,26 @@ export default function ProductDetailPage() {
       </div>
 
       <Card className="border-border/40 bg-card/80 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Link2 className="size-4 shrink-0" aria-hidden />
-            Linked products
-          </CardTitle>
-          <CardDescription>Pack and singles linked for inventory conversion.</CardDescription>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+          <div className="min-w-0 space-y-1.5">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Link2 className="size-4 shrink-0" aria-hidden />
+              Linked products
+            </CardTitle>
+            <CardDescription>Pack and singles linked for inventory conversion.</CardDescription>
+          </div>
+          {canConv && !convLoading && hasAnyConv ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-9 shrink-0 self-start"
+              onClick={() => setConvertOpen(true)}
+            >
+              <ArrowLeftRight className="size-4" aria-hidden />
+              Convert stock
+            </Button>
+          ) : null}
         </CardHeader>
         <CardContent>
           {convLoading ? (
@@ -577,6 +593,16 @@ export default function ProductDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConvertProductModal
+        open={convertOpen}
+        onOpenChange={setConvertOpen}
+        product={product}
+        onSuccess={() => {
+          void load();
+          void queryClient.invalidateQueries({ queryKey: ["product-conversions", id] });
+        }}
+      />
     </div>
   );
 }
