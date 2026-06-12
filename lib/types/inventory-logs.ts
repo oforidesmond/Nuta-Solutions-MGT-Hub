@@ -4,7 +4,7 @@ export interface InventoryLogListParams {
   page?: number;
   limit?: number;
   staffId?: string;
-  /** e.g. BULK_TO_SINGLES — server returns only that adjustment type */
+  /** e.g. BULK_TO_SINGLES - server returns only that adjustment type */
   type?: string;
 }
 

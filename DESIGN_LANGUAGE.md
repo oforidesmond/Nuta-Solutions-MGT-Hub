@@ -1,5 +1,5 @@
 # NutaSolutions Design Language & UI Philosophy
-## Apple-Grade Design System — Complete Implementation Guide
+## Apple-Grade Design System - Complete Implementation Guide
 
 ---
 
@@ -13,7 +13,7 @@ This document defines the **complete design language, visual philosophy, and int
 - POS Applications (Web / PWA / Mobile)
 - Future enterprise tools within the ecosystem
 
-**Goal:** Create interfaces indistinguishable in quality from Apple's own software — macOS, iOS, and Apple.com.
+**Goal:** Create interfaces indistinguishable in quality from Apple's own software - macOS, iOS, and Apple.com.
 
 ---
 
@@ -122,7 +122,7 @@ Apple uses color **sparingly and strategically**. Most of the interface is neutr
 
 **Base Colors:**
 ```css
-/* Neutrals — The Foundation */
+/* Neutrals - The Foundation */
 --white: #FFFFFF;
 --gray-50: #F9FAFB;   /* Subtle backgrounds */
 --gray-100: #F3F4F6;  /* Card backgrounds */
@@ -139,7 +139,7 @@ Apple uses color **sparingly and strategically**. Most of the interface is neutr
 
 **Brand Accent (Blue):**
 ```css
-/* NutaSolutions Blue — Use Sparingly */
+/* NutaSolutions Blue - Use Sparingly */
 --blue-50: #EFF6FF;
 --blue-100: #DBEAFE;
 --blue-500: #3B82F6;  /* Primary buttons */
@@ -191,7 +191,7 @@ Apple uses color **sparingly and strategically**. Most of the interface is neutr
    - Neon or oversaturated colors
    - Multiple competing accent colors
    - Gradients as primary backgrounds (subtle gradients OK)
-   - Pure black text on pure white (#000 on #FFF) — use gray-900
+   - Pure black text on pure white (#000 on #FFF) - use gray-900
 
 ---
 
@@ -224,52 +224,52 @@ html {
 #### Type Scale (Apple's Hierarchy)
 
 ```css
-/* Display — Marketing, hero sections */
+/* Display - Marketing, hero sections */
 --text-display: 72px / 80px; /* size / line-height */
 --text-display-weight: 700;
 --text-display-tracking: -0.02em;
 
-/* Title 1 — Page headings */
+/* Title 1 - Page headings */
 --text-title-1: 48px / 56px;
 --text-title-1-weight: 600;
 --text-title-1-tracking: -0.015em;
 
-/* Title 2 — Section headings */
+/* Title 2 - Section headings */
 --text-title-2: 36px / 44px;
 --text-title-2-weight: 600;
 --text-title-2-tracking: -0.01em;
 
-/* Title 3 — Subsection headings */
+/* Title 3 - Subsection headings */
 --text-title-3: 28px / 36px;
 --text-title-3-weight: 600;
 --text-title-3-tracking: -0.005em;
 
-/* Headline — Card headers */
+/* Headline - Card headers */
 --text-headline: 20px / 28px;
 --text-headline-weight: 600;
 --text-headline-tracking: 0;
 
-/* Body — Main content */
+/* Body - Main content */
 --text-body: 16px / 24px;
 --text-body-weight: 400;
 --text-body-tracking: 0;
 
-/* Callout — Emphasized body */
+/* Callout - Emphasized body */
 --text-callout: 17px / 26px;
 --text-callout-weight: 400;
 --text-callout-tracking: 0;
 
-/* Subheadline — Secondary info */
+/* Subheadline - Secondary info */
 --text-subheadline: 15px / 22px;
 --text-subheadline-weight: 400;
 --text-subheadline-tracking: 0;
 
-/* Footnote — Captions, metadata */
+/* Footnote - Captions, metadata */
 --text-footnote: 13px / 18px;
 --text-footnote-weight: 400;
 --text-footnote-tracking: 0;
 
-/* Caption — Labels, smallest text */
+/* Caption - Labels, smallest text */
 --text-caption: 12px / 16px;
 --text-caption-weight: 400;
 --text-caption-tracking: 0.02em;
@@ -309,23 +309,23 @@ html {
 
 ### 3. Spacing System
 
-**Apple uses an 8pt grid system** — all spacing is a multiple of 8px.
+**Apple uses an 8pt grid system** - all spacing is a multiple of 8px.
 
 #### Spacing Scale
 
 ```css
---spacing-1: 4px;    /* 0.25rem — Tight, inner padding */
---spacing-2: 8px;    /* 0.5rem — Standard small gap */
---spacing-3: 12px;   /* 0.75rem — Compact spacing */
---spacing-4: 16px;   /* 1rem — Base unit */
+--spacing-1: 4px;    /* 0.25rem - Tight, inner padding */
+--spacing-2: 8px;    /* 0.5rem - Standard small gap */
+--spacing-3: 12px;   /* 0.75rem - Compact spacing */
+--spacing-4: 16px;   /* 1rem - Base unit */
 --spacing-5: 20px;   /* 1.25rem */
---spacing-6: 24px;   /* 1.5rem — Section padding */
---spacing-8: 32px;   /* 2rem — Large gaps */
+--spacing-6: 24px;   /* 1.5rem - Section padding */
+--spacing-8: 32px;   /* 2rem - Large gaps */
 --spacing-10: 40px;  /* 2.5rem */
---spacing-12: 48px;  /* 3rem — Major sections */
---spacing-16: 64px;  /* 4rem — Page sections */
---spacing-20: 80px;  /* 5rem — Hero spacing */
---spacing-24: 96px;  /* 6rem — Large heroes */
+--spacing-12: 48px;  /* 3rem - Major sections */
+--spacing-16: 64px;  /* 4rem - Page sections */
+--spacing-20: 80px;  /* 5rem - Hero spacing */
+--spacing-24: 96px;  /* 6rem - Large heroes */
 ```
 
 #### Spacing Rules
@@ -356,7 +356,7 @@ html {
 
 ### 1. Glass Effect (Apple's Signature)
 
-**Apple's glass isn't just blur — it's a sophisticated layering system.**
+**Apple's glass isn't just blur - it's a sophisticated layering system.**
 
 #### Implementation
 
@@ -437,7 +437,7 @@ html {
 
 ### 3. Shadows & Elevation
 
-**Apple uses subtle, layered shadows** — never harsh drop shadows.
+**Apple uses subtle, layered shadows** - never harsh drop shadows.
 
 #### Shadow System
 
@@ -519,7 +519,7 @@ html {
 
 ### 5. Borders
 
-**Apple minimizes borders** — uses shadows and spacing instead.
+**Apple minimizes borders** - uses shadows and spacing instead.
 
 **When borders are necessary:**
 
@@ -1003,7 +1003,7 @@ html {
 
 ### 2. Easing Curves
 
-**Apple uses cubic-bezier easing** — never linear.
+**Apple uses cubic-bezier easing** - never linear.
 
 ```css
 /* Standard easing (default) */
@@ -1159,7 +1159,7 @@ html {
 
 ### 6. Focus States
 
-**Accessibility requirement** — keyboard navigation must be clear.
+**Accessibility requirement** - keyboard navigation must be clear.
 
 ```css
 /* Standard focus ring */
@@ -1229,7 +1229,7 @@ html {
 
 ### 1. Grid System
 
-**Apple uses a flexible grid** — typically 12 columns.
+**Apple uses a flexible grid** - typically 12 columns.
 
 ```css
 .container {
@@ -1410,7 +1410,7 @@ html {
 
 ### 1. Dark Mode Philosophy
 
-**Apple's dark mode isn't just inverted colors** — it's a carefully designed alternate appearance.
+**Apple's dark mode isn't just inverted colors** - it's a carefully designed alternate appearance.
 
 **Principles:**
 - **Pure black (#000)** for OLED efficiency
@@ -1824,17 +1824,17 @@ const Dashboard = lazy(() => import('./Dashboard'));
 
 **When generating UI for NutaSolutions:**
 
-1. **Read this document first** — don't rely on general knowledge
-2. **Use exact specifications** — spacing, colors, typography from this doc
-3. **Implement glassmorphism** — it's our signature
-4. **Follow Apple's patterns** — not Material Design, not Fluent
-5. **Maintain consistency** — reuse components, don't reinvent
-6. **Test dark mode** — every component must work in both modes
-7. **Ensure accessibility** — keyboard nav, screen readers, contrast
-8. **Prioritize performance** — fast load, smooth interactions
-9. **When in doubt** — choose simpler, cleaner, more minimal
+1. **Read this document first** - don't rely on general knowledge
+2. **Use exact specifications** - spacing, colors, typography from this doc
+3. **Implement glassmorphism** - it's our signature
+4. **Follow Apple's patterns** - not Material Design, not Fluent
+5. **Maintain consistency** - reuse components, don't reinvent
+6. **Test dark mode** - every component must work in both modes
+7. **Ensure accessibility** - keyboard nav, screen readers, contrast
+8. **Prioritize performance** - fast load, smooth interactions
+9. **When in doubt** - choose simpler, cleaner, more minimal
 
-**This is not a suggestion — it's the standard.**
+**This is not a suggestion - it's the standard.**
 
 ---
 
@@ -1842,4 +1842,4 @@ const Dashboard = lazy(() => import('./Dashboard'));
 
 **Every pixel matters. Every transition matters. Every spacing decision matters.**
 
-**Design like Apple is watching — because quality users are.**
+**Design like Apple is watching - because quality users are.**

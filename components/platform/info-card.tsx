@@ -33,7 +33,7 @@ interface InfoRowProps {
 }
 
 export function InfoRow({ label, value, highlight = false, mono = false }: InfoRowProps) {
-  const display = value === undefined || value === null || value === "" ? "—" : value;
+  const display = value === undefined || value === null || value === "" ? "-" : value;
   return (
     <div className="grid grid-cols-[8rem_1fr] gap-2 sm:grid-cols-[10rem_1fr]">
       <dt className="truncate text-xs text-muted-foreground">{label}</dt>

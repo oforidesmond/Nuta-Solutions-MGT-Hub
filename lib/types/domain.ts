@@ -119,7 +119,7 @@ export interface HubStockAdjustment {
   product?: { id: string; name: string; sku?: string | null };
 }
 
-/** Stock variance reasons — exact API enum literals. Mirror mobile copy via VARIANCE_REASON_LABELS. */
+/** Stock variance reasons - exact API enum literals. Mirror mobile copy via VARIANCE_REASON_LABELS. */
 export type VarianceReason =
   | "PHYSICAL_STOCK_PRESENT"
   | "PACK_BROKEN"
@@ -154,7 +154,7 @@ export interface HubSale {
   subtotal?: string | number | null;
   paymentMethod?: string | null;
   soldAt?: string | null;
-  /** When the sale was persisted/synced server-side — required for delayed-sync UI. */
+  /** When the sale was persisted/synced server-side - required for delayed-sync UI. */
   syncedAt?: string | null;
   createdAt?: string | null;
   createdBy?: { id: string; firstName?: string | null; lastName?: string | null; email?: string } | null;
@@ -184,7 +184,7 @@ export interface DashboardReliabilitySummary {
 }
 
 export interface DashboardSummary {
-  /** All-time count of recorded sales/transactions — not monetary. */
+  /** All-time count of recorded sales/transactions - not monetary. */
   totalSales: number;
   /** All-time revenue (decimals); never substitute `totalSales` for currency KPIs. */
   totalRevenue: number;
@@ -197,6 +197,6 @@ export interface DashboardSummary {
   todayRevenue?: number;
   /** Optional when API grows */
   inventoryValue?: number;
-  /** Phase 3 — may be nested under `reliability` or flattened with snake_case from API */
+  /** Phase 3 - may be nested under `reliability` or flattened with snake_case from API */
   reliability?: DashboardReliabilitySummary | null;
 }

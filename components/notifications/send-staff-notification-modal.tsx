@@ -64,7 +64,7 @@ export function SendStaffNotificationModal({ open, onOpenChange }: SendStaffNoti
 }
 
 /**
- * POST /notifications/send — tenant owner/manager → staff (see NOTIFICATIONS_REALTIME §4.3).
+ * POST /notifications/send - tenant owner/manager → staff (see NOTIFICATIONS_REALTIME §4.3).
  * Targeting priority: targetUserIds > targetRoles > targetAllStaff.
  */
 function buildSendPayload(input: {

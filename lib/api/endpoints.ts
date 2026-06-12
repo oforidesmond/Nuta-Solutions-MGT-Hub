@@ -1,4 +1,4 @@
-/** Central list of API paths — align with Nest controllers. */
+/** Central list of API paths - align with Nest controllers. */
 export const endpoints = {
   auth: {
     login: "/auth/login",
@@ -27,7 +27,7 @@ export const endpoints = {
     databaseWarnings: "/staff/database-warnings",
   },
   organizations: {
-    /** Same single tenant as `/me` — not a multi-org list. */
+    /** Same single tenant as `/me` - not a multi-org list. */
     list: "/organizations",
     me: "/organizations/me",
   },

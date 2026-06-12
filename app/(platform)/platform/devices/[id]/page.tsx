@@ -92,8 +92,8 @@ export default function PlatformDeviceDetailPage() {
   const ownerName = device.user
     ? [device.user.firstName, device.user.lastName].filter(Boolean).join(" ").trim() ||
       device.user.email ||
-      "—"
-    : "—";
+      "-"
+    : "-";
 
   return (
     <div className="space-y-6">
@@ -113,7 +113,7 @@ export default function PlatformDeviceDetailPage() {
             </div>
             <p className="font-mono text-xs text-muted-foreground">{device.deviceUuid}</p>
             <p className="text-sm text-muted-foreground">
-              Registered {device.registeredAt ? formatDate(device.registeredAt) : "—"}
+              Registered {device.registeredAt ? formatDate(device.registeredAt) : "-"}
               {device.lastSeenAt ? ` · Last seen ${formatDate(device.lastSeenAt)}` : ""}
             </p>
           </div>
@@ -134,9 +134,9 @@ export default function PlatformDeviceDetailPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <InfoCard title="Device">
-          <InfoRow label="Model" value={device.deviceModel ?? "—"} />
-          <InfoRow label="OS" value={device.deviceOs ?? "—"} />
-          <InfoRow label="Fingerprint" value={device.fingerprintHash ?? "—"} mono />
+          <InfoRow label="Model" value={device.deviceModel ?? "-"} />
+          <InfoRow label="OS" value={device.deviceOs ?? "-"} />
+          <InfoRow label="Fingerprint" value={device.fingerprintHash ?? "-"} mono />
           {device.revokedAt ? (
             <InfoRow label="Revoked" value={formatDate(device.revokedAt)} highlight />
           ) : null}
@@ -157,7 +157,7 @@ export default function PlatformDeviceDetailPage() {
                   {device.organization.name}
                 </Link>
               ) : (
-                "—"
+                "-"
               )
             }
           />
@@ -196,12 +196,12 @@ export default function PlatformDeviceDetailPage() {
               <TableBody>
                 {activity.recentSales.map((s) => (
                   <TableRow key={s.id}>
-                    <TableCell className="px-3 font-mono text-xs">{s.receiptNumber ?? "—"}</TableCell>
+                    <TableCell className="px-3 font-mono text-xs">{s.receiptNumber ?? "-"}</TableCell>
                     <TableCell className="px-3 text-sm">
                       {formatCurrency(Number(s.totalAmount || 0))}
                     </TableCell>
                     <TableCell className="px-3 text-xs text-muted-foreground">
-                      {s.soldAt ? formatDate(s.soldAt) : "—"}
+                      {s.soldAt ? formatDate(s.soldAt) : "-"}
                     </TableCell>
                   </TableRow>
                 ))}

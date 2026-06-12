@@ -16,7 +16,6 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,13 +35,11 @@ import {
 import { DateRangePresetToolbar } from "@/components/filters/date-range-preset-toolbar";
 import { PaginationBar } from "@/components/pagination/pagination-bar";
 import { fetchStockTakesPage } from "@/lib/api/stock-takes";
-import { fetchBranchesList } from "@/lib/api/branches";
 import { handleApiError } from "@/lib/api/errors";
 import { formatCurrency } from "@/lib/format";
 import { canManageStockTakes } from "@/lib/inventory-access";
 import type { DateRangePreset } from "@/lib/date-range-presets";
 import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
-import type { HubBranchOption } from "@/lib/types/staff";
 import type { StockTakeRow, StockTakesSummary } from "@/lib/types/stock-takes";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useAuthStore } from "@/stores/auth-store";
@@ -54,10 +51,6 @@ const VARIANCE_ROW_MED_PCT = 5;
 const VARIANCE_ROW_HIGH_PCT = 10;
 /** Same numeric units as API (e.g. −50 in org currency). */
 const SIGNIFICANT_LOSS_AMOUNT = 50;
-
-function activeBranches(list: HubBranchOption[]): HubBranchOption[] {
-  return list.filter((b) => b.isActive !== false);
-}
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);
@@ -79,9 +72,9 @@ function formatQty(s: string): string {
 
 function recordedByLabel(row: StockTakeRow): string {
   const u = row.user;
-  if (!u) return "—";
+  if (!u) return "-";
   const parts = [u.staffId, u.email].filter(Boolean);
-  return parts.join(" · ") || "—";
+  return parts.join(" · ") || "-";
 }
 
 function changeTone(changeStr: string): "up" | "down" | "flat" {
@@ -108,9 +101,9 @@ function varianceRowHighlight(row: StockTakeRow): "high" | "med" | null {
 }
 
 function formatVariancePct(raw: string | null): string {
-  if (raw == null || raw === "") return "—";
+  if (raw == null || raw === "") return "-";
   const n = Number(raw);
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "-";
   return `${n.toFixed(2)}%`;
 }
 
@@ -208,7 +201,7 @@ function KpiGrid({
       <KpiCard
         label="Total losses"
         description="Shrinkage at cost"
-        value={hasSummary && Number.isFinite(shrink) ? formatCurrency(Math.max(0, shrink), currency) : "—"}
+        value={hasSummary && Number.isFinite(shrink) ? formatCurrency(Math.max(0, shrink), currency) : "-"}
         valueClassName="text-destructive"
         iconWrapClassName="bg-destructive/10 text-destructive"
         icon={<TrendingDown className="size-5" strokeWidth={2} aria-hidden />}
@@ -216,7 +209,7 @@ function KpiGrid({
       <KpiCard
         label="Total gains"
         description="Overage at cost"
-        value={hasSummary && Number.isFinite(over) ? formatCurrency(Math.max(0, over), currency) : "—"}
+        value={hasSummary && Number.isFinite(over) ? formatCurrency(Math.max(0, over), currency) : "-"}
         valueClassName="text-emerald-700 dark:text-emerald-400"
         iconWrapClassName="border-emerald-600/25 bg-emerald-600/10 text-emerald-800 dark:text-emerald-200"
         icon={<TrendingUp className="size-5" strokeWidth={2} aria-hidden />}
@@ -224,7 +217,7 @@ function KpiGrid({
       <KpiCard
         label="Net impact"
         description="Losses minus gains"
-        value={hasSummary && Number.isFinite(net) ? formatCurrency(net, currency) : "—"}
+        value={hasSummary && Number.isFinite(net) ? formatCurrency(net, currency) : "-"}
         valueClassName={signedMoneyClass(net)}
         iconWrapClassName="bg-muted text-foreground"
         icon={<Scale className="size-5" strokeWidth={2} aria-hidden />}
@@ -232,7 +225,7 @@ function KpiGrid({
       <KpiCard
         label="Avg variance"
         description="Across listed items"
-        value={hasSummary && Number.isFinite(avgVar) ? `${avgVar.toFixed(2)}%` : "—"}
+        value={hasSummary && Number.isFinite(avgVar) ? `${avgVar.toFixed(2)}%` : "-"}
         valueClassName={hasSummary && Number.isFinite(avgVar) ? avgVarianceClass(avgVar) : "text-muted-foreground"}
         iconWrapClassName="bg-amber-500/10 text-amber-900 dark:text-amber-100"
         icon={<Percent className="size-5" strokeWidth={2} aria-hidden />}
@@ -250,7 +243,6 @@ export default function StockTakePage() {
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
-  const [branchId, setBranchId] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState<number>(20);
 
@@ -259,25 +251,14 @@ export default function StockTakePage() {
     [preset, customStart, customEnd],
   );
 
-  const branchesQuery = useQuery({
-    queryKey: ["branches", "list"],
-    queryFn: fetchBranchesList,
-    enabled: allowed,
-    staleTime: 60_000,
-  });
-
-  const branches = activeBranches(branchesQuery.data ?? []);
-  const showBranchFilter = branches.length > 1;
-
   const params = useMemo(
     () => ({
       startDate: range.startDate,
       endDate: range.endDate,
-      branchId: showBranchFilter && branchId ? branchId : undefined,
       page,
       limit,
     }),
-    [range.startDate, range.endDate, showBranchFilter, branchId, page, limit],
+    [range.startDate, range.endDate, page, limit],
   );
 
   const listQuery = useQuery({
@@ -358,28 +339,6 @@ export default function StockTakePage() {
               setPage(1);
             }}
           />
-          {showBranchFilter ? (
-            <div className="max-w-md space-y-1.5">
-              <Label htmlFor="st-branch-filter">Branch</Label>
-              <select
-                id="st-branch-filter"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-                value={branchId}
-                disabled={filtersDisabled}
-                onChange={(e) => {
-                  setBranchId(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="">All branches</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="whitespace-nowrap">Rows per page</span>
@@ -515,7 +474,7 @@ export default function StockTakePage() {
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[7rem] truncate font-mono text-xs text-muted-foreground">
-                        {row.product.sku?.trim() ? row.product.sku : "—"}
+                        {row.product.sku?.trim() ? row.product.sku : "-"}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{formatQty(row.quantityBefore)}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatQty(row.quantityAfter)}</TableCell>
@@ -525,7 +484,7 @@ export default function StockTakePage() {
                       </TableCell>
                       <TableCell className={cn("text-right text-sm font-medium tabular-nums", finClass)}>
                         {fin == null ? (
-                          <span aria-label={finAria}>—</span>
+                          <span aria-label={finAria}>-</span>
                         ) : (
                           <span className="inline-flex items-center justify-end gap-1">
                             {fin < 0 ? (
@@ -541,7 +500,7 @@ export default function StockTakePage() {
                       </TableCell>
                       <TableCell className={cn("text-right text-sm font-medium tabular-nums", varClass)}>
                         {vp == null ? (
-                          <span aria-label={varAria}>—</span>
+                          <span aria-label={varAria}>-</span>
                         ) : (
                           <span
                             className="inline-flex items-center justify-end gap-0.5"
@@ -569,7 +528,7 @@ export default function StockTakePage() {
                             </TooltipContent>
                           </Tooltip>
                         ) : (
-                          <span className="text-sm text-muted-foreground">—</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </TableCell>
                     </TableRow>

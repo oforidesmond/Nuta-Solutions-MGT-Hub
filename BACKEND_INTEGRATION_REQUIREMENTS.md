@@ -1,4 +1,4 @@
-# Backend Integration Requirements — Phase 2
+# Backend Integration Requirements - Phase 2
 
 **Last Updated:** 2026-04-19
 
@@ -60,7 +60,7 @@ This document tracks API endpoints, database expectations, Management Hub notifi
 
 | Field | Detail |
 |--------|--------|
-| **Auth** | Bearer (owner/admin — **not** staff mobile) |
+| **Auth** | Bearer (owner/admin - **not** staff mobile) |
 | **Purpose** | Promote a backend temporary aggregate to a permanent `Product`; then push updated catalog to staff devices via sync. |
 
 **Request body**
@@ -89,11 +89,11 @@ This document tracks API endpoints, database expectations, Management Hub notifi
 
 **Success response**
 
-- JSON array of temporary line items (or `{ data: [...] }` / `{ items: [...] }` — Hub normalizes). Each row should include at least **`id`** (placeholder **product** UUID), **`barcode`**, **`name`**, **`price`**, **`quantity_sold`** / **`quantitySold`**, **`first_sold_at`** / **`firstSoldAt`**.
+- JSON array of temporary line items (or `{ data: [...] }` / `{ items: [...] }` - Hub normalizes). Each row should include at least **`id`** (placeholder **product** UUID), **`barcode`**, **`name`**, **`price`**, **`quantity_sold`** / **`quantitySold`**, **`first_sold_at`** / **`firstSoldAt`**.
 
 **Backend routing requirement**
 
-- Register this route **before** `@Get(':id')` on the same controller. If `:id` is matched first, `GET /products/temporary` is parsed as `id = "temporary"` and Nest returns **`400` — `Validation failed (uuid is expected)`**. See **Backend Implementation Notes → Troubleshooting: GET /products/temporary**.
+- Register this route **before** `@Get(':id')` on the same controller. If `:id` is matched first, `GET /products/temporary` is parsed as `id = "temporary"` and Nest returns **`400` - `Validation failed (uuid is expected)`**. See **Backend Implementation Notes → Troubleshooting: GET /products/temporary**.
 
 ---
 
@@ -102,7 +102,7 @@ This document tracks API endpoints, database expectations, Management Hub notifi
 | Field | Detail |
 |--------|--------|
 | **Auth** | Bearer |
-| **Query** | `since` — ISO 8601 timestamp; return rows with `updated_at > since`. |
+| **Query** | `since` - ISO 8601 timestamp; return rows with `updated_at > since`. |
 
 **Response**
 
@@ -128,7 +128,7 @@ This document tracks API endpoints, database expectations, Management Hub notifi
 
 **Mobile behavior:** replaces local product rows by `id` / `barcode`; clears `is_temporary` when server sends a permanent product for a previously temporary barcode.
 
-**Temporary items — when `POST /staff/temporary-items` fires:** One row is queued **per temporary product line at sale completion** (not at product creation in the scanner), so backend daily counts match “sold today” semantics. Payload includes `local_sale_id` and `local_product_id` for idempotency.
+**Temporary items - when `POST /staff/temporary-items` fires:** One row is queued **per temporary product line at sale completion** (not at product creation in the scanner), so backend daily counts match “sold today” semantics. Payload includes `local_sale_id` and `local_product_id` for idempotency.
 
 ---
 
@@ -152,7 +152,7 @@ This document tracks API endpoints, database expectations, Management Hub notifi
 }
 ```
 
-- **`refund_method`** (optional): `cash` | `card` | `mobile_money` | `transfer` | `mixed` — mobile sends value derived from the **original sale** `payment_method`; backend can still derive if omitted.
+- **`refund_method`** (optional): `cash` | `card` | `mobile_money` | `transfer` | `mixed` - mobile sends value derived from the **original sale** `payment_method`; backend can still derive if omitted.
 
 **Success:** `{ "id": "uuid", "syncedAt": "ISO8601" }` (optional; mobile accepts empty object).
 
@@ -189,7 +189,7 @@ This document tracks API endpoints, database expectations, Management Hub notifi
 { "timestamp": "2026-04-18T12:00:00.000Z" }
 ```
 
-**Note:** May be public or Bearer — mobile uses Bearer when logged in; falls back if 401.
+**Note:** May be public or Bearer - mobile uses Bearer when logged in; falls back if 401.
 
 ---
 
@@ -276,7 +276,7 @@ This document tracks API endpoints, database expectations, Management Hub notifi
 | Alert | Trigger | Message (example) | Owner action |
 |-------|---------|---------------------|--------------|
 | Temporary items | `POST /staff/temporary-items` aggregated | *"5 temporary items sold today. Review?"* | Open list; use `POST /products/from-temporary/...` |
-| Return | `POST /staff/returns` | *"Return processed by [Name] — ₵X"* | View sale / return detail |
+| Return | `POST /staff/returns` | *"Return processed by [Name] - ₵X"* | View sale / return detail |
 | Time skew | `POST /staff/time-warning` | Staff badge warning | Contact staff / ignore |
 | Delayed sync | Server: `synced_at - sold_at > 24h` | Analytics ⚠️ on sale row | Investigate offline period |
 
@@ -316,7 +316,7 @@ This document tracks API endpoints, database expectations, Management Hub notifi
 
 ---
 
-## Mobile client (React Native) — NutaPOS Staff
+## Mobile client (React Native) - NutaPOS Staff
 
 Implementation in this repo is aligned with **Backend Implementation Notes** and **Deviations from Spec** below.
 
@@ -325,7 +325,7 @@ Implementation in this repo is aligned with **Backend Implementation Notes** and
 | **`GET /time`** | Uses **`buildRootPath('/time')`** (full URL = API origin + `/time`, **no** `/api/v1` prefix). Matches Nest: time routes live on the server root. |
 | **`POST /staff/temporary-items`** | Waits for HTTP **200/201/409** before `sync_queue` → `COMPLETED` and `UPDATE products.synced_at` for `local_product_id`. Response **`id`** = placeholder **Product** id. |
 | **`POST /staff/returns`** | **Online-only** (API success before local DB write); **`refund_method`** sent from original sale; **30s** client timeout with user messaging on failure. |
-| **Analytics** | **`POST /analytics/performance`** and **`POST /analytics/crash`** only — same as **Analytics Endpoint Structure (FINAL)**. |
+| **Analytics** | **`POST /analytics/performance`** and **`POST /analytics/crash`** only - same as **Analytics Endpoint Structure (FINAL)**. |
 | **Sales payload** | Sends **`receipt_number`** + **`receiptNumber`** (and `RCP-YYYYMMDD-XXXXXX` generation) for `POST /staff/sales`. |
 
 ---
@@ -340,13 +340,13 @@ Implementation in this repo is aligned with **Backend Implementation Notes** and
 
 All authenticated JSON routes use the global prefix **`/api/v1`** (see `main.ts`). **`GET /time`** and **`GET /health`** are excluded from the prefix and remain at **`/time`** and **`/health`** on the server root.
 
-### Troubleshooting: `GET /products/temporary` returns `400` — “uuid is expected”
+### Troubleshooting: `GET /products/temporary` returns `400` - “uuid is expected”
 
 | Symptom | `GET /api/v1/products/temporary` (or `/products/temporary` under your global prefix) returns **400 Bad Request** with message like **`Validation failed (uuid is expected)`**. |
 |--------|---|
-| **Who owns the fix** | **NestJS backend** — Management Hub is **not** at fault; it requests the correct path ([`lib/api/endpoints.ts`](lib/api/endpoints.ts) → **`productsTemporary: "/products/temporary"`**). |
+| **Who owns the fix** | **NestJS backend** - Management Hub is **not** at fault; it requests the correct path ([`lib/api/endpoints.ts`](lib/api/endpoints.ts) → **`productsTemporary: "/products/temporary"`**). |
 | **Root cause** | `GET /products/:id` is registered **before** `GET /products/temporary`, so the path segment **`temporary`** is bound to **`:id`** and fails **UUID** validation. |
-| **Fix** | In **`products.controller.ts`** (or equivalent), declare **`@Get('temporary')`** (and other **static** segments: `low-stock`, `expiring-soon`, `from-temporary/:productId`, etc.) **above** **`@Get(':id')`**. Alternatively expose the list under a non-colliding path (e.g. `GET /products/hub/temporary-queue`) and update the Hub **`endpoints.productsTemporary`** — coordinate both teams if you change the path. |
+| **Fix** | In **`products.controller.ts`** (or equivalent), declare **`@Get('temporary')`** (and other **static** segments: `low-stock`, `expiring-soon`, `from-temporary/:productId`, etc.) **above** **`@Get(':id')`**. Alternatively expose the list under a non-colliding path (e.g. `GET /products/hub/temporary-queue`) and update the Hub **`endpoints.productsTemporary`** - coordinate both teams if you change the path. |
 | **Verify** | After deploy: `curl -H "Authorization: Bearer …" "$API/api/v1/products/temporary"` returns **200** and a JSON array (or wrapped list). |
 
 #### Prompt for backend / Nest agent (copy-paste)
@@ -373,31 +373,31 @@ Synced with: Management Hub (lib/api/endpoints.ts productsTemporary = "/products
 - ✅ `POST /api/v1/staff/stock-adjustments` → [`staff-mobile.controller.ts`](src/modules/staff/staff-mobile.controller.ts) + [`staff-stock-adjustments.service.ts`](src/modules/staff/staff-stock-adjustments.service.ts)
 - ✅ `POST /api/v1/analytics/performance` and `POST /api/v1/analytics/crash` → [`src/modules/analytics/analytics.controller.ts`](src/modules/analytics/analytics.controller.ts)
 - ✅ `GET /api/v1/notifications` (Hub) → [`src/modules/notifications/notifications.controller.ts`](src/modules/notifications/notifications.controller.ts)
-- ✅ `GET /api/v1/products/:id/inventory-events` (Hub) — read model for mobile-posted inventory audit rows → [`products.controller.ts`](src/modules/products/products.controller.ts)
-- ⚠️ **`GET /api/v1/products/temporary`** (Hub) — **must** be registered **before** `@Get(':id')`; if missing or mis-ordered, Hub gets **400 uuid expected** (see **Troubleshooting** above). Add to this list when verified in code.
+- ✅ `GET /api/v1/products/:id/inventory-events` (Hub) - read model for mobile-posted inventory audit rows → [`products.controller.ts`](src/modules/products/products.controller.ts)
+- ⚠️ **`GET /api/v1/products/temporary`** (Hub) - **must** be registered **before** `@Get(':id')`; if missing or mis-ordered, Hub gets **400 uuid expected** (see **Troubleshooting** above). Add to this list when verified in code.
 
 ### Database Migrations
 
-- `prisma/migrations/20260418213445_phase2_mobile_staff_integration/` — Phase 2 core tables and enums.
-- `prisma/migrations/20260419164317_phase2_alignment_receipt_refund_daily_notify/` — `Sale.receipt_number` (`receiptNumberMobile`), `Return.refund_method`, `TemporaryItemOrgDayNotification` (one batched temp-item notification row per org per UTC day).
+- `prisma/migrations/20260418213445_phase2_mobile_staff_integration/` - Phase 2 core tables and enums.
+- `prisma/migrations/20260419164317_phase2_alignment_receipt_refund_daily_notify/` - `Sale.receipt_number` (`receiptNumberMobile`), `Return.refund_method`, `TemporaryItemOrgDayNotification` (one batched temp-item notification row per org per UTC day).
 
 ### Notification Types Added / Used
 
-- `TEMPORARY_ITEM_SOLD` — **one hub notification per organization per UTC calendar day** (daily batch). Rows are materialized at **00:05 UTC** (cron) and lazily when an admin opens **`GET /api/v1/notifications`** (yesterday’s batch if missing). `metadata.summaryUtcDate`, `metadata.items` (deduped lines). **No per-item / per-request spam** from `POST /staff/temporary-items`.
-- `RETURN_PROCESSED` — **hub-only** in-app notification (no mobile push). `metadata` includes `original_sale_id`, `return_id`, `refund_method`, `hub_only: true`.
-- `STAFF_TIME_WARNING` — org-wide alert; staff badge data on `StaffProfile` (`lastDeviceTimeWarningAt`, `lastDeviceTimeOffsetMinutes`, `lastDeviceTimeModel`, `deviceTimeWarningCount`)
-- Delayed sync: `isDelayedSync` on sale payloads when `syncedAt` minus `soldAt` &gt; 24h — see [`sales.service.ts`](src/modules/sales/sales.service.ts) `serializeSale` (Hub matches this using **`synced_at` / `sold_at`** only; see [`lib/sale-sync.ts`](lib/sale-sync.ts)).
+- `TEMPORARY_ITEM_SOLD` - **one hub notification per organization per UTC calendar day** (daily batch). Rows are materialized at **00:05 UTC** (cron) and lazily when an admin opens **`GET /api/v1/notifications`** (yesterday’s batch if missing). `metadata.summaryUtcDate`, `metadata.items` (deduped lines). **No per-item / per-request spam** from `POST /staff/temporary-items`.
+- `RETURN_PROCESSED` - **hub-only** in-app notification (no mobile push). `metadata` includes `original_sale_id`, `return_id`, `refund_method`, `hub_only: true`.
+- `STAFF_TIME_WARNING` - org-wide alert; staff badge data on `StaffProfile` (`lastDeviceTimeWarningAt`, `lastDeviceTimeOffsetMinutes`, `lastDeviceTimeModel`, `deviceTimeWarningCount`)
+- Delayed sync: `isDelayedSync` on sale payloads when `syncedAt` minus `soldAt` &gt; 24h - see [`sales.service.ts`](src/modules/sales/sales.service.ts) `serializeSale` (Hub matches this using **`synced_at` / `sold_at`** only; see [`lib/sale-sync.ts`](lib/sale-sync.ts)).
 
 ### Resolved Questions (Phase 2 alignment)
 
 1. **Temporary notifications:** **DAILY** batch per organization (UTC day). Aggregation job: cron at **00:05 UTC** plus lazy materialize on hub `GET /notifications`.
-2. **Return notifications:** **Hub-only** — `RETURN_PROCESSED` is stored for the Management Hub only; staff are not sent a push or in-app duplicate (staff already processed the return; mobile requires online for returns).
-3. **Temporary products:** **Option B** — placeholder `Product` rows use the mobile **`local_product_id` as `Product.id`** (`isTemporary: true`, `needsReview: true`). Promotion: **`POST /api/v1/products/from-temporary/{productId}`** updates that product and clears related `TemporaryItemSaleLine` rows.
-4. **Temporary items auto-dismiss:** **NO** — items remain in the owner review queue until **Promote** or **Ignore/Delete**; no 7-day auto-hide (could hide real catalog gaps). Optional Hub UX: badge when first sold &gt; 7 days ago.
-5. **Return notifications (staff mobile):** **NO** duplicate confirmation — hub-only notifications; aligns with item 2.
-6. **Delayed sync threshold:** **FIXED at 24 hours** — no org setting in the Hub for now (`YAGNI`). Warning when `synced_at - sold_at &gt; 24h` (see backend `serializeSale` and Hub [`lib/sale-sync.ts`](lib/sale-sync.ts)).
+2. **Return notifications:** **Hub-only** - `RETURN_PROCESSED` is stored for the Management Hub only; staff are not sent a push or in-app duplicate (staff already processed the return; mobile requires online for returns).
+3. **Temporary products:** **Option B** - placeholder `Product` rows use the mobile **`local_product_id` as `Product.id`** (`isTemporary: true`, `needsReview: true`). Promotion: **`POST /api/v1/products/from-temporary/{productId}`** updates that product and clears related `TemporaryItemSaleLine` rows.
+4. **Temporary items auto-dismiss:** **NO** - items remain in the owner review queue until **Promote** or **Ignore/Delete**; no 7-day auto-hide (could hide real catalog gaps). Optional Hub UX: badge when first sold &gt; 7 days ago.
+5. **Return notifications (staff mobile):** **NO** duplicate confirmation - hub-only notifications; aligns with item 2.
+6. **Delayed sync threshold:** **FIXED at 24 hours** - no org setting in the Hub for now (`YAGNI`). Warning when `synced_at - sold_at &gt; 24h` (see backend `serializeSale` and Hub [`lib/sale-sync.ts`](lib/sale-sync.ts)).
 
-### Resolved Questions (Management Hub — product decisions)
+### Resolved Questions (Management Hub - product decisions)
 
 1. ✅ **Temporary items:** NO auto-dismiss (manual review required: promote or ignore/delete).
 2. ✅ **Return notifications:** HUB-ONLY (staff receives no confirmation notification).
@@ -405,21 +405,21 @@ Synced with: Management Hub (lib/api/endpoints.ts productsTemporary = "/products
 
 ### Field Additions (Phase 2)
 
-- **`Sale.receipt_number`** — stored as optional column **`receipt_number`** (`receiptNumberMobile` in Prisma). `POST /api/v1/staff/sales` accepts **`receipt_number`** and/or **`receiptNumber`** (at least one required); canonical unique receipt remains **`receiptNumber`**. List/detail responses include **`receipt_number`** and **`receipt_number_mobile`** on serialized sales (see [`sales.service.ts`](src/modules/sales/sales.service.ts)).
-- **`Return.refund_method`** — optional string column; set from **`refund_method`** on the request if present, otherwise derived from the original sale’s **`paymentMethod`** (`cash`, `card`, `mobile_money`, `transfer`, `mixed`). See [`staff-returns.service.ts`](src/modules/staff/staff-returns.service.ts).
+- **`Sale.receipt_number`** - stored as optional column **`receipt_number`** (`receiptNumberMobile` in Prisma). `POST /api/v1/staff/sales` accepts **`receipt_number`** and/or **`receiptNumber`** (at least one required); canonical unique receipt remains **`receiptNumber`**. List/detail responses include **`receipt_number`** and **`receipt_number_mobile`** on serialized sales (see [`sales.service.ts`](src/modules/sales/sales.service.ts)).
+- **`Return.refund_method`** - optional string column; set from **`refund_method`** on the request if present, otherwise derived from the original sale’s **`paymentMethod`** (`cash`, `card`, `mobile_money`, `transfer`, `mixed`). See [`staff-returns.service.ts`](src/modules/staff/staff-returns.service.ts).
 - **Product ID strategy:** Temporary lines use **`local_product_id` = `Product.id`** for the placeholder product.
 
 ### Analytics Endpoint Structure (FINAL)
 
 Mobile should call **two separate endpoints** (no combined `/analytics/events`):
 
-- **`POST /api/v1/analytics/performance`** — body: `{ "metric": "sale_completion" | "scan_speed" | "sync_duration", "duration_ms": number, "device_model": string, "extra"?: object }`
-- **`POST /api/v1/analytics/crash`** — body: `{ "error": string, "stack"?: string, "is_fatal": boolean, "device_info"?: object }`
+- **`POST /api/v1/analytics/performance`** - body: `{ "metric": "sale_completion" | "scan_speed" | "sync_duration", "duration_ms": number, "device_model": string, "extra"?: object }`
+- **`POST /api/v1/analytics/crash`** - body: `{ "error": string, "stack"?: string, "is_fatal": boolean, "device_info"?: object }`
 
 ### Deviations from Spec
 
-- **`POST /staff/temporary-items`** response is **`{ "id": "<local_product_id>", "received": true }`** — `id` is the placeholder **product** id (not a sale-line id); **`aggregateId` was removed** from the mobile response.
-- **`POST /products/from-temporary/{productId}`** — path parameter is the **placeholder product UUID**, not a `TemporaryItemDailyAggregate` id.
+- **`POST /staff/temporary-items`** response is **`{ "id": "<local_product_id>", "received": true }`** - `id` is the placeholder **product** id (not a sale-line id); **`aggregateId` was removed** from the mobile response.
+- **`POST /products/from-temporary/{productId}`** - path parameter is the **placeholder product UUID**, not a `TemporaryItemDailyAggregate` id.
 - Controllers live under **`src/modules/…`** (Nest module layout), not flat `src/staff/…`.
 - **`GET /time`** is served at **`/time`**, not under `/api/v1`.
 - **`GET /products/:id/inventory-events`** added so the Management Hub can list `InventoryEvent` rows (spec implied history; mobile only posts via `POST /staff/inventory-events`).
@@ -428,11 +428,11 @@ Mobile should call **two separate endpoints** (no combined `/analytics/events`):
 
 - Postman collection: [`docs/postman/Phase2_Mobile_Endpoints.json`](docs/postman/Phase2_Mobile_Endpoints.json)
 - Set `accessToken`, `staffUserId`, `productId`, `saleId`, `categoryId`, `tempAggregateId` as collection variables for your environment.
-- Idempotency: repeat the same UUID body for temporary lines, returns, inventory events, and stock adjustments — expect **200** and no duplicate rows.
+- Idempotency: repeat the same UUID body for temporary lines, returns, inventory events, and stock adjustments - expect **200** and no duplicate rows.
 
 ### Open Questions for Mobile/Hub Teams
 
-_(None blocking Phase 2 Hub — routes and fields aligned.)_
+_(None blocking Phase 2 Hub - routes and fields aligned.)_
 
 ---
 
@@ -454,29 +454,29 @@ _(None blocking Phase 2 Hub — routes and fields aligned.)_
 
 ### Field Integration Confirmed (Phase 2)
 
-- ⚠️ **Temporary items list:** Hub calls **`GET /products/temporary`**. If the API returns **`400` — `uuid is expected`**, that is a **backend route-order bug** (`:id` swallowing `temporary`). See **Backend Implementation Notes → Troubleshooting: GET /products/temporary**. No Hub code change required once Nest registers the route correctly.
+- ⚠️ **Temporary items list:** Hub calls **`GET /products/temporary`**. If the API returns **`400` - `uuid is expected`**, that is a **backend route-order bug** (`:id` swallowing `temporary`). See **Backend Implementation Notes → Troubleshooting: GET /products/temporary**. No Hub code change required once Nest registers the route correctly.
 - ✅ **Receipt number:** Sales table shows `receipt_number` / `receiptNumber` via [`normalizeSale`](lib/api/sales.ts) (`N/A` when absent). [`components/sales/sales-table.tsx`](components/sales/sales-table.tsx)
 - ✅ **Refund method:** Return detail shows `refund_method`, falling back to `payment_method` when needed. [`app/(dashboard)/sales/[saleId]/return/[returnId]/page.tsx`](app/(dashboard)/sales/[saleId]/return/[returnId]/page.tsx), [`lib/api/returns.ts`](lib/api/returns.ts)
-- ✅ **Temporary items:** List uses **placeholder product `id`** for promote / ignore (`DELETE` removes placeholder); `aggregateId` is internal/legacy — optional `?highlightProductId=` or `?aggregateId=` for row highlight only.
+- ✅ **Temporary items:** List uses **placeholder product `id`** for promote / ignore (`DELETE` removes placeholder); `aggregateId` is internal/legacy - optional `?highlightProductId=` or `?aggregateId=` for row highlight only.
 - ✅ **Sync delay:** Fixed **24h** threshold; `isSaleDelayedSync` requires **`synced_at`** (no warning if not synced yet). [`lib/sale-sync.ts`](lib/sale-sync.ts)
 
 ### Notification Handlers
 
-- `TEMPORARY_ITEM_SOLD` — Uses `actionUrl` when present; otherwise `/inventory/temporary-items` with optional `?highlightProductId=` from metadata (`productId`), legacy `?aggregateId=` supported. [`lib/navigation/notification-href.ts`](lib/navigation/notification-href.ts)
-- `RETURN_PROCESSED` — Resolves `/sales/{saleId}/return/{returnId}` from `metadata` or `actionUrl`.
-- `STAFF_TIME_WARNING` — Resolves `/staff/{staffId}/devices` from `metadata` or `actionUrl`.
-- Delayed sync — Visual indicator in sales table only (no notification type). [`lib/sale-sync.ts`](lib/sale-sync.ts)
+- `TEMPORARY_ITEM_SOLD` - Uses `actionUrl` when present; otherwise `/inventory/temporary-items` with optional `?highlightProductId=` from metadata (`productId`), legacy `?aggregateId=` supported. [`lib/navigation/notification-href.ts`](lib/navigation/notification-href.ts)
+- `RETURN_PROCESSED` - Resolves `/sales/{saleId}/return/{returnId}` from `metadata` or `actionUrl`.
+- `STAFF_TIME_WARNING` - Resolves `/staff/{staffId}/devices` from `metadata` or `actionUrl`.
+- Delayed sync - Visual indicator in sales table only (no notification type). [`lib/sale-sync.ts`](lib/sale-sync.ts)
 
 ### API Integration
 
 - Uses existing [`lib/api/client.ts`](lib/api/client.ts) (`axios` + Bearer).
 - New/extended modules:
-  - [`lib/api/notifications.ts`](lib/api/notifications.ts) — `fetchNotifications()` → `GET /notifications`
-  - [`lib/api/products.ts`](lib/api/products.ts) — `fetchTemporaryItems()` → `GET /products/temporary`, `promoteFromTemporary()` → `POST /products/from-temporary/{id}`, `fetchInventoryEvents()` → `GET /products/{id}/inventory-events`
-  - [`lib/api/returns.ts`](lib/api/returns.ts) — `fetchReturnDetail()` → `GET /sales/{saleId}/return/{returnId}`
-  - [`lib/api/analytics-hub.ts`](lib/api/analytics-hub.ts) — `fetchAnalyticsPerformance()`, `fetchAnalyticsCrashes()` (treats **404** as “endpoint not available yet”)
-  - [`lib/api/staff-reliability.ts`](lib/api/staff-reliability.ts) — Phase 3 read helpers + backup blob download; list calls treat **404** as missing backend routes
-  - [`lib/api/staff.ts`](lib/api/staff.ts) — `parseStaffMember` extended with device time fields from `StaffProfile`
+  - [`lib/api/notifications.ts`](lib/api/notifications.ts) - `fetchNotifications()` → `GET /notifications`
+  - [`lib/api/products.ts`](lib/api/products.ts) - `fetchTemporaryItems()` → `GET /products/temporary`, `promoteFromTemporary()` → `POST /products/from-temporary/{id}`, `fetchInventoryEvents()` → `GET /products/{id}/inventory-events`
+  - [`lib/api/returns.ts`](lib/api/returns.ts) - `fetchReturnDetail()` → `GET /sales/{saleId}/return/{returnId}`
+  - [`lib/api/analytics-hub.ts`](lib/api/analytics-hub.ts) - `fetchAnalyticsPerformance()`, `fetchAnalyticsCrashes()` (treats **404** as “endpoint not available yet”)
+  - [`lib/api/staff-reliability.ts`](lib/api/staff-reliability.ts) - Phase 3 read helpers + backup blob download; list calls treat **404** as missing backend routes
+  - [`lib/api/staff.ts`](lib/api/staff.ts) - `parseStaffMember` extended with device time fields from `StaffProfile`
 - Hooks: [`lib/hooks/use-temporary-items.ts`](lib/hooks/use-temporary-items.ts), [`lib/hooks/use-notifications.ts`](lib/hooks/use-notifications.ts)
 
 ### UI/UX Decisions
@@ -484,15 +484,15 @@ _(None blocking Phase 2 Hub — routes and fields aligned.)_
 - Temporary items: `Table` + **Promote** dialog + **Ignore** (deletes placeholder product); no auto-dismiss; optional **“Sold _n_ days ago”** badge when first sold &gt; 7 days; `?highlightProductId=` / `?aggregateId=` highlights a row (amber).
 - Return details: Full page with two cards (original sale vs return); link back to `/sales`.
 - Inventory events: **Sheet** from the right on product detail (`View history` next to duplicate/edit actions).
-- Delayed sync: Amber **AlertTriangle** with tooltip — same 24h rule as backend; tooltip uses **floored whole hours** between `sold_at` and `synced_at`.
+- Delayed sync: Amber **AlertTriangle** with tooltip - same 24h rule as backend; tooltip uses **floored whole hours** between `sold_at` and `synced_at`.
 - Reports: Device section shows a friendly message when `GET /analytics/performance` and `GET /analytics/crash` return **404** (mobile-only POST documented elsewhere).
 
 ### Deviations from Spec
 
 - Product detail and inventory audit trail live under **`/products/[id]`** (existing Hub routes), not `/inventory/products/{id}`.
-- **`GET /sales/{saleId}/return/{returnId}`** — Hub calls this path; confirm with backend if the controller uses a different segment (e.g. `returns` plural).
-- **Dismiss device time warning** — Not implemented (no `PATCH` endpoint in shared spec).
-- **Promote mutation** — Invoked from the page via `promoteFromTemporary()`; no separate `usePromoteTemporaryItem` hook (optional follow-up).
+- **`GET /sales/{saleId}/return/{returnId}`** - Hub calls this path; confirm with backend if the controller uses a different segment (e.g. `returns` plural).
+- **Dismiss device time warning** - Not implemented (no `PATCH` endpoint in shared spec).
+- **Promote mutation** - Invoked from the page via `promoteFromTemporary()`; no separate `usePromoteTemporaryItem` hook (optional follow-up).
 
 ### Testing Notes
 
@@ -501,13 +501,13 @@ _(None blocking Phase 2 Hub — routes and fields aligned.)_
 
 ---
 
-## Phase 3 — Staff reliability & operations (Management Hub)
+## Phase 3 - Staff reliability & operations (Management Hub)
 
 **Hub implementation:** Operations nav, dashboard widgets, and list pages under `/operations/*` ([`lib/api/staff-reliability.ts`](lib/api/staff-reliability.ts), [`lib/reliability-user-label.ts`](lib/reliability-user-label.ts), [`app/(dashboard)/operations/`](app/(dashboard)/operations/), [`app/(dashboard)/page.tsx`](app/(dashboard)/page.tsx)). **`GET /staff/backup/:id`** is used for binary download. Crash **list** omits `stack`; the hub loads **`GET /analytics/crashes/:id`** when a row is opened.
 
-### Read APIs (Nest — implemented; hub wired)
+### Read APIs (Nest - implemented; hub wired)
 
-**Roles:** **ADMIN** and **MANAGER** only (same as `GET /dashboard/summary`). **SUPER_ADMIN** without matching `@Roles` / org scope gets **403** — the hub UI matches this ([`lib/operations-access.ts`](lib/operations-access.ts)).
+**Roles:** **ADMIN** and **MANAGER** only (same as `GET /dashboard/summary`). **SUPER_ADMIN** without matching `@Roles` / org scope gets **403** - the hub UI matches this ([`lib/operations-access.ts`](lib/operations-access.ts)).
 
 **`GET /api/v1/dashboard/reliability-summary`** returns nested widgets, for example:
 
@@ -529,7 +529,7 @@ _(None blocking Phase 2 Hub — routes and fields aligned.)_
 }
 ```
 
-**List routes** — shared query params: `from`, `to`, `userId`, `limit` (1–100, default 20), `cursor` (opaque); **`deviceId`** on **`GET /staff/backups`** only. Response: `{ "items": [], "nextCursor": null }`. List rows may include nested **`user`** `{ id, firstName, lastName, email }` or **`null`** (crashes). **`deviceId`** on backups is the **client** stable id string.
+**List routes** - shared query params: `from`, `to`, `userId`, `limit` (1–100, default 20), `cursor` (opaque); **`deviceId`** on **`GET /staff/backups`** only. Response: `{ "items": [], "nextCursor": null }`. List rows may include nested **`user`** `{ id, firstName, lastName, email }` or **`null`** (crashes). **`deviceId`** on backups is the **client** stable id string.
 
 | Method | Path | Notes |
 |--------|------|--------|

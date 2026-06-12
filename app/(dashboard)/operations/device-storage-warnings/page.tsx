@@ -27,9 +27,9 @@ import type { HubUser } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
 function numMb(v: number | string | null | undefined): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return "-";
   const n = typeof v === "string" ? parseFloat(v) : v;
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "-";
   return `${n} MB`;
 }
 

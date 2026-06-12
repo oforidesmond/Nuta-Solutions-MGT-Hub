@@ -205,7 +205,7 @@ export default function DatabaseWarningsPage() {
                           {r.healthy ? "yes" : "no"}
                         </TableCell>
                         <TableCell className="max-w-xl">
-                          <p className="font-mono text-xs text-muted-foreground">{preview || "—"}</p>
+                          <p className="font-mono text-xs text-muted-foreground">{preview || "-"}</p>
                           {r.errors.length > 0 ? (
                             <Button
                               type="button"

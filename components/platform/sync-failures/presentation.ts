@@ -26,13 +26,13 @@ export function syncFailureStatusLabel(status: PlatformSyncFailureStatus): strin
 export function syncFailureActionLabel(
   action: PlatformSyncFailureResolutionAction | null | undefined,
 ): string {
-  if (!action) return "—";
+  if (!action) return "-";
   return ACTION_LABELS[action] ?? action;
 }
 
 export function syncFailurePersonLabel(
   person: PlatformSyncFailurePersonRef | null | undefined,
-  fallback = "—",
+  fallback = "-",
 ): string {
   if (!person) return fallback;
   const name = [person.firstName, person.lastName].filter(Boolean).join(" ").trim();

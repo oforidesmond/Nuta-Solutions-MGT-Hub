@@ -204,8 +204,8 @@ function DevicesTableDesktop({ rows }: { rows: PlatformDevice[] }) {
             const owner = d.user
               ? [d.user.firstName, d.user.lastName].filter(Boolean).join(" ").trim() ||
                 d.user.email ||
-                "—"
-              : "—";
+                "-"
+              : "-";
             return (
               <TableRow key={d.id}>
                 <TableCell className="px-4 py-3">
@@ -226,7 +226,7 @@ function DevicesTableDesktop({ rows }: { rows: PlatformDevice[] }) {
                       {d.organization.name}
                     </Link>
                   ) : (
-                    "—"
+                    "-"
                   )}
                 </TableCell>
                 <TableCell>
@@ -265,8 +265,8 @@ function DeviceCardMobile({ device }: { device: PlatformDevice }) {
   const owner = device.user
     ? [device.user.firstName, device.user.lastName].filter(Boolean).join(" ").trim() ||
       device.user.email ||
-      "—"
-    : "—";
+      "-"
+    : "-";
   return (
     <Card className="gap-3 p-4">
       <div className="flex items-start justify-between gap-2">

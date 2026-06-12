@@ -1,4 +1,4 @@
-# NutaPOS Management Hub — Design & integration
+# NutaPOS Management Hub - Design & integration
 
 This document describes how the hub works in **this repository**: structure, auth, navigation, data patterns, and a **deep pass on products** (model, APIs, UI, inventory, sales interactions, edge cases).
 
@@ -10,16 +10,16 @@ This document describes how the hub works in **this repository**: structure, aut
 
 | Surface | Route group | Who |
 | --- | --- | --- |
-| **Tenant Management Hub** | `(dashboard)` — `/`, `/products`, etc. | `ADMIN`, `MANAGER`, `STAFF`, `SALES_AGENT` (organisation-scoped users) |
-| **Platform Admin Console** | `(platform)` — `/platform`, … | `SUPER_ADMIN` with **`organizationId === null`** |
+| **Tenant Management Hub** | `(dashboard)` - `/`, `/products`, etc. | `ADMIN`, `MANAGER`, `STAFF`, `SALES_AGENT` (organisation-scoped users) |
+| **Platform Admin Console** | `(platform)` - `/platform`, … | `SUPER_ADMIN` with **`organizationId === null`** |
 
 They use different shells and API modules (`lib/api/*` vs `lib/api/platform/*`). `postLoginRedirect` in `lib/platform-access.ts` sends SUPER_ADMIN users to `/platform` and everyone else to `/`.
 
 ### 1.2 Layout & auth gates
 
-- **Root:** `app/layout.tsx` — `QueryProvider`, `AuthProvider`, global toaster.
-- **Tenant:** `app/(dashboard)/layout.tsx` — `DashboardAuthGate` → `DashboardShell`.
-- **Platform:** `app/(platform)/layout.tsx` — `PlatformAuthGate` → `PlatformShell`.
+- **Root:** `app/layout.tsx` - `QueryProvider`, `AuthProvider`, global toaster.
+- **Tenant:** `app/(dashboard)/layout.tsx` - `DashboardAuthGate` → `DashboardShell`.
+- **Platform:** `app/(platform)/layout.tsx` - `PlatformAuthGate` → `PlatformShell`.
 - **No `middleware.ts`:** route protection is handled in gate components plus API authorization.
 
 Session lives in **`stores/auth-store.ts`** (Zustand).
@@ -38,7 +38,7 @@ Session lives in **`stores/auth-store.ts`** (Zustand).
 
 ---
 
-# 2. Products — complete reference
+# 2. Products - complete reference
 
 This section is exhaustive for **everything the frontend implements** around catalogue products: types, endpoints, screens, helpers, how stock is interpreted, how categories attach, how inventory and sales relate, and what is wired only in API code but not in UI.
 
@@ -50,23 +50,23 @@ Defined in `lib/types/domain.ts`. The API may return **string or number** for nu
 
 | Field | Role |
 | --- | --- |
-| `id` | UUID string — primary key for routes and mutations. |
-| `name` | Display name — **required** in forms. |
+| `id` | UUID string - primary key for routes and mutations. |
+| `name` | Display name - **required** in forms. |
 | `sku` | Optional stock-keeping identifier; monospace in tables. |
 | `barcode` | Optional barcode; used heavily for **temporary items** promotion (required there). |
 | `description` | Longer text; optional. |
 | `categoryId` | FK to category when API uses relational style. |
 | `category` | **Polymorphic:** may be **`HubCategory`**, **`string`** (legacy label), or null. Display uses `productCategoryLabel()` (below). |
-| `costPrice` | Unit cost — form requires ≥ 0. |
-| `sellingPrice` | Retail/unit sell price — form requires ≥ cost (validation warns if sell &lt; cost). |
+| `costPrice` | Unit cost - form requires ≥ 0. |
+| `sellingPrice` | Retail/unit sell price - form requires ≥ cost (validation warns if sell &lt; cost). |
 | `currentStock` | Common Prisma/API name for on-hand qty. |
-| `stockQuantity` | Alternate API name — **both** supported (see §2.5). |
+| `stockQuantity` | Alternate API name - **both** supported (see §2.5). |
 | `reorderLevel` | When set and &gt; 0, drives “low stock” colouring vs quantity; if unset, heuristic applies (§2.5). |
 | `unit` / `unitOfMeasure` | Unit label (“pcs”, “boxes”…); form writes **both** to the API for compatibility. |
-| `taxable`, `customTaxRate`, `taxRate` | Present on model and on `ProductWriteBody`; **product form does not expose them** — backend defaults apply unless PATCH’d elsewhere. |
+| `taxable`, `customTaxRate`, `taxRate` | Present on model and on `ProductWriteBody`; **product form does not expose them** - backend defaults apply unless PATCH’d elsewhere. |
 | `isActive` | Soft-active flag; **low stock fallback** and **expiring fallback** filters use `isActive !== false`. |
 | `expirySummary` | Optional human string from API. |
-| `nearestExpiryDate` | ISO date — powers **Expiring soon** page and dashboard fallback aggregation. |
+| `nearestExpiryDate` | ISO date - powers **Expiring soon** page and dashboard fallback aggregation. |
 | `createdAt`, `updatedAt` | Shown on product detail card. |
 | `batches` | Optional **`HubBatch[]`** embedded on `GET /products/:id` (used on detail **Batches** tab). |
 
@@ -88,7 +88,7 @@ Defined in `lib/types/domain.ts`. The API may return **string or number** for nu
 | `initialStock`, `stockQuantity`, `currentStock` | Form maps **entered stock** to **`currentStock`** only (`ProductForm`). |
 | `reorderLevel` | Parsed float or omitted. |
 | `unit` + `unitOfMeasure` | Both set from single “Unit of measure” field. |
-| `isActive` | Not toggled on current form — delete flow uses **`DELETE`** instead. |
+| `isActive` | Not toggled on current form - delete flow uses **`DELETE`** instead. |
 
 **Create vs edit stock field**
 
@@ -109,13 +109,13 @@ Declared in `lib/api/endpoints.ts`, called from `lib/api/products.ts` unless not
 | PATCH | `/products/:id` | `updateProduct` | Edit product |
 | DELETE | `/products/:id` | `deleteProduct` | Detail delete, list delete, **temporary item “ignore”** |
 | POST | `/products/:id/duplicate` | `duplicateProduct` | Detail + list row |
-| PATCH | `/products/:id/pricing` | `updateProductPricing` | **`updateProductPricing` only — no page calls it today** |
-| GET | `/products/low-stock` | `fetchLowStockProducts` | Low stock alerts page (**with 404 fallback** — §2.12) |
-| GET | `/products/expiring-soon` | `fetchExpiringSoonProducts` | Expiring page (**with 404 fallback** — §2.12) |
-| GET | `/products/:id/stock-history` | `fetchStockHistory` | Detail tab **Stock history** — array / `.data` / `.history` / `.adjustments` tolerant unwrap |
+| PATCH | `/products/:id/pricing` | `updateProductPricing` | **`updateProductPricing` only - no page calls it today** |
+| GET | `/products/low-stock` | `fetchLowStockProducts` | Low stock alerts page (**with 404 fallback** - §2.12) |
+| GET | `/products/expiring-soon` | `fetchExpiringSoonProducts` | Expiring page (**with 404 fallback** - §2.12) |
+| GET | `/products/:id/stock-history` | `fetchStockHistory` | Detail tab **Stock history** - array / `.data` / `.history` / `.adjustments` tolerant unwrap |
 | GET | `/products/:id/inventory-events` | `fetchInventoryEvents` | **InventoryEventHistorySheet** on detail |
 | GET | `/products/temporary` | `fetchTemporaryItems` | Temporary items page (+ hook `useTemporaryItems`) |
-| POST | `/products/from-temporary/:tempItemId` | `promoteFromTemporary` | Promote modal — **`snake_case` body keys** (`cost_price`, `category_id`, `stock_quantity`, `barcode`, `selling_price`, `name`) |
+| POST | `/products/from-temporary/:tempItemId` | `promoteFromTemporary` | Promote modal - **`snake_case` body keys** (`cost_price`, `category_id`, `stock_quantity`, `barcode`, `selling_price`, `name`) |
 | *(high limit helper)* | `GET /products?page=1&limit=500` | `fetchProducts` | Dashboard fallback aggregation, category dropdown source for large lists |
 
 List query params for paginated catalogue: **`page`, `limit`, `search`, `categoryId`, `lowStock`** (boolean), **`sortBy`** ∈ `name` \| `createdAt` \| `stockQuantity` \| `sellingPrice`, **`sortOrder`** `asc`|`desc`.
@@ -130,18 +130,18 @@ List query params for paginated catalogue: **`page`, `limit`, `search`, `categor
 
 ### APIs (`lib/api/categories.ts`)
 
-- `GET /categories` — product form + product list filters + temporary promote dialog + categories admin page.
-- `GET /categories/:id`, `POST /categories`, `PATCH /categories/:id`, `DELETE /categories/:id` — categories CRUD on `/categories` page only.
-- `GET /categories/:id/products` — implemented as **`fetchCategoryProducts`** — **nothing in the frontend imports this** today; filtering by category on `/products` uses **`categoryId`** on **`GET /products`** instead.
+- `GET /categories` - product form + product list filters + temporary promote dialog + categories admin page.
+- `GET /categories/:id`, `POST /categories`, `PATCH /categories/:id`, `DELETE /categories/:id` - categories CRUD on `/categories` page only.
+- `GET /categories/:id/products` - implemented as **`fetchCategoryProducts`** - **nothing in the frontend imports this** today; filtering by category on `/products` uses **`categoryId`** on **`GET /products`** instead.
 
 ### Display helper
 
 ```ts
-// lib/product-helpers.ts — verbatim behaviour
+// lib/product-helpers.ts - verbatim behaviour
 productCategoryLabel(p): string
 ```
 
-Returns category **name** if `category` is an object; the string itself if legacy string; **`"—"`** if missing.
+Returns category **name** if `category` is an object; the string itself if legacy string; **`"-"`** if missing.
 
 ### Form wiring
 
@@ -175,7 +175,7 @@ Returns **`ok` \| `low` \| `out`**:
 1. Quantity **≤ 0** or non-finite → **`out`**.
 2. Else threshold =
    - if `reorderLevel` valid → `reorderLevel`
-   - else **`DEFAULT_LOW_STOCK_MAX`** (= **5**) — heuristic when API omits reorder.
+   - else **`DEFAULT_LOW_STOCK_MAX`** (= **5**) - heuristic when API omits reorder.
 3. If `quantity <= threshold` → **`low`**; else **`ok`**.
 
 Badge colours tie to tone on **`/products`**, grids, rows, detail card.
@@ -194,12 +194,12 @@ Badge colours tie to tone on **`/products`**, grids, rows, detail card.
 | `/inventory/alerts` | Nav label “Low stock” | Uses product low-stock endpoints + fallback |
 | `/inventory/temporary-items` | Temporary barcodes aggregation | Lifecycle **before** full product |
 
-**`ProductForm`** — `components/products/product-form.tsx`  
-Sections: Basic info (name *, sku, barcode, category, description), Pricing (cost *, sell * + margin hint), Inventory (starting/current stock, reorder, unit), optional **Batch & expiry on create only** (`trackBatch` → after save calls **`createBatch`** — §2.8).
+**`ProductForm`** - `components/products/product-form.tsx`  
+Sections: Basic info (name *, sku, barcode, category, description), Pricing (cost *, sell * + margin hint), Inventory (starting/current stock, reorder, unit), optional **Batch & expiry on create only** (`trackBatch` → after save calls **`createBatch`** - §2.8).
 
 ---
 
-## 2.7 Product list (`/products`) — behaviour details
+## 2.7 Product list (`/products`) - behaviour details
 
 ### Data loading
 
@@ -231,7 +231,7 @@ Per row/link: view detail, edit, duplicate (`duplicateProduct`), delete confirm.
 
 ### Intentionally weak / stubbed UX
 
-**“Export to Excel”** — button fires **`toast.message("Export to Excel will be available soon.")`** only; **no export**.
+**“Export to Excel”** - button fires **`toast.message("Export to Excel will be available soon.")`** only; **no export**.
 
 ---
 
@@ -251,7 +251,7 @@ After **`createProduct`** succeeds, if user enabled **track batches**, form post
 }
 ```
 
-Failure on batch keeps product saved — **toast error** only for batch step.
+Failure on batch keeps product saved - **toast error** only for batch step.
 
 ### Global batches page `/batches`
 
@@ -260,13 +260,13 @@ Failure on batch keeps product saved — **toast error** only for batch step.
 - **`fetchBatches({ limit: 100 })`** main table,
 - **`fetchExpiringBatches`**, **`fetchExpiredBatches`**, **`removeExpiredBatch`** for sidebar cards.
 
-Shows **`b.product?.name`** when batch embeds product stub — **navigation** relies on **`Link`/product name**, not mandatory link to SKU.
+Shows **`b.product?.name`** when batch embeds product stub - **navigation** relies on **`Link`/product name**, not mandatory link to SKU.
 
 ### Detail page batches tab
 
 Renders **`product.batches`** from **`GET /products/:id`**: displays `remainingQuantity ?? quantity`, `expiryDate`, expired badge vs active.
 
-Batch listing API **`fetchBatches`** supports **`productId`, `from`, `to`** query keys — **`/batches` page does not pass `productId` today** (global list).
+Batch listing API **`fetchBatches`** supports **`productId`, `from`, `to`** query keys - **`/batches` page does not pass `productId` today** (global list).
 
 ---
 
@@ -288,11 +288,11 @@ Loads **`fetchStockHistory(id)`** when tab selected; entries **`HubStockAdjustme
 | **Stock history** | Adjustment-style audit |
 | **Inventory events sheet** | *“Mobile-posted audit trail: sales, returns, adjustments, restocks”* |
 
-Different endpoints and normalizers — engineers should keep both when debugging “missing line” reports.
+Different endpoints and normalizers - engineers should keep both when debugging “missing line” reports.
 
 ### Sales tab
 
-Label **“Sales (soon)”** — static muted text · **no `GET`-by-product line items wired**.
+Label **“Sales (soon)”** - static muted text · **no `GET`-by-product line items wired**.
 
 ---
 
@@ -324,13 +324,13 @@ Modal **`StockTakeRecordModal`** (`components/inventory/stock-take-record-modal.
 
 Shows **system stock** via **`productQuantity(product)`**.
 
-**Branches:** `fetchBranchesList` (`GET /branches`) via React Query **`enabled: open`**. **`activeBranches`**, branch `<select>` only if **more than one** branch returned; otherwise hidden. **`/branches` hub page remains a backend placeholder**, but **`/branches` list API** — if absent — yields empty branch list gracefully.
+**Branches:** `fetchBranchesList` (`GET /branches`) via React Query **`enabled: open`**. **`activeBranches`**, branch `<select>` only if **more than one** branch returned; otherwise hidden. **`/branches` hub page remains a backend placeholder**, but **`/branches` list API** - if absent - yields empty branch list gracefully.
 
 Success toast summarizes **`quantityBefore` → `quantityAfter` (Δ)** from parsed **`StockTakeRow`**.
 
 **History:** `/inventory/stock-take` lists paginated takes with **`product.id`, `product.name`, `product.sku`**, variance and financial aggregates when returned.
 
-Stock take capability on product rows / nav matches **`canManageStockTakes`** — same rule as **`/inventory/stock-take`**.
+Stock take capability on product rows / nav matches **`canManageStockTakes`** - same rule as **`/inventory/stock-take`**.
 
 ---
 
@@ -338,7 +338,7 @@ Stock take capability on product rows / nav matches **`canManageStockTakes`** �
 
 **`fetchInventoryAdjustmentsPage`** reads **`GET /inventory/adjustments`** with dates + pagination + **`staffId`**.
 
-Rows are **`Record<string, unknown>`**: UI renders **generic key/value formatting** (`cellDisplay`). **Whether each row exposes `productId` / SKU depends entirely on backend shape** — the hub **does not** enforce a typed product slice here.
+Rows are **`Record<string, unknown>`**: UI renders **generic key/value formatting** (`cellDisplay`). **Whether each row exposes `productId` / SKU depends entirely on backend shape** - the hub **does not** enforce a typed product slice here.
 
 Interpretation for products: adjustments are organisation-level deltas; correlate with **`HubInventoryEvent` per product** on the sheet when SKU-level investigation is needed.
 
@@ -346,7 +346,7 @@ Interpretation for products: adjustments are organisation-level deltas; correlat
 
 ## 2.14 Temporary items (pre-catalog products sold at till)
 
-`/inventory/temporary-items` — **`GET /products/temporary`**.
+`/inventory/temporary-items` - **`GET /products/temporary`**.
 
 Normalized fields include **`quantitySold`** (alternate keys `temporarySoldCount`), **`firstSoldAt`**, **`aggregateId`**.
 
@@ -357,7 +357,7 @@ Normalized fields include **`quantitySold`** (alternate keys `temporarySoldCount
 
 **Ignore / dismiss**
 
-- Calls **`deleteProduct(ignoreTarget.id)`** — backend model treats temporary IDs as removable via product delete semantics; UI toast: *removed from queue*.
+- Calls **`deleteProduct(ignoreTarget.id)`** - backend model treats temporary IDs as removable via product delete semantics; UI toast: *removed from queue*.
 
 Deep links from notifications (§2.16) scroll/highlight **`highlightProductId` / `aggregateId`**.
 
@@ -365,11 +365,11 @@ Deep links from notifications (§2.16) scroll/highlight **`highlightProductId` /
 
 ## 2.15 Sales hub vs product stock (what happens when sold)
 
-**Point-of-sale** lives on mobile; tenant hub **`/sales`** lists **`HubSale`** rows (pagination, totals, filters) via **`fetchSalesPage`** (`GET /sales`). **`HubSale`** has **aggregate** sale fields (**`totalAmount`, `receiptNumber`, `soldAt`, `createdBy`**...) — **not per-line SKU payload** on that type.
+**Point-of-sale** lives on mobile; tenant hub **`/sales`** lists **`HubSale`** rows (pagination, totals, filters) via **`fetchSalesPage`** (`GET /sales`). **`HubSale`** has **aggregate** sale fields (**`totalAmount`, `receiptNumber`, `soldAt`, `createdBy`**...) - **not per-line SKU payload** on that type.
 
 Impact on **`HubProduct.stockQuantity/currentStock`** is **computed server-side** when sales sync; **`HubInventoryEvent` `eventType`** may read **`SALE`** (plus `RETURN`, `ADJUSTMENT`, `RESTOCK`). That is how the hub **surfaces stock impact** tied to catalogue entries without reinventing ledger math in TS.
 
-Sales **export** CSV: separate endpoint blob download — unrelated to SKU detail view.
+Sales **export** CSV: separate endpoint blob download - unrelated to SKU detail view.
 
 ---
 
@@ -412,18 +412,18 @@ These exist in **`lib/api/products.ts`** / **`categories.ts`** but have **zero c
 
 | Capability | Evidence |
 | --- | --- |
-| `updateProductPricing` | Only defined — no page/mutation imports |
-| `fetchCategoryProducts` | Only exported — catalogue filters use **`GET /products?categoryId=`** instead |
+| `updateProductPricing` | Only defined - no page/mutation imports |
+| `fetchCategoryProducts` | Only exported - catalogue filters use **`GET /products?categoryId=`** instead |
 
 ---
 
 ## 2.20 Delete semantics (copy vs backend guarantee)
 
-Dialogs state product will be **“removed” / hidden from sales** (`deleteProduct` = HTTP DELETE soft-delete semantics **assumed** — exact DB behaviour is whichever your Nest/layer exposes).
+Dialogs state product will be **“removed” / hidden from sales** (`deleteProduct` = HTTP DELETE soft-delete semantics **assumed** - exact DB behaviour is whichever your Nest/layer exposes).
 
 ---
 
-## 3. Other tenant areas — single-line map
+## 3. Other tenant areas - single-line map
 
 Brief pointer only:
 

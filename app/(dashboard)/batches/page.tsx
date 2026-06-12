@@ -91,7 +91,7 @@ export default function BatchesPage() {
                     <div>
                       <p className="font-medium">{b.product?.name ?? "Product"}</p>
                       <p className="text-xs text-muted-foreground">
-                        Batch {b.batchNumber ?? b.id.slice(0, 8)} · expired {b.expiryDate ? formatDateDMY(b.expiryDate) : "—"}
+                        Batch {b.batchNumber ?? b.id.slice(0, 8)} · expired {b.expiryDate ? formatDateDMY(b.expiryDate) : "-"}
                       </p>
                     </div>
                     <Button
@@ -122,7 +122,7 @@ export default function BatchesPage() {
                   <div key={b.id} className="rounded-lg border border-amber-500/20 bg-background/80 p-3">
                     <p className="font-medium">{b.product?.name ?? "Product"}</p>
                     <p className="text-xs text-muted-foreground">
-                      Batch {b.batchNumber ?? "—"} · expires {b.expiryDate ? formatDateDMY(b.expiryDate) : "—"}
+                      Batch {b.batchNumber ?? "-"} · expires {b.expiryDate ? formatDateDMY(b.expiryDate) : "-"}
                     </p>
                     {b.product?.id ? (
                       <Link className="mt-2 inline-block text-xs font-medium text-primary underline-offset-2 hover:underline" href={`/products/${b.product.id}`}>
@@ -171,12 +171,12 @@ export default function BatchesPage() {
                           {b.product.name}
                         </Link>
                       ) : (
-                        "—"
+                        "-"
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{b.batchNumber ?? "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{String(b.remainingQuantity ?? b.quantity ?? "—")}</TableCell>
-                    <TableCell>{b.expiryDate ? formatDateDMY(b.expiryDate) : "—"}</TableCell>
+                    <TableCell className="font-mono text-xs">{b.batchNumber ?? "-"}</TableCell>
+                    <TableCell className="text-right tabular-nums">{String(b.remainingQuantity ?? b.quantity ?? "-")}</TableCell>
+                    <TableCell>{b.expiryDate ? formatDateDMY(b.expiryDate) : "-"}</TableCell>
                     <TableCell>
                       {b.isExpired ? <Badge variant="destructive">Expired</Badge> : <Badge variant="secondary">OK</Badge>}
                     </TableCell>

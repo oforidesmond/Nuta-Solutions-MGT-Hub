@@ -80,7 +80,7 @@ export default function OrganizationUsersPage() {
               const name =
                 [u.firstName, u.lastName].filter(Boolean).join(" ").trim() ||
                 u.email ||
-                "—";
+                "-";
               return (
                 <TableRow key={u.id}>
                   <TableCell className="px-4 py-3">
@@ -97,7 +97,7 @@ export default function OrganizationUsersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {u.email ?? "—"}
+                    {u.email ?? "-"}
                   </TableCell>
                   <TableCell>
                     {u.isActive ? (

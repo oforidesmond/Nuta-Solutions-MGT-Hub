@@ -1,10 +1,10 @@
 /**
- * Phase 3 staff reliability — `GET` routes under global `/api/v1` (via `NEXT_PUBLIC_API_URL`).
+ * Phase 3 staff reliability - `GET` routes under global `/api/v1` (via `NEXT_PUBLIC_API_URL`).
  *
- * - `GET /dashboard/reliability-summary` — Operations home widgets.
- * - `GET /staff/backups`, `/staff/device-warnings`, `/staff/database-warnings`, `/analytics/crashes` — paginated lists (`limit`, `cursor`, …).
- * - `GET /analytics/crashes/:id` — full row including `stack`.
- * - `GET /staff/backup/:id` — binary SQLite download.
+ * - `GET /dashboard/reliability-summary` - Operations home widgets.
+ * - `GET /staff/backups`, `/staff/device-warnings`, `/staff/database-warnings`, `/analytics/crashes` - paginated lists (`limit`, `cursor`, …).
+ * - `GET /analytics/crashes/:id` - full row including `stack`.
+ * - `GET /staff/backup/:id` - binary SQLite download.
  */
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
@@ -44,7 +44,7 @@ function bool(v: unknown): boolean {
   return v === true || v === "true";
 }
 
-/** Parse filename from Content-Disposition (RFC 5987 filename* optional — basic support). */
+/** Parse filename from Content-Disposition (RFC 5987 filename* optional - basic support). */
 export function parseContentDispositionFilename(header: string | undefined): string | null {
   if (!header) return null;
   const m = /filename\*?=(?:UTF-8'')?("?)([^";]+)\1/i.exec(header);
@@ -106,7 +106,7 @@ function normalizeBackupRow(raw: unknown): StaffDeviceBackupRow | null {
   const id = str(o.id);
   const userId = str(o.userId ?? o.user_id) ?? nestedUser?.id;
   const deviceId = str(o.deviceId ?? o.device_id);
-  const appVersion = str(o.appVersion ?? o.app_version) ?? "—";
+  const appVersion = str(o.appVersion ?? o.app_version) ?? "-";
   if (!id || !userId || !deviceId) return null;
   return {
     id,
@@ -210,7 +210,7 @@ export function blankReliabilityHomeSummary(): ReliabilityHomeSummary {
   };
 }
 
-/** `GET /dashboard/reliability-summary` — nested widget object (§7.1). */
+/** `GET /dashboard/reliability-summary` - nested widget object (§7.1). */
 export function normalizeReliabilitySummaryPayload(raw: unknown): ReliabilityHomeSummary {
   if (!raw || typeof raw !== "object") return blankReliabilityHomeSummary();
   const o = raw as Record<string, unknown>;

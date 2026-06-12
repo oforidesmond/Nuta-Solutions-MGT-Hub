@@ -747,15 +747,15 @@ After implementation, verify:
 ## Files to Create/Modify
 
 ### **NEW FILES:**
-1. `lib/services/notifications-socket.ts` — WebSocket service singleton
-2. `lib/api/notifications.ts` — Add `fetchUnreadCount()` function
+1. `lib/services/notifications-socket.ts` - WebSocket service singleton
+2. `lib/api/notifications.ts` - Add `fetchUnreadCount()` function
 
 ### **MODIFY FILES:**
-1. `lib/hooks/use-notifications.ts` — Add WebSocket integration, unread count query
-2. `components/layout/notifications-menu.tsx` — Fix click behavior, add optimistic updates
-3. `lib/navigation/notification-href.ts` — Complete all type-specific routes
-4. `lib/types/phase2.ts` — Add missing fields (aggregateCount, dedupKey, expiresAt)
-5. `lib/query/poll-intervals.ts` — Make polling conditional on WebSocket state
+1. `lib/hooks/use-notifications.ts` - Add WebSocket integration, unread count query
+2. `components/layout/notifications-menu.tsx` - Fix click behavior, add optimistic updates
+3. `lib/navigation/notification-href.ts` - Complete all type-specific routes
+4. `lib/types/phase2.ts` - Add missing fields (aggregateCount, dedupKey, expiresAt)
+5. `lib/query/poll-intervals.ts` - Make polling conditional on WebSocket state
 
 ### **NO CHANGES (Keep As-Is):**
 - Platform admin notification UI (`app/(platform)/platform/notifications/*`)
@@ -819,7 +819,7 @@ Your implementation will be **world-class** when:
 ## Reference Documentation
 
 Read these files in your workspace for backend API details:
-- `docs/NOTIFICATIONS_REALTIME.md` — Complete API reference (Socket.IO events, REST endpoints, payloads)
+- `docs/NOTIFICATIONS_REALTIME.md` - Complete API reference (Socket.IO events, REST endpoints, payloads)
 - Current frontend implementation notes in workspace context
 
 ---

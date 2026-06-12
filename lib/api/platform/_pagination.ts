@@ -5,7 +5,7 @@ import type { PaginatedResponse } from "@/lib/types/platform";
 
 /**
  * Strips undefined values and serializes arrays as repeated query keys
- * (`?planType=PRO&planType=TRIAL`) — the contract documented in
+ * (`?planType=PRO&planType=TRIAL`) - the contract documented in
  * `SUPER_ADMIN_API.md` for `planType[]`, `planStatus[]`, `eventType[]`,
  * `role[]`, `status[]`, and `type[]` filters.
  */

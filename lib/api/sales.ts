@@ -150,7 +150,6 @@ export async function fetchSalesPage(params: SalesListParams = {}): Promise<Pagi
       sortBy: params.sortBy,
       sortOrder: params.sortOrder,
       staffId: params.staffId,
-      branchId: params.branchId,
       paymentMethod: params.paymentMethod,
     },
   });
@@ -179,7 +178,6 @@ export async function fetchSalesWithVariancesPage(
       endDate: params.endDate,
       page: params.page,
       limit,
-      branchId: params.branchId,
       productId: params.productId,
       varianceReason: params.varianceReason,
     },
@@ -197,7 +195,7 @@ export async function fetchSalesWithVariancesPage(
 
 /**
  * `GET /api/v1/sales/:id` returns one element of the `GET /api/v1/sales` `data[]` shape
- * (same `serializeSale` body — `items[]` + variance fields included).
+ * (same `serializeSale` body - `items[]` + variance fields included).
  */
 export async function fetchSaleById(id: string): Promise<HubSale> {
   const res = await api.get(endpoints.saleById(id));
@@ -225,14 +223,13 @@ function parsePageMeta(meta: Record<string, unknown>, dataLen: number) {
 }
 
 export async function fetchSalesStats(
-  params: Pick<SalesListParams, "startDate" | "endDate" | "staffId" | "branchId" | "paymentMethod"> = {},
+  params: Pick<SalesListParams, "startDate" | "endDate" | "staffId" | "paymentMethod"> = {},
 ): Promise<SalesStatsPayload> {
   const res = await api.get(endpoints.salesStats, {
     params: {
       startDate: params.startDate,
       endDate: params.endDate,
       staffId: params.staffId,
-      branchId: params.branchId,
       paymentMethod: params.paymentMethod,
     },
   });
@@ -246,7 +243,6 @@ export async function downloadSalesExportBlob(params: SalesExportParams): Promis
       startDate: params.startDate,
       endDate: params.endDate,
       staffId: params.staffId,
-      branchId: params.branchId,
       paymentMethod: params.paymentMethod,
     },
     responseType: "blob",

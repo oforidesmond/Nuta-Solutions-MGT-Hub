@@ -109,7 +109,7 @@ export default function ReturnDetailPage() {
                   <span className="font-medium tabular-nums">
                     {origTotal != null && Number.isFinite(origTotal)
                       ? formatCurrency(origTotal, currency)
-                      : "—"}
+                      : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
@@ -117,7 +117,7 @@ export default function ReturnDetailPage() {
                   <span>
                     {origWhen
                       ? `${formatDateDMY(origWhen)} · ${formatTime12h(origWhen)}`
-                      : "—"}
+                      : "-"}
                   </span>
                 </div>
                 {orig.receiptNumber ? (
@@ -132,9 +132,9 @@ export default function ReturnDetailPage() {
                     <ul className="space-y-1">
                       {orig.items.map((it, i) => (
                         <li key={i} className="flex justify-between gap-2 text-sm">
-                          <span className="truncate">{it.name ?? it.productId ?? "—"}</span>
+                          <span className="truncate">{it.name ?? it.productId ?? "-"}</span>
                           <span className="shrink-0 tabular-nums text-muted-foreground">
-                            ×{String(it.quantity ?? "—")}
+                            ×{String(it.quantity ?? "-")}
                           </span>
                         </li>
                       ))}
@@ -172,7 +172,7 @@ export default function ReturnDetailPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Refund method</p>
-              <p className="font-medium">{refundMethodLabel || "—"}</p>
+              <p className="font-medium">{refundMethodLabel || "-"}</p>
             </div>
             {data.createdAt ? (
               <p className="text-xs text-muted-foreground">
@@ -193,8 +193,8 @@ export default function ReturnDetailPage() {
                     const up = Number(line.unitPrice ?? 0);
                     return (
                       <TableRow key={i}>
-                        <TableCell>{line.productName ?? line.productId ?? "—"}</TableCell>
-                        <TableCell className="text-right tabular-nums">{String(line.quantity ?? "—")}</TableCell>
+                        <TableCell>{line.productName ?? line.productId ?? "-"}</TableCell>
+                        <TableCell className="text-right tabular-nums">{String(line.quantity ?? "-")}</TableCell>
                         <TableCell className="text-right tabular-nums">
                           {formatCurrency(Number.isFinite(up) ? up : 0, currency)}
                         </TableCell>

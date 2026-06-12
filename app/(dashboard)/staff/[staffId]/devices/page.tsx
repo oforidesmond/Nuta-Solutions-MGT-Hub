@@ -16,7 +16,7 @@ import type { HubStaffMember } from "@/lib/types/staff";
 
 function staffName(m: HubStaffMember): string {
   const n = [m.firstName, m.lastName].filter(Boolean).join(" ");
-  return n || m.email || "—";
+  return n || m.email || "-";
 }
 
 export default function StaffDevicesPage() {
@@ -120,14 +120,14 @@ export default function StaffDevicesPage() {
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
               <dt className="text-muted-foreground">Device model</dt>
-              <dd className="font-medium">{member.lastDeviceTimeModel ?? "—"}</dd>
+              <dd className="font-medium">{member.lastDeviceTimeModel ?? "-"}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Last warning</dt>
               <dd className="font-medium">
                 {member.lastDeviceTimeWarningAt
                   ? `${formatDateDMY(member.lastDeviceTimeWarningAt)} · ${formatTime12h(member.lastDeviceTimeWarningAt)}`
-                  : "—"}
+                  : "-"}
               </dd>
             </div>
             {member.deviceTimeWarningCount != null ? (

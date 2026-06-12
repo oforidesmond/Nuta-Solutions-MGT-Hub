@@ -1,4 +1,4 @@
-# NutaPOS Hub — Nest & Astro integration
+# NutaPOS Hub - Nest & Astro integration
 
 This document describes how the Next.js Management Hub (`npm run dev` on port **5174**), the Astro marketing site (**4321**), and the Nest API (**3000**) work together.
 
@@ -21,8 +21,8 @@ This document describes how the Next.js Management Hub (`npm run dev` on port **
 
 Copy `.env.local.example` to `.env.local`:
 
-- `NEXT_PUBLIC_API_URL` — Nest base URL (e.g. `http://localhost:3000`).
-- `NEXT_PUBLIC_HUB_URL` — Hub public URL (e.g. `http://localhost:5174`) for documentation and deep links.
+- `NEXT_PUBLIC_API_URL` - Nest base URL (e.g. `http://localhost:3000`).
+- `NEXT_PUBLIC_HUB_URL` - Hub public URL (e.g. `http://localhost:5174`) for documentation and deep links.
 
 ## Nest endpoints the Hub calls
 

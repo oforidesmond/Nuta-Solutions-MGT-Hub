@@ -10,7 +10,7 @@ administrative action.
 
 These endpoints are **strictly separated** from the tenant-scoped endpoints
 used by organization owners and staff. They never accept `organizationId` from
-the JWT — the calling SUPER_ADMIN has none — and instead accept the target
+the JWT - the calling SUPER_ADMIN has none - and instead accept the target
 organization id as a path parameter.
 
 ### Authentication
@@ -41,7 +41,7 @@ npm run create:super-admin
 
 - All platform endpoints are protected by `JwtAuthGuard` (global) +
   `SuperAdminGuard` (in [`platform-admin.controller.ts`](src/modules/platform-admin/platform-admin.controller.ts)).
-- `TenantGuard` is **never** applied to platform endpoints — it would fail for
+- `TenantGuard` is **never** applied to platform endpoints - it would fail for
   super admins who carry no `organizationId`.
 - All `:organizationId` / `:userId` / `:deviceId` path params are validated by
   `ParseUUIDPipe` and existence-checked before any state change.
@@ -271,7 +271,7 @@ Sets `Device.status = REVOKED`, `revokedAt = now()`, `revokedReason = reason`.
 **Revokes** all `RefreshToken` rows whose `deviceUuid` matches the device's
 `deviceUuid` so the device can no longer call `/auth/refresh`. Audit:
 `PLATFORM_DEVICE_REVOKED` + `PlatformAdminAction { actionType: 'revoke_device' }`.
-The status is **terminal** — `unsuspend` will refuse to restore a revoked
+The status is **terminal** - `unsuspend` will refuse to restore a revoked
 device.
 
 #### `POST /platform/devices/:deviceId/suspend`
@@ -423,7 +423,7 @@ super-admin actions actually take effect across the system:
 
 | Action | Side effect | Implementation |
 | --- | --- | --- |
-| Suspend org | `login`, `staffLogin`, `refresh` reject 401 | [`auth.service.ts`](src/modules/auth/auth.service.ts) — `assertOrgUsable` check |
+| Suspend org | `login`, `staffLogin`, `refresh` reject 401 | [`auth.service.ts`](src/modules/auth/auth.service.ts) - `assertOrgUsable` check |
 | Suspend org | Tenant-scoped GET/POST endpoints reject 403 | [`OrganizationStatusGuard`](src/common/guards/organization-status.guard.ts) wired onto `SyncController`/`SalesController`/`InventoryController` |
 | Unsuspend org | Login + sync resume immediately | Same guards re-evaluate the live org row |
 | Soft-delete org | Same as suspend (org becomes inactive) | Same guards check `isActive` |
@@ -455,18 +455,18 @@ Migration: [`prisma/migrations/20260501120000_platform_admin/migration.sql`](pri
 
 ### Unit tests
 
-- [`super-admin.guard.spec.ts`](src/common/guards/super-admin.guard.spec.ts) —
+- [`super-admin.guard.spec.ts`](src/common/guards/super-admin.guard.spec.ts) -
   guard accepts only SUPER_ADMIN with no org id.
 - [`organization-status.guard.spec.ts`](src/common/guards/organization-status.guard.spec.ts)
-  — exemptions, suspension/inactive rejection, ACTIVE pass-through.
-- [`platform-admin-action.service.spec.ts`](src/modules/platform-admin/platform-admin-action.service.spec.ts) —
+  - exemptions, suspension/inactive rejection, ACTIVE pass-through.
+- [`platform-admin-action.service.spec.ts`](src/modules/platform-admin/platform-admin-action.service.spec.ts) -
   EventLog written iff org id + event type both present.
-- [`platform-admin-organizations.service.spec.ts`](src/modules/platform-admin/platform-admin-organizations.service.spec.ts) —
+- [`platform-admin-organizations.service.spec.ts`](src/modules/platform-admin/platform-admin-organizations.service.spec.ts) -
   suspend/unsuspend/softDelete/updatePlan happy paths and validation errors.
-- [`platform-admin-devices.service.spec.ts`](src/modules/platform-admin/platform-admin-devices.service.spec.ts) —
+- [`platform-admin-devices.service.spec.ts`](src/modules/platform-admin/platform-admin-devices.service.spec.ts) -
   revoke flips status + revokes refresh tokens; revoked devices can't be
   unsuspended.
-- [`platform-admin-users.service.spec.ts`](src/modules/platform-admin/platform-admin-users.service.spec.ts) —
+- [`platform-admin-users.service.spec.ts`](src/modules/platform-admin/platform-admin-users.service.spec.ts) -
   deactivate revokes tokens; resetPassword toggles temp-password response
   visibility.
 
@@ -511,7 +511,7 @@ E2E_RUN=1 npm run test:e2e
 
 ### Required environment variables
 
-- `DATABASE_URL` — Postgres connection string.
+- `DATABASE_URL` - Postgres connection string.
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_EXPIRES`, `JWT_ACCESS_EXPIRES` (already
   required by the auth module).
 - `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD` (only when running

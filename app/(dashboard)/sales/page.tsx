@@ -65,7 +65,6 @@ export default function SalesPage() {
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
   const [staffId, setStaffId] = useState("");
-  const [branchId, setBranchId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [varianceOnly, setVarianceOnly] = useState(false);
   const [varianceReason, setVarianceReason] = useState<VarianceReason | "">("");
@@ -89,10 +88,9 @@ export default function SalesPage() {
       sortBy,
       sortOrder,
       staffId: staffId || undefined,
-      branchId: branchId || undefined,
       paymentMethod: paymentMethod || undefined,
     }),
-    [range.startDate, range.endDate, page, limit, sortBy, sortOrder, staffId, branchId, paymentMethod],
+    [range.startDate, range.endDate, page, limit, sortBy, sortOrder, staffId, paymentMethod],
   );
 
   const varianceParams = useMemo(
@@ -101,11 +99,10 @@ export default function SalesPage() {
       endDate: range.endDate,
       page,
       limit,
-      branchId: branchId || undefined,
       productId: productId.trim() || undefined,
       varianceReason: varianceReason || undefined,
     }),
-    [range.startDate, range.endDate, page, limit, branchId, productId, varianceReason],
+    [range.startDate, range.endDate, page, limit, productId, varianceReason],
   );
 
   const listQuery = useQuery({
@@ -138,7 +135,6 @@ export default function SalesPage() {
         startDate: range.startDate,
         endDate: range.endDate,
         staffId: staffId || undefined,
-        branchId: branchId || undefined,
         paymentMethod: paymentMethod || undefined,
       });
       const url = URL.createObjectURL(blob);
@@ -272,19 +268,6 @@ export default function SalesPage() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="branch-filter">Branch ID</Label>
-              <input
-                id="branch-filter"
-                className={selectClassName}
-                placeholder="Optional UUID"
-                value={branchId}
-                onChange={(e) => {
-                  setBranchId(e.target.value);
-                  setPage(1);
-                }}
-              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pay-filter">Payment</Label>

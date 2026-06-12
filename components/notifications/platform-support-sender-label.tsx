@@ -9,7 +9,7 @@ type PlatformSupportSenderLabelProps = {
 };
 
 /**
- * Official attribution for platform super-admin notifications — high-trust, Apple-style pill.
+ * Official attribution for platform super-admin notifications - high-trust, Apple-style pill.
  */
 export function PlatformSupportSenderLabel({
   variant = "default",

@@ -31,7 +31,7 @@ export type NavSection = {
   items: NavItem[];
 };
 
-/** Desktop sidebar + mobile sheet — order matches management hub design. */
+/** Desktop sidebar + mobile sheet - order matches management hub design. */
 export const navSections: NavSection[] = [
   {
     items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }],

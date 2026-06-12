@@ -35,7 +35,7 @@ type AdjustmentDisplayItem =
   | { kind: "pair"; a: HubStockAdjustment; b: HubStockAdjustment };
 
 function formatWhen(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString(undefined, {
@@ -49,13 +49,13 @@ function formatWhen(iso: string | null | undefined): string {
 
 function userLabel(row: HubStockAdjustment): string {
   const u = row.user;
-  if (!u) return "—";
+  if (!u) return "-";
   const name = [u.firstName, u.lastName].filter(Boolean).join(" ");
-  return name || u.email || "—";
+  return name || u.email || "-";
 }
 
 function productLabel(row: HubStockAdjustment): string {
-  return row.product?.name ?? "—";
+  return row.product?.name ?? "-";
 }
 
 function qtyChangeNum(row: HubStockAdjustment): number {
@@ -230,7 +230,7 @@ export default function InventoryAdjustmentsPage() {
                           <TableCell />
                           <TableCell className="whitespace-nowrap text-sm">{formatWhen(row.createdAt)}</TableCell>
                           <TableCell className="max-w-[10rem] truncate text-sm">
-                            {row.type?.replace(/_/g, " ") ?? "—"}
+                            {row.type?.replace(/_/g, " ") ?? "-"}
                           </TableCell>
                           <TableCell className="max-w-[12rem]">
                             <span className="truncate font-medium">{productLabel(row)}</span>
@@ -243,10 +243,10 @@ export default function InventoryAdjustmentsPage() {
                             )}
                           >
                             {q > 0 ? "+" : ""}
-                            {row.quantityChange ?? "—"}
+                            {row.quantityChange ?? "-"}
                           </TableCell>
                           <TableCell className="max-w-[14rem] truncate text-sm text-muted-foreground">
-                            {row.notes?.trim() || "—"}
+                            {row.notes?.trim() || "-"}
                           </TableCell>
                           <TableCell className="max-w-[10rem] truncate text-sm">{userLabel(row)}</TableCell>
                           <TableCell className="text-sm">
@@ -260,13 +260,13 @@ export default function InventoryAdjustmentsPage() {
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p className="text-xs">
-                                    Paired leg: {row.linkedAdjustment.quantityChange ?? "—"} on{" "}
+                                    Paired leg: {row.linkedAdjustment.quantityChange ?? "-"} on{" "}
                                     {row.linkedAdjustment.product?.name ?? "product"}
                                   </p>
                                 </TooltipContent>
                               </UiTooltip>
                             ) : (
-                              "—"
+                              "-"
                             )}
                           </TableCell>
                         </TableRow>
@@ -310,9 +310,9 @@ export default function InventoryAdjustmentsPage() {
                           <TableCell className="text-right text-xs text-muted-foreground">
                             <span className="sr-only">Expand to see both legs</span>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">—</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">—</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">-</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">-</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">-</TableCell>
                         </TableRow>
                         {open ? (
                           <>
@@ -329,11 +329,11 @@ export default function InventoryAdjustmentsPage() {
                                 )}
                               >
                                 {qtyChangeNum(a) > 0 ? "+" : ""}
-                                {a.quantityChange ?? "—"}
+                                {a.quantityChange ?? "-"}
                               </TableCell>
-                              <TableCell className="max-w-[14rem] truncate text-sm">{a.notes?.trim() || "—"}</TableCell>
+                              <TableCell className="max-w-[14rem] truncate text-sm">{a.notes?.trim() || "-"}</TableCell>
                               <TableCell className="max-w-[10rem] truncate text-sm">{userLabel(a)}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">-</TableCell>
                             </TableRow>
                             <TableRow className="bg-muted/15">
                               <TableCell />
@@ -348,11 +348,11 @@ export default function InventoryAdjustmentsPage() {
                                 )}
                               >
                                 {qtyChangeNum(b) > 0 ? "+" : ""}
-                                {b.quantityChange ?? "—"}
+                                {b.quantityChange ?? "-"}
                               </TableCell>
-                              <TableCell className="max-w-[14rem] truncate text-sm">{b.notes?.trim() || "—"}</TableCell>
+                              <TableCell className="max-w-[14rem] truncate text-sm">{b.notes?.trim() || "-"}</TableCell>
                               <TableCell className="max-w-[10rem] truncate text-sm">{userLabel(b)}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">-</TableCell>
                             </TableRow>
                           </>
                         ) : null}

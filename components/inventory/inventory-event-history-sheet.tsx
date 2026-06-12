@@ -29,9 +29,9 @@ function staffLabel(e: HubInventoryEvent): string {
   const s = e.staff;
   if (s) {
     const n = [s.firstName, s.lastName].filter(Boolean).join(" ");
-    return n || "—";
+    return n || "-";
   }
-  return "—";
+  return "-";
 }
 
 function referenceLabel(e: HubInventoryEvent): string {
@@ -40,7 +40,7 @@ function referenceLabel(e: HubInventoryEvent): string {
     const kind = e.referenceType ?? "Ref";
     return `${kind} #${short}`;
   }
-  return "—";
+  return "-";
 }
 
 export function InventoryEventHistorySheet({ productId }: { productId: string }) {
@@ -119,11 +119,11 @@ export function InventoryEventHistorySheet({ productId }: { productId: string })
                             {formatTime12h(when)}
                           </>
                         ) : (
-                          "—"
+                          "-"
                         )}
                       </TableCell>
                       <TableCell className="text-sm font-medium">
-                        {String(e.eventType ?? "—").replace(/_/g, " ")}
+                        {String(e.eventType ?? "-").replace(/_/g, " ")}
                       </TableCell>
                       <TableCell
                         className={`text-right tabular-nums ${ch < 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-400"}`}

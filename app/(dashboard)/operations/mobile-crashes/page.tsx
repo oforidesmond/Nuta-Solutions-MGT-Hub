@@ -275,7 +275,7 @@ export default function MobileCrashesPage() {
                         {r.isFatal ? "yes" : "no"}
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {r.errorType ?? "—"}
+                        {r.errorType ?? "-"}
                       </TableCell>
                       <TableCell className="max-w-md truncate font-mono text-xs">{r.error}</TableCell>
                     </TableRow>
@@ -318,7 +318,7 @@ export default function MobileCrashesPage() {
                   <span className="font-medium text-foreground">Fatal:</span> {detail.isFatal ? "yes" : "no"}
                 </p>
                 <p>
-                  <span className="font-medium text-foreground">Type:</span> {detail.errorType ?? "—"}
+                  <span className="font-medium text-foreground">Type:</span> {detail.errorType ?? "-"}
                 </p>
                 <p>
                   <span className="font-medium text-foreground">Client time:</span>{" "}
@@ -339,7 +339,7 @@ export default function MobileCrashesPage() {
                     <Skeleton className="h-32 w-full" />
                   ) : (
                     <pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-muted-foreground">
-                      {detail.stack?.trim() ? detail.stack : "—"}
+                      {detail.stack?.trim() ? detail.stack : "-"}
                     </pre>
                   )}
                 </ScrollArea>
@@ -351,7 +351,7 @@ export default function MobileCrashesPage() {
                     <Skeleton className="h-32 w-full" />
                   ) : (
                     <pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-muted-foreground">
-                      {detail.deviceInfo ? prettyJson(detail.deviceInfo) : "—"}
+                      {detail.deviceInfo ? prettyJson(detail.deviceInfo) : "-"}
                     </pre>
                   )}
                 </ScrollArea>

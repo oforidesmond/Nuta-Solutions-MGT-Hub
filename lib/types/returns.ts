@@ -4,7 +4,6 @@ export interface ReturnsListParams {
   page?: number;
   limit?: number;
   staffId?: string;
-  branchId?: string;
 }
 
 export interface PaginatedReturnsResponse<T = Record<string, unknown>> {

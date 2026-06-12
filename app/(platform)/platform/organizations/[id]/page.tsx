@@ -31,7 +31,7 @@ function toNumber(v: string | number | null | undefined): number {
 function formatRelative(iso: string | null | undefined): string {
   if (!iso) return "Never";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "-";
   const diffMs = Date.now() - d.getTime();
   const sec = Math.round(diffMs / 1000);
   if (sec < 60) return `${sec}s ago`;

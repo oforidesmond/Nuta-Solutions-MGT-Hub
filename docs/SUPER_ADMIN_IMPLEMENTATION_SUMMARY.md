@@ -62,9 +62,9 @@ Total: **24** endpoints.
   - `platform-admin.module.ts`, `platform-admin.controller.ts`
   - 7 split services (`-organizations`, `-users`, `-devices`, `-analytics`,
     `-telemetry`, `-audit`, `-notifications`)
-  - `platform-admin-action.service.ts` — central audit writer used by every
+  - `platform-admin-action.service.ts` - central audit writer used by every
     mutating endpoint.
-  - `dto/` — 19 DTO files for query params and bodies.
+  - `dto/` - 19 DTO files for query params and bodies.
 - New guards: `src/common/guards/super-admin.guard.ts`,
   `src/common/guards/organization-status.guard.ts`.
 - New decorator: `src/common/decorators/ip-address.decorator.ts`.
@@ -80,13 +80,13 @@ Total: **24** endpoints.
 
 ### Operational tooling
 
-- `scripts/create-super-admin.ts` + `npm run create:super-admin`. Idempotent —
+- `scripts/create-super-admin.ts` + `npm run create:super-admin`. Idempotent -
   creates a SUPER_ADMIN, or rotates the password of an existing one. Refuses
   to overwrite a non-platform account that already owns the email.
 
 ### Documentation
 
-- `SUPER_ADMIN_API.md` — full endpoint reference with request/response
+- `SUPER_ADMIN_API.md` - full endpoint reference with request/response
   shapes, audit fields, curl examples, side-effect enforcement matrix,
   schema deltas, testing instructions, and deployment checklist.
 
@@ -228,7 +228,7 @@ Skipped by default unless `E2E_RUN=1`. Cleans up its own fixtures via the
 - The new `PlatformAdminAction` table is indexed for the three most common
   read patterns (per-admin, per-org, per-action-type).
 - `OrganizationStatusGuard` reads only `{ isActive, planStatus }` (two
-  columns) — fast. If this becomes a bottleneck, the org row is a strong
+  columns) - fast. If this becomes a bottleneck, the org row is a strong
   candidate for the future `Redis`/`@nestjs/cache-manager` integration.
 
 ## 6. Known limitations / out of scope
@@ -245,7 +245,7 @@ Skipped by default unless `E2E_RUN=1`. Cleans up its own fixtures via the
   platform endpoints (super admins are trusted operators). Add one if
   required by SOC 2/PCI policy.
 - **Crash-report `affectedUsers` excludes anonymous crashes** (where
-  `userId` is null) — by design.
+  `userId` is null) - by design.
 - **Plan transition heuristic.** `GET /platform/analytics/plans` infers
   transitions from `EventLog` payload shapes (`metadata.before/after.planType`
   or `payload.fromPlan/toPlan`). Older `PLAN_UPGRADED`/`PLAN_DOWNGRADED`
@@ -267,7 +267,7 @@ Skipped by default unless `E2E_RUN=1`. Cleans up its own fixtures via the
   destructive actions).
 - Redis cache for `Organization.{ isActive, planStatus }` to make the
   `OrganizationStatusGuard` zero-latency.
-- Frontend admin console (separate workstream — this doc + `SUPER_ADMIN_API.md`
+- Frontend admin console (separate workstream - this doc + `SUPER_ADMIN_API.md`
   are the contract).
 - IP allowlisting for SUPER_ADMIN sessions.
 - Per-admin daily action quotas / anomaly detection on `PlatformAdminAction`.

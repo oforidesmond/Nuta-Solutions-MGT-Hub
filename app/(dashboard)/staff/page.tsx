@@ -68,7 +68,7 @@ const PRESET_PERMISSION_KEYS = [
 
 function staffDisplayName(m: HubStaffMember) {
   const n = [m.firstName, m.lastName].filter(Boolean).join(" ");
-  return n || m.email || "—";
+  return n || m.email || "-";
 }
 
 function splitFullName(full: string): { firstName: string; lastName?: string } {
@@ -96,12 +96,12 @@ function roleBadgeClass(role: string) {
 }
 
 function metadataSummary(meta: Record<string, unknown> | null | undefined) {
-  if (!meta || Object.keys(meta).length === 0) return "—";
+  if (!meta || Object.keys(meta).length === 0) return "-";
   try {
     const s = JSON.stringify(meta);
     return s.length > 96 ? `${s.slice(0, 96)}…` : s;
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -135,7 +135,7 @@ function CredentialsDialog({
         <div className="grid gap-4 py-2">
           <div className="space-y-1">
             <p className="text-xs font-medium text-muted-foreground">Staff ID</p>
-            <p className="font-mono text-lg font-semibold tracking-tight">{staffId || "—"}</p>
+            <p className="font-mono text-lg font-semibold tracking-tight">{staffId || "-"}</p>
           </div>
           {otp ? (
             <div className="space-y-2">
@@ -632,8 +632,8 @@ export default function StaffPage() {
                           {String(m.role).toLowerCase().replace("_", " ")}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{m.jobTitle ?? "—"}</TableCell>
-                      <TableCell>{m.phoneNumber ?? "—"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{m.jobTitle ?? "-"}</TableCell>
+                      <TableCell>{m.phoneNumber ?? "-"}</TableCell>
                       <TableCell>
                         {m.isActive ? (
                           <span className="text-xs text-emerald-700 dark:text-emerald-300">Active</span>
@@ -690,7 +690,7 @@ export default function StaffPage() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">-</span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -801,7 +801,7 @@ export default function StaffPage() {
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Phone</dt>
-                <dd>{detail.phoneNumber ?? "—"}</dd>
+                <dd>{detail.phoneNumber ?? "-"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Role</dt>
@@ -809,11 +809,11 @@ export default function StaffPage() {
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Job title</dt>
-                <dd>{detail.jobTitle ?? "—"}</dd>
+                <dd>{detail.jobTitle ?? "-"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Branch</dt>
-                <dd>{detail.branch?.name ?? (detail.branchId ? detail.branchId : "—")}</dd>
+                <dd>{detail.branch?.name ?? (detail.branchId ? detail.branchId : "-")}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Status</dt>
@@ -980,7 +980,7 @@ export default function StaffPage() {
           <DialogHeader>
             <DialogTitle>Activity log</DialogTitle>
             <DialogDescription>
-              {activityTarget ? staffDisplayName(activityTarget) : ""} — recent actions.
+              {activityTarget ? staffDisplayName(activityTarget) : ""} - recent actions.
             </DialogDescription>
           </DialogHeader>
           {activityLoading ? (

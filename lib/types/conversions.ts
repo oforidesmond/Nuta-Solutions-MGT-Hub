@@ -44,7 +44,6 @@ export interface ExecuteBulkConversionBody {
   quantity: number;
   direction: ConversionDirection;
   notes?: string;
-  branchId?: string;
 }
 
 export interface ConversionExecutionResponse {

@@ -222,18 +222,18 @@ function SyncFailureDetailBody({
         <CardContent className="space-y-3 text-sm">
           <div className="grid gap-3 sm:grid-cols-2">
             <MetadataItem label="Receipt number">
-              <InlineValueWithCopy value={receiptNumber} emptyLabel="—" />
+              <InlineValueWithCopy value={receiptNumber} emptyLabel="-" />
             </MetadataItem>
             <MetadataItem label="Total amount">
               {totalAmount != null
                 ? formatCurrency(toNumericAmount(totalAmount), currency)
-                : "—"}
+                : "-"}
             </MetadataItem>
             <MetadataItem label="Sold at">{formatDate(soldAt)}</MetadataItem>
             <MetadataItem label="Payment method">
               {readStringFromJson(summaryObject, ["paymentMethod", "payment_method"]) ??
                 readStringFromJson(payloadObject, ["paymentMethod", "payment_method"]) ??
-                "—"}
+                "-"}
             </MetadataItem>
           </div>
 
@@ -298,21 +298,21 @@ function SyncFailureDetailBody({
             <MetadataItem label="Device">
               <InlineValueWithCopy
                 value={failure.device?.deviceName ?? failure.deviceId ?? failure.device?.id ?? null}
-                emptyLabel="—"
+                emptyLabel="-"
               />
             </MetadataItem>
             <MetadataItem label="Endpoint">
-              <span className="break-all font-mono text-xs">{failure.endpoint ?? "—"}</span>
+              <span className="break-all font-mono text-xs">{failure.endpoint ?? "-"}</span>
             </MetadataItem>
             <MetadataItem label="Error code">
-              <InlineValueWithCopy value={failure.errorCode ?? null} emptyLabel="—" />
+              <InlineValueWithCopy value={failure.errorCode ?? null} emptyLabel="-" />
             </MetadataItem>
             <MetadataItem label="HTTP status">
-              {failure.httpStatusCode != null ? String(failure.httpStatusCode) : "—"}
+              {failure.httpStatusCode != null ? String(failure.httpStatusCode) : "-"}
             </MetadataItem>
             <MetadataItem label="Created at">{formatDate(failure.createdAt)}</MetadataItem>
             <MetadataItem label="Entity ID">
-              <InlineValueWithCopy value={failure.entityId} emptyLabel="—" />
+              <InlineValueWithCopy value={failure.entityId} emptyLabel="-" />
             </MetadataItem>
           </div>
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -347,14 +347,14 @@ function SyncFailureDetailBody({
             </MetadataItem>
             <MetadataItem label="Resolved at">{formatDate(failure.resolvedAt)}</MetadataItem>
             <MetadataItem label="Applied sale ID">
-              <InlineValueWithCopy value={failure.appliedSaleId ?? null} emptyLabel="—" />
+              <InlineValueWithCopy value={failure.appliedSaleId ?? null} emptyLabel="-" />
             </MetadataItem>
           </div>
           <MetadataItem label="Resolution notes">
             {failure.resolutionNotes ? (
               <p className="whitespace-pre-wrap break-words">{failure.resolutionNotes}</p>
             ) : (
-              "—"
+              "-"
             )}
           </MetadataItem>
         </CardContent>
@@ -448,21 +448,21 @@ function itemName(item: unknown): string {
 
 function itemQuantity(item: unknown): string {
   const obj = objOrNull(item);
-  if (!obj) return "—";
+  if (!obj) return "-";
   const quantity = obj.quantity;
   return typeof quantity === "number" || typeof quantity === "string"
     ? String(quantity)
-    : "—";
+    : "-";
 }
 
 function itemLineTotal(item: unknown, currency: string): string {
   const obj = objOrNull(item);
-  if (!obj) return "—";
+  if (!obj) return "-";
   const total = obj.lineTotal ?? obj.total ?? null;
   if (typeof total === "number" || typeof total === "string") {
     return formatCurrency(toNumericAmount(total), currency);
   }
-  return "—";
+  return "-";
 }
 
 function objOrNull(value: unknown): Record<string, unknown> | null {

@@ -23,7 +23,7 @@ Tenant-scoped APIs for linking pack (parent) and unit (child) products, and exec
 | `isActive` | Boolean | `false` disables `convert-bulk` for this row |
 | `createdAt` / `updatedAt` | DateTime | |
 
-- **Unique:** `(organizationId, parentProductId, childProductId)` — one row per pair per org.
+- **Unique:** `(organizationId, parentProductId, childProductId)` - one row per pair per org.
 - **Cascade:** deleting org or either product removes conversion rows.
 
 ### `StockAdjustment`
@@ -49,10 +49,10 @@ Both legs use the **parent product’s** `costPrice`:
 
 ### Quantities
 
-- **`direction: BULK_TO_SINGLES`** — `quantity` = number of **packs** to break down.  
+- **`direction: BULK_TO_SINGLES`** - `quantity` = number of **packs** to break down.  
   - Parent: `-quantity`  
   - Child: `+quantity × conversionRatio`
-- **`direction: SINGLES_TO_BULK`** — `quantity` = number of **packs** to assemble.  
+- **`direction: SINGLES_TO_BULK`** - `quantity` = number of **packs** to assemble.  
   - Singles consumed: `quantity × conversionRatio`  
   - Parent: `+quantity`  
   - Child: `-quantity × conversionRatio`
@@ -77,8 +77,8 @@ Self-edge (`parent === child`) is rejected.
 
 ### Hard delete vs deactivate
 
-- **`DELETE /products/conversions/:id`** — removes the conversion row (HTTP **204**). Historical `StockAdjustment` rows remain; paired legs still reference each other unless a row is deleted (FK `SetNull` only applies when a **StockAdjustment** is deleted).
-- **PATCH** with `{ "isActive": false }` — keeps the row; execution returns **409** if inactive.
+- **`DELETE /products/conversions/:id`** - removes the conversion row (HTTP **204**). Historical `StockAdjustment` rows remain; paired legs still reference each other unless a row is deleted (FK `SetNull` only applies when a **StockAdjustment** is deleted).
+- **PATCH** with `{ "isActive": false }` - keeps the row; execution returns **409** if inactive.
 
 ---
 
@@ -103,7 +103,7 @@ Create a conversion relationship.
 }
 ```
 
-**Response** — created conversion + nested product names/skus (ratio as string).
+**Response** - created conversion + nested product names/skus (ratio as string).
 
 **Errors**
 
@@ -203,7 +203,7 @@ Execute one conversion in one transaction.
 
 Provide **`conversionId`** **or** both **`parentProductId`** and **`childProductId`**.
 
-**Response** — `{ "parentAdjustment": { ... }, "childAdjustment": { ... } }` with decimal fields as strings, `linkedAdjustmentId`, `product`, `user`, etc.
+**Response** - `{ "parentAdjustment": { ... }, "childAdjustment": { ... } }` with decimal fields as strings, `linkedAdjustmentId`, `product`, `user`, etc.
 
 **Errors**
 
@@ -223,7 +223,7 @@ Provide **`conversionId`** **or** both **`parentProductId`** and **`childProduct
 
 **New query param**
 
-- `type` — optional `StockAdjustmentType` enum value (e.g. `BULK_TO_SINGLES`). When set, results are **only** that type (default exclusion list for sale/stock-take etc. does not apply).
+- `type` - optional `StockAdjustmentType` enum value (e.g. `BULK_TO_SINGLES`). When set, results are **only** that type (default exclusion list for sale/stock-take etc. does not apply).
 
 **Response items** now include:
 
@@ -256,11 +256,11 @@ curl -sS "$API/api/v1/inventory/adjustments?type=BULK_TO_SINGLES" \
 
 ## Testing recommendations
 
-1. **Create** — happy path; duplicate pair → 409; `A→B` + `B→C` + attempt `C→A` → 400.
-2. **Reactivate** — inactive `C→A` with graph that would cycle → 400.
-3. **convert-bulk** — stock boundaries; paired `linkedAdjustmentId`; event log count 2; rollback on failure (e.g. force child stock insufficient).
-4. **Financial** — `parentImpact + childImpact === 0` after rounding correction.
-5. **GET adjustments** — `linkedAdjustment` populated for conversion rows; filter `type=BULK_TO_SINGLES`.
+1. **Create** - happy path; duplicate pair → 409; `A→B` + `B→C` + attempt `C→A` → 400.
+2. **Reactivate** - inactive `C→A` with graph that would cycle → 400.
+3. **convert-bulk** - stock boundaries; paired `linkedAdjustmentId`; event log count 2; rollback on failure (e.g. force child stock insufficient).
+4. **Financial** - `parentImpact + childImpact === 0` after rounding correction.
+5. **GET adjustments** - `linkedAdjustment` populated for conversion rows; filter `type=BULK_TO_SINGLES`.
 
 ---
 

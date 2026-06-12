@@ -91,8 +91,8 @@ export default function OrganizationDevicesPage() {
               const ownerName = d.user
                 ? [d.user.firstName, d.user.lastName].filter(Boolean).join(" ").trim() ||
                   d.user.email ||
-                  "—"
-                : "—";
+                  "-"
+                : "-";
               return (
                 <TableRow key={d.id}>
                   <TableCell className="px-4 py-3">

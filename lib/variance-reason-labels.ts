@@ -23,7 +23,7 @@ export const VARIANCE_REASON_VALUES: VarianceReason[] = [
 ];
 
 export function varianceReasonLabel(reason: string | null | undefined): string {
-  if (!reason) return "—";
+  if (!reason) return "-";
   return (
     VARIANCE_REASON_LABELS[reason as VarianceReason] ??
     reason.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())

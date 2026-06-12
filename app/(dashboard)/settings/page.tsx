@@ -116,7 +116,7 @@ export default function SettingsPage() {
       </div>
       {orgQuery.isError ? (
         <p className="text-sm text-amber-800 dark:text-amber-200">
-          Could not refresh organization details ({handleApiError(orgQuery.error)}). Showing last known values —
+          Could not refresh organization details ({handleApiError(orgQuery.error)}). Showing last known values -
           retry or reload the page.
         </p>
       ) : null}

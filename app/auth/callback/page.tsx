@@ -45,10 +45,16 @@ function CallbackContent() {
     let cancelled = false;
     (async () => {
       try {
-        const { accessToken, refreshToken, user, organization } =
+        const { accessToken, refreshToken, user, organization, defaultBranchId } =
           await consumeHandoffRequest(code);
         if (cancelled) return;
-        setSession({ accessToken, refreshToken, user, organization });
+        setSession({
+          accessToken,
+          refreshToken,
+          user,
+          organization,
+          defaultBranchId,
+        });
         const oid = user.organizationId ?? organization?.id;
         if (oid) {
           try {

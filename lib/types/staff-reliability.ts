@@ -1,4 +1,4 @@
-/** Phase 3 — staff device reliability (Nest DTOs; camelCase with snake_case fallbacks in normalizers). */
+/** Phase 3 - staff device reliability (Nest DTOs; camelCase with snake_case fallbacks in normalizers). */
 
 export type StaffBackupStorageProvider = "s3" | "local" | string;
 
@@ -13,7 +13,7 @@ export interface ReliabilityNestedUser {
 export interface StaffDeviceBackupRow {
   id: string;
   userId: string;
-  /** Client stable id from the device — not necessarily server `Device` UUID. */
+  /** Client stable id from the device - not necessarily server `Device` UUID. */
   deviceId: string;
   appVersion: string;
   buildNumber?: string | null;

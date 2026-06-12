@@ -104,7 +104,7 @@ function ManagePlanForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Manage plan — {org.name}</DialogTitle>
+        <DialogTitle>Manage plan - {org.name}</DialogTitle>
         <DialogDescription>
           Changes apply immediately and are recorded in the platform audit log.
         </DialogDescription>

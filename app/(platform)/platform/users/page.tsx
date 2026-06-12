@@ -195,7 +195,7 @@ function UsersTableDesktop({ rows }: { rows: PlatformUser[] }) {
                   >
                     {name}
                   </Link>
-                  <p className="font-mono text-[0.7rem] text-muted-foreground">{u.email ?? "—"}</p>
+                  <p className="font-mono text-[0.7rem] text-muted-foreground">{u.email ?? "-"}</p>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {u.organization ? (
@@ -206,7 +206,7 @@ function UsersTableDesktop({ rows }: { rows: PlatformUser[] }) {
                       {u.organization.name}
                     </Link>
                   ) : (
-                    "—"
+                    "-"
                   )}
                 </TableCell>
                 <TableCell>
@@ -253,7 +253,7 @@ function UserCardMobile({ user }: { user: PlatformUser }) {
           >
             {name}
           </Link>
-          <p className="truncate text-xs text-muted-foreground">{user.email ?? "—"}</p>
+          <p className="truncate text-xs text-muted-foreground">{user.email ?? "-"}</p>
           {user.organization ? (
             <Link
               href={`/platform/organizations/${user.organization.id}`}

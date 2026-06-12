@@ -229,7 +229,7 @@ export default function ProductDetailPage() {
           <CardHeader>
             <CardTitle className="text-xl font-semibold">{product.name}</CardTitle>
             <CardDescription className="font-mono text-xs">
-              SKU: {product.sku ?? "—"} · Barcode: {product.barcode ?? "—"}
+              SKU: {product.sku ?? "-"} · Barcode: {product.barcode ?? "-"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
@@ -240,7 +240,7 @@ export default function ProductDetailPage() {
             <div>
               <p className="text-muted-foreground">Stock</p>
               <Badge variant="outline" className={cn("mt-1 tabular-nums", stockBadgeClass(tone))}>
-                {Number.isFinite(q) ? q : "—"} units
+                {Number.isFinite(q) ? q : "-"} units
               </Badge>
               {product.reorderLevel != null ? (
                 <p className="mt-1 text-muted-foreground">Reorder at: {String(product.reorderLevel)}</p>
@@ -264,7 +264,7 @@ export default function ProductDetailPage() {
             {product.createdAt ? (
               <p className="text-xs text-muted-foreground">
                 Added {formatDateDMY(product.createdAt)} · Updated{" "}
-                {product.updatedAt ? formatDateDMY(product.updatedAt) : "—"}
+                {product.updatedAt ? formatDateDMY(product.updatedAt) : "-"}
               </p>
             ) : null}
           </CardContent>
@@ -311,8 +311,8 @@ export default function ProductDetailPage() {
                     {batches.map((b) => (
                       <TableRow key={b.id}>
                         <TableCell className="font-mono text-xs">{b.batchNumber ?? b.id.slice(0, 8)}</TableCell>
-                        <TableCell className="text-right tabular-nums">{String(b.remainingQuantity ?? b.quantity ?? "—")}</TableCell>
-                        <TableCell>{b.expiryDate ? formatDateDMY(b.expiryDate) : "—"}</TableCell>
+                        <TableCell className="text-right tabular-nums">{String(b.remainingQuantity ?? b.quantity ?? "-")}</TableCell>
+                        <TableCell>{b.expiryDate ? formatDateDMY(b.expiryDate) : "-"}</TableCell>
                         <TableCell>
                           {b.isExpired ? (
                             <Badge variant="destructive">Expired</Badge>
@@ -337,12 +337,12 @@ export default function ProductDetailPage() {
                     const when = h.createdAt;
                     const by = h.user
                       ? [h.user.firstName, h.user.lastName].filter(Boolean).join(" ") || h.user.email
-                      : "—";
+                      : "-";
                     const change = Number(h.quantityChange ?? 0);
                     return (
                       <li key={h.id} className="rounded-lg border border-border/40 bg-muted/20 p-3 text-sm">
                         <p className="font-medium text-foreground">
-                          {when ? `${formatDateDMY(when)} · ${formatTime12h(when)}` : "—"}
+                          {when ? `${formatDateDMY(when)} · ${formatTime12h(when)}` : "-"}
                         </p>
                         <p className="text-muted-foreground">
                           {h.type?.replace(/_/g, " ") ?? "Adjustment"}{" "}

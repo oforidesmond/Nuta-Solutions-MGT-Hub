@@ -1,6 +1,6 @@
 import type { HubSale } from "@/lib/types/domain";
 
-/** Fixed 24-hour threshold (ms). No settings UI — see Phase 2 alignment. */
+/** Fixed 24-hour threshold (ms). No settings UI - see Phase 2 alignment. */
 export const DELAYED_SYNC_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 type SaleTimestamps = HubSale & {

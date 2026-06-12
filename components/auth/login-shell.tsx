@@ -6,7 +6,7 @@ type LoginShellProps = {
   className?: string;
 };
 
-/** Full-viewport auth canvas — soft depth, glass panel host (DESIGN_LANGUAGE). */
+/** Full-viewport auth canvas - soft depth, glass panel host (DESIGN_LANGUAGE). */
 export function LoginShell({ children, className }: LoginShellProps) {
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#f5f5f7] px-4 py-12 dark:bg-[#000000]">

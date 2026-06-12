@@ -17,15 +17,18 @@ export function PlatformSidebar({ onNavigate }: PlatformSidebarProps) {
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
+  const isMobileDrawer = Boolean(onNavigate);
+
   return (
     <aside
       className={cn(
-        "flex w-60 shrink-0 flex-col gap-1 border-r border-border/30 p-3",
+        "flex shrink-0 flex-col gap-1 border-r border-border/30 p-3",
         "bg-sidebar/75 backdrop-blur-xl supports-[backdrop-filter]:bg-sidebar/60",
+        isMobileDrawer ? "h-full min-h-0 w-full" : "w-60",
       )}
     >
       <SidebarBrand title="Platform Console" />
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto pb-4">
+      <nav className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-4">
         {platformNavSections.map((section, si) => (
           <div key={si} className="space-y-1">
             {section.title ? (

@@ -27,7 +27,7 @@ export default function StaffProfilePage() {
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Staff</p>
           <h1 className="text-2xl font-semibold tracking-tight">
-            {query.isPending ? <Skeleton className="inline-block h-8 w-48" /> : m ? staffName(m) : "—"}
+            {query.isPending ? <Skeleton className="inline-block h-8 w-48" /> : m ? staffName(m) : "-"}
           </h1>
         </div>
         <Button variant="outline" size="sm" render={<Link href="/staff" />}>
@@ -51,10 +51,10 @@ export default function StaffProfilePage() {
                 <span className="font-mono text-xs">{m.staffId}</span>
               </p>
               <p>
-                <span className="text-muted-foreground">Email</span> {m.email ?? "—"}
+                <span className="text-muted-foreground">Email</span> {m.email ?? "-"}
               </p>
               <p>
-                <span className="text-muted-foreground">Phone</span> {m.phoneNumber ?? "—"}
+                <span className="text-muted-foreground">Phone</span> {m.phoneNumber ?? "-"}
               </p>
               <p>
                 <span className="text-muted-foreground">Role</span>{" "}

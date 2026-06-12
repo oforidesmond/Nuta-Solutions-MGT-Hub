@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NutaPOS — Management Hub",
+  title: "NutaPOS - Management Hub",
   description: "Business owner dashboard for NutaPOS",
   icons: {
     icon: [{ url: "/favicon-light.png", type: "image/png" }],

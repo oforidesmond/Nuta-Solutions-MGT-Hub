@@ -23,9 +23,9 @@ import type { HubSale } from "@/lib/types/domain";
 
 function createdByLabel(s: HubSale): string {
   const c = s.createdBy;
-  if (!c) return "—";
+  if (!c) return "-";
   const n = [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
-  return n || c.email || "—";
+  return n || c.email || "-";
 }
 
 /** Counts variance lines on the row when `items[]` is present on the list payload. */
@@ -145,7 +145,7 @@ export function SalesTable({
                   {formatCurrency(Number.isFinite(total) ? total : 0, currency)}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {when ? `${formatDateDMY(when)} · ${formatTime12h(when)}` : "—"}
+                  {when ? `${formatDateDMY(when)} · ${formatTime12h(when)}` : "-"}
                 </TableCell>
                 <TableCell>{createdByLabel(s)}</TableCell>
               </TableRow>

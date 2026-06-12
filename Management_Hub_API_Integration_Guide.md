@@ -105,14 +105,14 @@ Legend:
 
 | Method | Path | Auth | Roles | Mobile | Hub | Request highlights | Success | Errors / notes |
 |--------|------|------|-------|--------|-----|-------------------|---------|----------------|
-| `POST` | `/auth/signup` | Public | — | No | **P1** | `SignupDto` | New user/org | 400 validation |
-| `POST` | `/auth/login` | Public | — | No | **P0** | Email/password owner login | Tokens + user | 401 invalid |
-| `POST` | `/auth/staff/login` | Public | — | **Yes** | No (staff only) | `staffId`, `password` | Staff JWT | 401 |
-| `POST` | `/auth/staff/change-password` | JWT | — | **Yes** | Rare | `currentPassword`, `newPassword` | 200 | 400/401 |
-| `POST` | `/auth/refresh` | Public | — | **Yes** | **P0** | `refresh_token` or `refreshToken` | New access token | 401 refresh invalid |
-| `POST` | `/auth/staff/bind-device` | JWT | — | **Yes** | No | `BindDeviceDto` + fingerprint hash rules | 200 device bind | 400 hash mismatch |
-| `POST` | `/auth/handoff` | Public + throttle | — | No | **P0** | `{ refreshToken }` | Short-lived handoff for web | Rate limited |
-| `POST` | `/auth/handoff/consume` | Public + throttle | — | No | **P0** | `{ code }` | Exchange code for tokens | Rate limited |
+| `POST` | `/auth/signup` | Public | - | No | **P1** | `SignupDto` | New user/org | 400 validation |
+| `POST` | `/auth/login` | Public | - | No | **P0** | Email/password owner login | Tokens + user | 401 invalid |
+| `POST` | `/auth/staff/login` | Public | - | **Yes** | No (staff only) | `staffId`, `password` | Staff JWT | 401 |
+| `POST` | `/auth/staff/change-password` | JWT | - | **Yes** | Rare | `currentPassword`, `newPassword` | 200 | 400/401 |
+| `POST` | `/auth/refresh` | Public | - | **Yes** | **P0** | `refresh_token` or `refreshToken` | New access token | 401 refresh invalid |
+| `POST` | `/auth/staff/bind-device` | JWT | - | **Yes** | No | `BindDeviceDto` + fingerprint hash rules | 200 device bind | 400 hash mismatch |
+| `POST` | `/auth/handoff` | Public + throttle | - | No | **P0** | `{ refreshToken }` | Short-lived handoff for web | Rate limited |
+| `POST` | `/auth/handoff/consume` | Public + throttle | - | No | **P0** | `{ code }` | Exchange code for tokens | Rate limited |
 
 **Real-time:** None. Hub should refresh tokens before expiry and handle 401 → refresh flow.
 
@@ -122,11 +122,11 @@ Legend:
 
 | Method | Path | Auth | Roles | Mobile | Hub | Query / body | Response / use |
 |--------|------|------|-------|--------|-----|--------------|----------------|
-| `GET` | `/users/me` | JWT + tenant | Any with org | Optional | **P0** | — | Current user profile |
-| `GET` | `/users` | JWT + tenant | ADMIN, MANAGER, STAFF | **Yes** (list peers) | **P0** | — | Staff directory (hub: read-only directory) |
-| `POST` | `/users` | JWT + tenant | ADMIN, MANAGER | No | **P1** | `CreateUserDto` | Create staff user (overlaps with `/staff` CRUD—see gaps) |
+| `GET` | `/users/me` | JWT + tenant | Any with org | Optional | **P0** | - | Current user profile |
+| `GET` | `/users` | JWT + tenant | ADMIN, MANAGER, STAFF | **Yes** (list peers) | **P0** | - | Staff directory (hub: read-only directory) |
+| `POST` | `/users` | JWT + tenant | ADMIN, MANAGER | No | **P1** | `CreateUserDto` | Create staff user (overlaps with `/staff` CRUD-see gaps) |
 
-**Pagination / search:** **Not implemented** on `GET /users` — hub may need client-side filter or backend extension.
+**Pagination / search:** **Not implemented** on `GET /users` - hub may need client-side filter or backend extension.
 
 ---
 
@@ -134,7 +134,7 @@ Legend:
 
 | Method | Path | Auth | Roles | Mobile | Hub | Body | Response / use |
 |--------|------|------|-------|--------|-----|------|----------------|
-| `GET` | `/organizations/me` | JWT + tenant | ADMIN, MANAGER, STAFF | **Yes** (sync context) | **P0** | — | Org settings, plan, tax flags |
+| `GET` | `/organizations/me` | JWT + tenant | ADMIN, MANAGER, STAFF | **Yes** (sync context) | **P0** | - | Org settings, plan, tax flags |
 | `PATCH` | `/organizations/me` | JWT + tenant | ADMIN, MANAGER | No | **P0** | `UpdateOrganizationDto` | Update business metadata, tax, currency |
 
 **Real-time:** Poll after saves; broadcast not available.
@@ -156,7 +156,7 @@ Legend:
 
 | Method | Path | Auth | Roles | Mobile | Hub | Body / query | Response / use |
 |--------|------|------|-------|--------|-----|--------------|----------------|
-| `GET` | `/sales` | JWT + tenant | ADMIN, MANAGER, STAFF | Partial | **P0** | — | Last **100** sales, serialized with items + `createdBy` (no pagination params) |
+| `GET` | `/sales` | JWT + tenant | ADMIN, MANAGER, STAFF | Partial | **P0** | - | Last **100** sales, serialized with items + `createdBy` (no pagination params) |
 | `POST` | `/sales` | JWT + tenant | ADMIN, MANAGER, STAFF | Possible | **P1** | `CreateSaleDto`: `items[]` { `productId`, `quantity` }, optional `paymentMethod`, `soldAt`, `discountAmount` | Server-side stock + tax calculation; creates sale |
 
 | Method | Path | Auth | Roles | Mobile | Hub | Body / notes |
@@ -171,17 +171,17 @@ Legend:
 
 ### Staff administration (HR / permissions)
 
-Controller: `staff.controller.ts` — all `ADMIN`/`MANAGER` unless noted.
+Controller: `staff.controller.ts` - all `ADMIN`/`MANAGER` unless noted.
 
 | Method | Path | Roles | Mobile | Hub | Query / body | Notes |
 |--------|------|-------|--------|-----|--------------|-------|
 | `POST` | `/staff` | ADMIN, MANAGER | No | **P0** | `CreateStaffDto` | Create staff account |
 | `GET` | `/staff` | ADMIN, MANAGER | No | **P0** | `?includeInactive=true` optional | List staff |
 | `GET` | `/staff/performance` | ADMIN, MANAGER | No | **P1** | `?from`, `?to` ISO strings | Performance metrics |
-| `GET` | `/staff/:id` | ADMIN, MANAGER | No | **P0** | — | Staff detail |
+| `GET` | `/staff/:id` | ADMIN, MANAGER | No | **P0** | - | Staff detail |
 | `PATCH` | `/staff/:id` | ADMIN, MANAGER | No | **P0** | `UpdateStaffDto` | Update profile/status |
-| `DELETE` | `/staff/:id` | ADMIN, MANAGER | No | **P1** | — | Deactivate staff |
-| `POST` | `/staff/:id/reset-password` | ADMIN, MANAGER | No | **P0** | — | Issue reset |
+| `DELETE` | `/staff/:id` | ADMIN, MANAGER | No | **P1** | - | Deactivate staff |
+| `POST` | `/staff/:id/reset-password` | ADMIN, MANAGER | No | **P0** | - | Issue reset |
 | `PATCH` | `/staff/:id/role` | **ADMIN only** | No | **P0** | `ChangeStaffRoleDto` | Elevate/demote roles |
 | `POST` | `/staff/:id/set-permissions` | ADMIN, MANAGER | No | **P1** | `SetStaffPermissionsDto` | Fine-grained permissions |
 | `GET` | `/staff/:id/activity-log` | ADMIN, MANAGER | No | **P1** | `?page`, `?limit` | Paginated activity |
@@ -205,7 +205,7 @@ Controller: `staff.controller.ts` — all `ADMIN`/`MANAGER` unless noted.
 |--------|------|-------|--------|-----|----------------|
 | `GET` | `/staff/master-data` | ADMIN, MANAGER, STAFF, SALES_AGENT | **Yes** | **P2** | `?since` optional cursor for delta sync |
 
-**Hub use:** Mostly read-only insight into what staff devices pull; useful for support/debug—not core owner UX.
+**Hub use:** Mostly read-only insight into what staff devices pull; useful for support/debug-not core owner UX.
 
 ---
 
@@ -219,7 +219,7 @@ Controller: `staff.controller.ts` — all `ADMIN`/`MANAGER` unless noted.
 | `POST` | `/staff/time-warning` | same | **Yes** | **P2** | `StaffTimeWarningDto` |
 | `POST` | `/staff/stock-adjustments` | same | **Yes** | **P1** audit | `StaffStockAdjustmentDto` |
 
-**Hub:** Owners do not POST these; they need **read APIs** listing temporary items, returns, adjustments (partially covered via products, audit—see gaps).
+**Hub:** Owners do not POST these; they need **read APIs** listing temporary items, returns, adjustments (partially covered via products, audit-see gaps).
 
 ---
 
@@ -227,7 +227,7 @@ Controller: `staff.controller.ts` — all `ADMIN`/`MANAGER` unless noted.
 
 | Method | Path | Roles | Mobile | Hub | Notes |
 |--------|------|-------|--------|-----|-------|
-| `GET` | `/staff/backups` | ADMIN, MANAGER | No | **P1** | Query: `StaffBackupsListQueryDto` — `from`, `to`, `userId`, `limit` (1–100), `cursor`, `deviceId` |
+| `GET` | `/staff/backups` | ADMIN, MANAGER | No | **P1** | Query: `StaffBackupsListQueryDto` - `from`, `to`, `userId`, `limit` (1–100), `cursor`, `deviceId` |
 | `GET` | `/staff/device-warnings` | ADMIN, MANAGER | No | **P1** | `StaffReliabilityListQueryDto` |
 | `GET` | `/staff/database-warnings` | ADMIN, MANAGER | No | **P1** | same |
 | `POST` | `/staff/backup` | ADMIN, MANAGER, STAFF, SALES_AGENT | **Yes** | No | **Multipart:** field `backup` (file, max ~52MB), body `device_id`, `app_version`, optional `build_number`, `created_at` → **201** |
@@ -244,11 +244,11 @@ Controller: `staff.controller.ts` — all `ADMIN`/`MANAGER` unless noted.
 | Method | Path | Roles | Mobile | Hub | Query / body |
 |--------|------|-------|--------|-----|--------------|
 | `GET` | `/products` | ADMIN, MANAGER, STAFF | **Yes** (filtered) | **P0** | `QueryProductsDto`: `page`, `limit` (max 100), `search`, `categoryId`, `lowStock`, `includeInactive`, `sortBy`, `sortOrder` |
-| `GET` | `/products/low-stock` | ADMIN, MANAGER | No | **P0** | — |
+| `GET` | `/products/low-stock` | ADMIN, MANAGER | No | **P0** | - |
 | `GET` | `/products/expiring-soon` | ADMIN, MANAGER | No | **P1** | `?months` default 3 |
-| `POST` | `/products/from-temporary/:productId` | ADMIN, MANAGER | No | **P0** | `PromoteFromTemporaryDto` — promote temp line to catalog |
+| `POST` | `/products/from-temporary/:productId` | ADMIN, MANAGER | No | **P0** | `PromoteFromTemporaryDto` - promote temp line to catalog |
 | `GET` | `/products/temporary` | ADMIN, MANAGER, STAFF | **Yes** | **P0** | Pending temp SKUs |
-| `GET` | `/products/:id` | ADMIN, MANAGER, STAFF | **Yes** | **P0** | — |
+| `GET` | `/products/:id` | ADMIN, MANAGER, STAFF | **Yes** | **P0** | - |
 | `GET` | `/products/:id/stock-history` | ADMIN, MANAGER | No | **P1** | `?page`, `?limit` |
 | `GET` | `/products/:id/inventory-events` | ADMIN, MANAGER | No | **P1** | `?page`, `?limit` |
 | `POST` | `/products` | ADMIN, MANAGER, STAFF | **Yes** | **P0** | `CreateProductDto` |
@@ -267,10 +267,10 @@ Controller: `staff.controller.ts` — all `ADMIN`/`MANAGER` unless noted.
 |--------|------|-------|--------|-----|--------------|
 | `POST` | `/categories` | ADMIN, MANAGER | No | **P0** | `CreateCategoryDto` |
 | `GET` | `/categories` | ADMIN, MANAGER, STAFF | **Yes** | **P0** | `QueryCategoriesDto`: optional `search` |
-| `GET` | `/categories/:id` | ADMIN, MANAGER, STAFF | **Yes** | **P0** | — |
+| `GET` | `/categories/:id` | ADMIN, MANAGER, STAFF | **Yes** | **P0** | - |
 | `GET` | `/categories/:id/products` | ADMIN, MANAGER, STAFF | **Yes** | **P1** | Products in category |
 | `PATCH` | `/categories/:id` | ADMIN, MANAGER | No | **P0** | `UpdateCategoryDto` |
-| `DELETE` | `/categories/:id` | ADMIN, MANAGER | No | **P1** | — |
+| `DELETE` | `/categories/:id` | ADMIN, MANAGER | No | **P1** | - |
 
 ---
 
@@ -281,10 +281,10 @@ Controller: `staff.controller.ts` — all `ADMIN`/`MANAGER` unless noted.
 | `POST` | `/batches` | ADMIN, MANAGER | No | **P1** | `CreateBatchDto` |
 | `GET` | `/batches` | ADMIN, MANAGER, STAFF | **Yes** | **P1** | `QueryBatchesDto`: page, limit, `productId`, `expiryDateFrom`/`To`, `isExpired`, `onlyExpiringSoon` |
 | `GET` | `/batches/expiring` | ADMIN, MANAGER | No | **P1** | `?days` default 30 |
-| `GET` | `/batches/expired` | ADMIN, MANAGER | No | **P1** | — |
-| `GET` | `/batches/:id` | ADMIN, MANAGER, STAFF | **Yes** | **P1** | — |
+| `GET` | `/batches/expired` | ADMIN, MANAGER | No | **P1** | - |
+| `GET` | `/batches/:id` | ADMIN, MANAGER, STAFF | **Yes** | **P1** | - |
 | `PATCH` | `/batches/:id` | ADMIN, MANAGER | No | **P1** | `UpdateBatchDto` |
-| `DELETE` | `/batches/:id` | ADMIN, MANAGER | No | **P2** | — |
+| `DELETE` | `/batches/:id` | ADMIN, MANAGER | No | **P2** | - |
 | `POST` | `/batches/:id/remove-expired` | ADMIN, MANAGER | No | **P2** | Stock maintenance |
 
 ---
@@ -332,7 +332,7 @@ Controller: `staff.controller.ts` — all `ADMIN`/`MANAGER` unless noted.
 
 **Total:** **84** HTTP operations (**82** under `/api/v1`, **2** health/time without prefix).
 
-### `/api/v1` — alphabetical by first path segment
+### `/api/v1` - alphabetical by first path segment
 
 **`analytics` (6)**  
 `GET /analytics/crashes` · `GET /analytics/crashes/:id` · `GET /analytics/performance` · `POST /analytics/crash` · `POST /analytics/performance`
@@ -364,7 +364,7 @@ Controller: `staff.controller.ts` — all `ADMIN`/`MANAGER` unless noted.
 **`sales` (2)**  
 `GET /sales` · `POST /sales`
 
-**`staff` (29)** — merged from `StaffPosController`, `StaffMobileController`, `StaffReliabilityController`, `StaffController`, `StaffSalesController`  
+**`staff` (29)** - merged from `StaffPosController`, `StaffMobileController`, `StaffReliabilityController`, `StaffController`, `StaffSalesController`  
 
 `DELETE /staff/:id` · `GET /staff` · `GET /staff/backup/:id` · `GET /staff/backups` · `GET /staff/categories` · `GET /staff/database-warnings` · `GET /staff/device-warnings` · `GET /staff/inventory` · `GET /staff/master-data` · `GET /staff/performance` · `GET /staff/pricing` · `GET /staff/settings/tax` · `GET /staff/trial/status` · `GET /staff/:id` · `GET /staff/:id/activity-log` · `PATCH /staff/:id` · `PATCH /staff/:id/role` · `POST /staff` · `POST /staff/backup` · `POST /staff/database-warning` · `POST /staff/device-warning` · `POST /staff/inventory-events` · `POST /staff/returns` · `POST /staff/sales` · `POST /staff/stock-adjustments` · `POST /staff/temporary-items` · `POST /staff/time-warning` · `POST /staff/:id/reset-password` · `POST /staff/:id/set-permissions`
 
@@ -389,14 +389,14 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 
 #### `GET /health`
 
-- **Auth:** Public · **Roles:** — · **Query/Body:** none
-- **Success:** `200` — service health payload (implementation-specific)
-- **Errors:** — · **Mobile:** No · **Hub:** Ops (P1) · **Live:** N/A
+- **Auth:** Public · **Roles:** - · **Query/Body:** none
+- **Success:** `200` - service health payload (implementation-specific)
+- **Errors:** - · **Mobile:** No · **Hub:** Ops (P1) · **Live:** N/A
 
 #### `GET /time`
 
-- **Auth:** Public · **Roles:** — · **Query/Body:** none
-- **Success:** `200` — server time
+- **Auth:** Public · **Roles:** - · **Query/Body:** none
+- **Success:** `200` - server time
 - **Mobile:** No · **Hub:** P3 diagnostics · **Live:** N/A
 
 ---
@@ -405,53 +405,53 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 
 #### `POST /api/v1/auth/signup`
 
-- **Auth:** Public · **Body:** `SignupDto` — `email`, `password` (min 8), `organizationName`; optional `firstName`, `lastName`, `phoneNumber`, `businessType`, `businessLocation`, `leadSource`, `branchCount` (int ≥ 0)
-- **Success:** `201`/`200` (per `AuthService`) — user + tokens + org bootstrap
+- **Auth:** Public · **Body:** `SignupDto` - `email`, `password` (min 8), `organizationName`; optional `firstName`, `lastName`, `phoneNumber`, `businessType`, `businessLocation`, `leadSource`, `branchCount` (int ≥ 0)
+- **Success:** `201`/`200` (per `AuthService`) - user + tokens + org bootstrap
 - **Errors:** `400` validation; `409` email exists (if enforced)
 - **Mobile:** No · **Hub:** Owner onboarding (P1) · **Live:** N/A
 
 #### `POST /api/v1/auth/login`
 
-- **Auth:** Public · **Body:** `LoginDto` — `email`, `password`
-- **Success:** `200` — access + refresh + user with `organizationId`
+- **Auth:** Public · **Body:** `LoginDto` - `email`, `password`
+- **Success:** `200` - access + refresh + user with `organizationId`
 - **Errors:** `401` invalid credentials
 - **Mobile:** No · **Hub:** **P0** session · **Live:** N/A
 
 #### `POST /api/v1/auth/staff/login`
 
-- **Auth:** Public · **Body:** `StaffLoginDto` — `staffId`, `password` (see contract for response shape)
-- **Success:** `200` — staff JWT + `user` + `staffProfile` / `staff_profile`
+- **Auth:** Public · **Body:** `StaffLoginDto` - `staffId`, `password` (see contract for response shape)
+- **Success:** `200` - staff JWT + `user` + `staffProfile` / `staff_profile`
 - **Errors:** `401` · **Mobile:** **P0** · **Hub:** Do not use
 
 #### `POST /api/v1/auth/staff/change-password`
 
-- **Auth:** JWT · **Body:** `StaffChangePasswordDto` — `currentPassword`, `newPassword`
+- **Auth:** JWT · **Body:** `StaffChangePasswordDto` - `currentPassword`, `newPassword`
 - **Success:** `200`
 - **Errors:** `400` weak/wrong password · **Mobile:** **Yes** · **Hub:** Rare
 
 #### `POST /api/v1/auth/refresh`
 
-- **Auth:** Public · **Body:** `StaffRefreshDto` / alternate keys — `refresh_token` or `refreshToken` required
-- **Success:** `200` — new `access_token` / `accessToken`
+- **Auth:** Public · **Body:** `StaffRefreshDto` / alternate keys - `refresh_token` or `refreshToken` required
+- **Success:** `200` - new `access_token` / `accessToken`
 - **Errors:** `400` missing token; `401` invalid refresh
 - **Mobile:** **Yes** · **Hub:** **P0**
 
 #### `POST /api/v1/auth/staff/bind-device`
 
-- **Auth:** JWT · **Body:** `BindDeviceDto` — nested `deviceFingerprint`, `deviceUuid`, `fingerprintHash` (64 hex SHA-256 of canonical JSON per contract), `timestamp` ISO8601
-- **Success:** `200` — `{ deviceId? }`
+- **Auth:** JWT · **Body:** `BindDeviceDto` - nested `deviceFingerprint`, `deviceUuid`, `fingerprintHash` (64 hex SHA-256 of canonical JSON per contract), `timestamp` ISO8601
+- **Success:** `200` - `{ deviceId? }`
 - **Errors:** `400` hash mismatch / validation · **Mobile:** **Yes** · **Hub:** No
 
 #### `POST /api/v1/auth/handoff`
 
-- **Auth:** Public · **Guards:** `ThrottlerGuard` — limit 15/min per config · **Body:** `RefreshDto` — `refreshToken` (min length 10)
-- **Success:** `200`/`201` — short-lived handoff payload (see `HandoffService`)
+- **Auth:** Public · **Guards:** `ThrottlerGuard` - limit 15/min per config · **Body:** `RefreshDto` - `refreshToken` (min length 10)
+- **Success:** `200`/`201` - short-lived handoff payload (see `HandoffService`)
 - **Errors:** `429` throttle · **Mobile:** No · **Hub:** **P0** web session bridge
 
 #### `POST /api/v1/auth/handoff/consume`
 
-- **Auth:** Public · **Throttle:** 30/min · **Body:** `HandoffConsumeDto` — `code` (min 8 chars)
-- **Success:** `200` — tokens for hub session
+- **Auth:** Public · **Throttle:** 30/min · **Body:** `HandoffConsumeDto` - `code` (min 8 chars)
+- **Success:** `200` - tokens for hub session
 - **Errors:** `400`/`401` invalid code · **Hub:** **P0**
 
 ---
@@ -460,21 +460,21 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 
 #### `GET /api/v1/users/me`
 
-- **Auth:** JWT + `TenantGuard` · **Roles:** (none on handler — any authenticated user with org)
-- **Success:** `200` — profile from `UsersService.getMe`
+- **Auth:** JWT + `TenantGuard` · **Roles:** (none on handler - any authenticated user with org)
+- **Success:** `200` - profile from `UsersService.getMe`
 - **Errors:** `403` no org · **Mobile:** Optional · **Hub:** **P0**
 
 #### `GET /api/v1/users`
 
 - **Auth:** JWT + tenant · **Roles:** `ADMIN`, `MANAGER`, `STAFF`
-- **Success:** `200` — staff list (`listStaff`)
+- **Success:** `200` - staff list (`listStaff`)
 - **Mobile:** Yes (peer list) · **Hub:** **P0** directory · **Pagination:** none
 
 #### `POST /api/v1/users`
 
 - **Auth:** JWT + tenant · **Roles:** `ADMIN`, `MANAGER` · **Body:** `CreateUserDto`
-- **Success:** `201`/`200` — created user
-- **Hub:** **P1** (overlaps `POST /staff` — align product UX)
+- **Success:** `201`/`200` - created user
+- **Hub:** **P1** (overlaps `POST /staff` - align product UX)
 
 ---
 
@@ -483,13 +483,13 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 #### `GET /api/v1/organizations/me`
 
 - **Auth:** JWT + tenant · **Roles:** `ADMIN`, `MANAGER`, `STAFF`
-- **Success:** `200` — org + plan + tax fields (see Prisma `Organization`)
+- **Success:** `200` - org + plan + tax fields (see Prisma `Organization`)
 - **Mobile:** Sync context · **Hub:** **P0**
 
 #### `PATCH /api/v1/organizations/me`
 
-- **Auth:** JWT + tenant · **Roles:** `ADMIN`, `MANAGER` · **Body:** `UpdateOrganizationDto` — optional `name`, `businessType`, `businessLocation`, `leadSource`, `phone`, `email`
-- **Success:** `200` — updated org
+- **Auth:** JWT + tenant · **Roles:** `ADMIN`, `MANAGER` · **Body:** `UpdateOrganizationDto` - optional `name`, `businessType`, `businessLocation`, `leadSource`, `phone`, `email`
+- **Success:** `200` - updated org
 - **Hub:** **P0** business profile
 
 ---
@@ -499,13 +499,13 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 #### `GET /api/v1/dashboard/summary`
 
 - **Auth:** JWT + tenant · **Roles:** `ADMIN`, `MANAGER` · **Query:** none
-- **Success:** `200` — `{ totalSales, totalRevenue, todaySales, todayRevenue, lowStockCount, expiringSoonCount, pendingTemporaryItems }` (numbers)
+- **Success:** `200` - `{ totalSales, totalRevenue, todaySales, todayRevenue, lowStockCount, expiringSoonCount, pendingTemporaryItems }` (numbers)
 - **Hub:** **P0** · **Live:** Poll
 
 #### `GET /api/v1/dashboard/reliability-summary`
 
 - **Auth:** JWT + tenant · **Roles:** `ADMIN`, `MANAGER`
-- **Success:** `200` — nested `backups`, `lowStorage`, `database`, `crashes` with counts + ISO timestamps (see `DashboardService`)
+- **Success:** `200` - nested `backups`, `lowStorage`, `database`, `crashes` with counts + ISO timestamps (see `DashboardService`)
 - **Hub:** **P1** · **Live:** Poll
 
 ---
@@ -515,43 +515,43 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 #### `GET /api/v1/sales`
 
 - **Auth:** JWT + tenant · **Roles:** `ADMIN`, `MANAGER`, `STAFF`
-- **Success:** `200` — array of serialized sales (max **100**, `soldAt` desc) with `items` + `createdBy`
+- **Success:** `200` - array of serialized sales (max **100**, `soldAt` desc) with `items` + `createdBy`
 - **Hub:** **P0** · **Gaps:** no `from`/`to`/cursor · **Live:** Poll
 
 #### `POST /api/v1/sales`
 
 - **Auth:** JWT + tenant · **Roles:** `ADMIN`, `MANAGER`, `STAFF` · **Body:** `CreateSaleDto`
-- **Success:** `201`/`200` — created sale (see `SalesService`)
+- **Success:** `201`/`200` - created sale (see `SalesService`)
 - **Errors:** `404` product; `400` insufficient stock · **Hub:** Optional register-style sale entry
 
 #### `POST /api/v1/staff/sales`
 
 - **Auth:** JWT + tenant · **Roles:** `ADMIN`, `MANAGER`, `STAFF`, `SALES_AGENT` · **Body:** `StaffSaleUploadDto` (sale id, receipt, totals, `items[]`, `paymentMethod`, `currency`, `soldAt`, optional `deviceInfo`, …)
-- **Success:** `201` — `{ syncedAt, synced_at }` · **Duplicate:** `409` same body (idempotent)
+- **Success:** `201` - `{ syncedAt, synced_at }` · **Duplicate:** `409` same body (idempotent)
 - **Errors:** `400` business validation · **Mobile:** **Primary sale upload** · **Hub:** Read via `GET /sales` · **Live:** Poll
 
 ---
 
-### Staff — administration (`StaffController`)
+### Staff - administration (`StaffController`)
 
 | Endpoint | Method | Roles | Query / params | Body | Success | Hub / mobile |
 |----------|--------|-------|------------------|------|---------|--------------|
-| `/staff` | `POST` | ADMIN, MANAGER | — | `CreateStaffDto` | Created staff | Hub P0 / mobile no |
-| `/staff` | `GET` | ADMIN, MANAGER | `includeInactive=true` | — | Staff array | Hub P0 |
-| `/staff/performance` | `GET` | ADMIN, MANAGER | `from`, `to` ISO | — | Metrics | Hub P1 |
-| `/staff/:id` | `GET` | ADMIN, MANAGER | — | `:id` UUID | Detail | Hub P0 |
-| `/staff/:id` | `PATCH` | ADMIN, MANAGER | — | `UpdateStaffDto` | Updated | Hub P0 |
-| `/staff/:id` | `DELETE` | ADMIN, MANAGER | — | — | Deactivated | Hub P1 |
-| `/staff/:id/reset-password` | `POST` | ADMIN, MANAGER | — | — | Temp password / ack | Hub P0 |
-| `/staff/:id/role` | `PATCH` | **ADMIN only** | — | `ChangeStaffRoleDto` | Updated role | Hub P0 |
-| `/staff/:id/set-permissions` | `POST` | ADMIN, MANAGER | — | `SetStaffPermissionsDto` | Updated | Hub P1 |
-| `/staff/:id/activity-log` | `GET` | ADMIN, MANAGER | `page`, `limit` | — | Paginated log | Hub P1 |
+| `/staff` | `POST` | ADMIN, MANAGER | - | `CreateStaffDto` | Created staff | Hub P0 / mobile no |
+| `/staff` | `GET` | ADMIN, MANAGER | `includeInactive=true` | - | Staff array | Hub P0 |
+| `/staff/performance` | `GET` | ADMIN, MANAGER | `from`, `to` ISO | - | Metrics | Hub P1 |
+| `/staff/:id` | `GET` | ADMIN, MANAGER | - | `:id` UUID | Detail | Hub P0 |
+| `/staff/:id` | `PATCH` | ADMIN, MANAGER | - | `UpdateStaffDto` | Updated | Hub P0 |
+| `/staff/:id` | `DELETE` | ADMIN, MANAGER | - | - | Deactivated | Hub P1 |
+| `/staff/:id/reset-password` | `POST` | ADMIN, MANAGER | - | - | Temp password / ack | Hub P0 |
+| `/staff/:id/role` | `PATCH` | **ADMIN only** | - | `ChangeStaffRoleDto` | Updated role | Hub P0 |
+| `/staff/:id/set-permissions` | `POST` | ADMIN, MANAGER | - | `SetStaffPermissionsDto` | Updated | Hub P1 |
+| `/staff/:id/activity-log` | `GET` | ADMIN, MANAGER | `page`, `limit` | - | Paginated log | Hub P1 |
 
 **Errors:** `:id` not UUID → `400`; not found → `404`.
 
 ---
 
-### Staff — POS & sync (`StaffPosController`, `SyncController`)
+### Staff - POS & sync (`StaffPosController`, `SyncController`)
 
 | Endpoint | Roles | Mobile | Hub | Notes |
 |----------|-------|--------|-----|-------|
@@ -564,11 +564,11 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 
 ---
 
-### Staff — mobile writes (`StaffMobileController`)
+### Staff - mobile writes (`StaffMobileController`)
 
 | Endpoint | Method | Roles | Body DTO | Success | Mobile | Hub |
 |----------|--------|-------|----------|---------|--------|-----|
-| `/staff/master-data` | `GET` | POS roles | — | `?since` | Catalog delta | **Yes** | P2 |
+| `/staff/master-data` | `GET` | POS roles | - | `?since` | Catalog delta | **Yes** | P2 |
 | `/staff/temporary-items` | `POST` | POS roles | `StaffTemporaryItemDto` | `200` | **Yes** | Audit only (no GET) |
 | `/staff/returns` | `POST` | POS roles | `StaffReturnDto` | `200` | **Yes** | Audit gap |
 | `/staff/inventory-events` | `POST` | POS roles | `StaffInventoryEventDto` | `200` | **Yes** | Use product events GET |
@@ -577,7 +577,7 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 
 ---
 
-### Staff — reliability (`StaffReliabilityController`)
+### Staff - reliability (`StaffReliabilityController`)
 
 | Endpoint | Method | Roles | Request | Success | Notes |
 |----------|--------|-------|---------|---------|-------|
@@ -598,16 +598,16 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 | Endpoint | Method | Roles | Query / params / body | Success |
 |----------|--------|-------|------------------------|---------|
 | `/products` | `GET` | ADMIN, MANAGER, STAFF | `QueryProductsDto` | Paginated list |
-| `/products/low-stock` | `GET` | ADMIN, MANAGER | — | Low-stock rows |
+| `/products/low-stock` | `GET` | ADMIN, MANAGER | - | Low-stock rows |
 | `/products/expiring-soon` | `GET` | ADMIN, MANAGER | `?months` | Soon-expiring |
 | `/products/from-temporary/:productId` | `POST` | ADMIN, MANAGER | `PromoteFromTemporaryDto` | `200` promote |
-| `/products/temporary` | `GET` | ADMIN, MANAGER, STAFF | — | Temp products |
+| `/products/temporary` | `GET` | ADMIN, MANAGER, STAFF | - | Temp products |
 | `/products/:id` | `GET` | ADMIN, MANAGER, STAFF | UUID | One product |
 | `/products/:id/stock-history` | `GET` | ADMIN, MANAGER | `page`, `limit` | Paginated |
 | `/products/:id/inventory-events` | `GET` | ADMIN, MANAGER | `page`, `limit` | Paginated |
 | `/products` | `POST` | ADMIN, MANAGER, STAFF | `CreateProductDto` | Created |
 | `/products/:id` | `PATCH` | ADMIN, MANAGER, STAFF | `UpdateProductDto` | Updated |
-| `/products/:id` | `DELETE` | ADMIN, MANAGER | — | Removed/deactivated |
+| `/products/:id` | `DELETE` | ADMIN, MANAGER | - | Removed/deactivated |
 | `/products/:id/pricing` | `PATCH` | ADMIN, MANAGER | `UpdatePricingDto` | Updated |
 | `/products/:id/duplicate` | `POST` | ADMIN, MANAGER | optional JSON `{ sku }` | Duplicate |
 
@@ -621,10 +621,10 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 |----------|--------|-------|--------------|
 | `/categories` | `POST` | ADMIN, MANAGER | `CreateCategoryDto` |
 | `/categories` | `GET` | ADMIN, MANAGER, STAFF | `QueryCategoriesDto` (`search`) |
-| `/categories/:id` | `GET` | ADMIN, MANAGER, STAFF | — |
-| `/categories/:id/products` | `GET` | ADMIN, MANAGER, STAFF | — |
+| `/categories/:id` | `GET` | ADMIN, MANAGER, STAFF | - |
+| `/categories/:id/products` | `GET` | ADMIN, MANAGER, STAFF | - |
 | `/categories/:id` | `PATCH` | ADMIN, MANAGER | `UpdateCategoryDto` |
-| `/categories/:id` | `DELETE` | ADMIN, MANAGER | — |
+| `/categories/:id` | `DELETE` | ADMIN, MANAGER | - |
 
 ---
 
@@ -635,11 +635,11 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 | `/batches` | `POST` | ADMIN, MANAGER | `CreateBatchDto` |
 | `/batches` | `GET` | ADMIN, MANAGER, STAFF | `QueryBatchesDto` (pagination + filters) |
 | `/batches/expiring` | `GET` | ADMIN, MANAGER | `?days` (default 30) |
-| `/batches/expired` | `GET` | ADMIN, MANAGER | — |
+| `/batches/expired` | `GET` | ADMIN, MANAGER | - |
 | `/batches/:id` | `GET` | ADMIN, MANAGER, STAFF | UUID |
 | `/batches/:id` | `PATCH` | ADMIN, MANAGER | `UpdateBatchDto` |
-| `/batches/:id` | `DELETE` | ADMIN, MANAGER | — |
-| `/batches/:id/remove-expired` | `POST` | ADMIN, MANAGER | — |
+| `/batches/:id` | `DELETE` | ADMIN, MANAGER | - |
+| `/batches/:id/remove-expired` | `POST` | ADMIN, MANAGER | - |
 
 ---
 
@@ -648,7 +648,7 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 | Endpoint | Method | Roles | Body / query |
 |----------|--------|-------|----------------|
 | `/analytics/crashes` | `GET` | ADMIN, MANAGER | `StaffReliabilityListQueryDto` |
-| `/analytics/crashes/:id` | `GET` | ADMIN, MANAGER | — (includes `stack`) |
+| `/analytics/crashes/:id` | `GET` | ADMIN, MANAGER | - (includes `stack`) |
 | `/analytics/performance` | `GET` | ADMIN, MANAGER | `StaffReliabilityListQueryDto` |
 | `/analytics/performance` | `POST` | POS roles | `MobilePerformanceDto` |
 | `/analytics/crash` | `POST` | POS roles | `MobileCrashDto` |
@@ -867,7 +867,7 @@ Common headers for JSON endpoints: `Content-Type: application/json`; protected r
 | Area | Gap |
 |------|-----|
 | Sales | No date range, staff filter, or pagination on `GET /sales` |
-| Users | `POST /users` vs `POST /staff` overlap—risk of duplicate mental models |
+| Users | `POST /users` vs `POST /staff` overlap-risk of duplicate mental models |
 | Customers | No CRM |
 | Exports | No `GET /reports/…` CSV/PDF |
 | Bulk | No bulk product import, bulk staff invite, batch price update |
@@ -957,12 +957,12 @@ flowchart TB
 ## Security considerations
 
 1. **Never use staff JWT in the owner hub.** Staff tokens grant `POST /staff/sales` and inventory mutations; a leaked staff token in a browser is higher risk than scoped owner tokens.
-2. **`PATCH /staff/:id/role` is ADMIN-only** — UI must hide from managers if policy requires.
-3. **`GET /analytics/crashes/:id` exposes stack traces** — restrict to trusted owners; avoid logging stacks to third-party client loggers unsanitized.
-4. **`GET /staff/backup/:id`** streams SQLite backups — **highly sensitive**; enforce strong auth, audit access, and consider time-limited signed URLs in a future revision.
-5. **Handoff codes** are short-lived but **public** endpoints — throttle already applied; hub must complete consume quickly and use HTTPS only.
-6. **Tenant isolation** is JWT-derived — hub must not allow overriding `organizationId` from client input on tenant routes (current design: good).
-7. **`SUPER_ADMIN`** without org cannot call tenant routes — platform console would need a separate API surface (not in this inventory).
+2. **`PATCH /staff/:id/role` is ADMIN-only** - UI must hide from managers if policy requires.
+3. **`GET /analytics/crashes/:id` exposes stack traces** - restrict to trusted owners; avoid logging stacks to third-party client loggers unsanitized.
+4. **`GET /staff/backup/:id`** streams SQLite backups - **highly sensitive**; enforce strong auth, audit access, and consider time-limited signed URLs in a future revision.
+5. **Handoff codes** are short-lived but **public** endpoints - throttle already applied; hub must complete consume quickly and use HTTPS only.
+6. **Tenant isolation** is JWT-derived - hub must not allow overriding `organizationId` from client input on tenant routes (current design: good).
+7. **`SUPER_ADMIN`** without org cannot call tenant routes - platform console would need a separate API surface (not in this inventory).
 
 ---
 

@@ -241,7 +241,7 @@ export default function TelemetryPerformancePage() {
                               Open
                             </Link>
                           ) : (
-                            "—"
+                            "-"
                           )}
                         </TableCell>
                       </TableRow>

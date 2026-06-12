@@ -86,7 +86,7 @@ export function parseStaffMember(raw: Record<string, unknown>): HubStaffMember {
       null,
     role,
     isActive,
-    staffId: staffId || "—",
+    staffId: staffId || "-",
     jobTitle:
       (p.jobTitle as string | null | undefined) ??
       (raw.jobTitle as string | null | undefined) ??
@@ -221,7 +221,7 @@ export async function setStaffPermissions(
 function mapActivityRow(row: Record<string, unknown>) {
   return {
     id: row.id != null ? String(row.id) : undefined,
-    action: String(row.action ?? row.type ?? row.eventType ?? "—"),
+    action: String(row.action ?? row.type ?? row.eventType ?? "-"),
     createdAt: String(row.createdAt ?? row.timestamp ?? row.at ?? ""),
     metadata: asRecord(row.metadata) ?? asRecord(row.payload),
   };
@@ -303,7 +303,7 @@ function mapStaffPerformanceRow(row: Record<string, unknown>): StaffPerformanceR
       const combined = [row.firstName, row.lastName].filter(Boolean).join(" ");
       if (combined) return combined;
       if (row.email) return String(row.email);
-      return "—";
+      return "-";
     })(),
     totalSales: toNumericAmount(
       (row.totalAmount ??

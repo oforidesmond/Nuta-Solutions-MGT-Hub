@@ -1,4 +1,4 @@
-# Notifications system — integration guide (REST + Socket.IO)
+# Notifications system - integration guide (REST + Socket.IO)
 
 This document is the **single deep-dive** for frontend and mobile clients integrating with the enhanced notifications stack: **per-user read state for org-wide (“broadcast”) rows**, **aggregated / deduplicated types**, **cached unread counts**, **Socket.IO hints**, and **optional expiry sweeps**. REST responses are authoritative; WebSocket events are **hints** to refetch.
 
@@ -26,7 +26,7 @@ This document is the **single deep-dive** for frontend and mobile clients integr
 
 - **Broadcast** (`userId === null`): visible to org **ADMIN** and **MANAGER** only. Read state is **per user** via `NotificationReadReceipt`, **not** the row’s `isRead`.
 - **Personal** (`userId` set): visible only to that user (`userId === currentUser`). Read state uses the row’s `isRead` / `readAt`.
-- **Staff mobile** (`STAFF`, `SALES_AGENT`): **personal inbox only** — they do **not** see org-wide (`userId: null`) rows. Owner → staff messages are always created with `userId` set.
+- **Staff mobile** (`STAFF`, `SALES_AGENT`): **personal inbox only** - they do **not** see org-wide (`userId: null`) rows. Owner → staff messages are always created with `userId` set.
 
 List API returns a **unified** `isRead` / `readAt` for both personal and broadcast cases (see **List endpoint** below).
 
@@ -41,7 +41,7 @@ These types may **merge into an existing unread row** within a configurable time
 - `REORDER_SUGGESTION`
 - `BATCH_EXPIRED`
 
-Dedup key is derived from `type`, `relatedEntityType`, `relatedEntityId`, and `userId` (or `"BROADCAST"`). Updates bump `aggregateCount` and refresh title/message/metadata. Realtime emits **`notification:new`** (personal) or **`notification:broadcast`** (org) with the **updated** row — clients should **merge by `id`**.
+Dedup key is derived from `type`, `relatedEntityType`, `relatedEntityId`, and `userId` (or `"BROADCAST"`). Updates bump `aggregateCount` and refresh title/message/metadata. Realtime emits **`notification:new`** (personal) or **`notification:broadcast`** (org) with the **updated** row - clients should **merge by `id`**.
 
 ### 2.3 Default `expiresAt` (retention hints)
 
@@ -61,7 +61,7 @@ New notifications get `expiresAt` from type (calendar days from creation, **UTC*
 
 ### 2.4 Temporary-item daily notification (lazy + cron)
 
-Listing notifications **may** trigger materialization of “yesterday’s” temporary-item summary for the org (safety net if cron missed). Frontend does not call anything special — expect occasional **new** rows after opening the inbox.
+Listing notifications **may** trigger materialization of “yesterday’s” temporary-item summary for the org (safety net if cron missed). Frontend does not call anything special - expect occasional **new** rows after opening the inbox.
 
 ### 2.5 Unread count semantics
 
@@ -72,7 +72,7 @@ Listing notifications **may** trigger materialization of “yesterday’s” tem
   - `SECURITY_ALERT`, `SUSPICIOUS_ACTIVITY`, `DEVICE_UNAUTHORIZED`
   - `BACKUP_FAILED`, `USAGE_LIMIT_REACHED`, `SERVICE_MAINTENANCE`
 
-Use `hasCritical` for badge styling or a “urgent” filter — do not hard-code only the two legacy types.
+Use `hasCritical` for badge styling or a “urgent” filter - do not hard-code only the two legacy types.
 
 ### 2.6 Permissive `type` on create (platform + internal)
 
@@ -88,12 +88,12 @@ Clients listing notifications should:
 
 ---
 
-## 3. `NotificationType` (Prisma enum — mirror in clients)
+## 3. `NotificationType` (Prisma enum - mirror in clients)
 
 Use the same string literals as the API (JSON preserves enum names). **40 values** + fallback:
 
 ```typescript
-/** Mirror of Prisma `NotificationType` — keep in sync with backend schema. */
+/** Mirror of Prisma `NotificationType` - keep in sync with backend schema. */
 export type NotificationType =
   // Inventory & operations
   | 'TEMPORARY_ITEM_SOLD'
@@ -206,10 +206,10 @@ interface NotificationMetadataOther {
 
 **Errors (typical):**
 
-- **401** — missing/invalid/expired token → refresh token flow.
-- **403** — wrong role or tenant guard failure.
-- **400** — validation (e.g. invalid UUID on mark-read path).
-- **200** on mark-read when the DB update succeeded — **even if Redis cache delete failed** (do not show “service unavailable” for mark-read).
+- **401** - missing/invalid/expired token → refresh token flow.
+- **403** - wrong role or tenant guard failure.
+- **400** - validation (e.g. invalid UUID on mark-read path).
+- **200** on mark-read when the DB update succeeded - **even if Redis cache delete failed** (do not show “service unavailable” for mark-read).
 
 ### 4.1 `GET /api/v1/notifications/unread-count`
 
@@ -239,9 +239,9 @@ export interface NotificationsUnreadCountResponse {
 
 | Param | Type | Default | Notes |
 |--------|------|---------|--------|
-| `unread` | string | — | If `true` or `1`, only unread rows for this user. |
+| `unread` | string | - | If `true` or `1`, only unread rows for this user. |
 | `limit` | number | `50` | Clamped to **1–100**. |
-| `cursor` | UUID string | — | Opaque: **notification `id`** of the last item from the previous page. |
+| `cursor` | UUID string | - | Opaque: **notification `id`** of the last item from the previous page. |
 
 **Response:**
 
@@ -258,7 +258,7 @@ export interface NotificationListItem {
   /** Merged event count for deduped types; always >= 1. */
   aggregateCount: number;
   /**
-   * JSON from DB — structure varies by `type` / producer.
+   * JSON from DB - structure varies by `type` / producer.
    * When `type === 'OTHER'`, check `metadata.originalType` for the requested label.
    */
   metadata: unknown;
@@ -319,8 +319,8 @@ export interface SendNotificationRequest {
 
 **Errors:**
 
-- **400** — no targeting / no recipients / invalid `targetUserIds` → `{ message, invalidUserIds }`
-- **403** — not ADMIN or MANAGER
+- **400** - no targeting / no recipients / invalid `targetUserIds` → `{ message, invalidUserIds }`
+- **403** - not ADMIN or MANAGER
 
 Each create invalidates the recipient’s unread-count cache and emits **`notification:new`** with optional **`senderName`** (from sender display name).
 
@@ -334,9 +334,9 @@ Lists **personal** notifications the caller sent to staff (`metadata.source === 
 |--------|------|---------|--------|
 | `page` | number | `1` | 1-based page index. |
 | `limit` | number | `25` | Clamped to **1–100**. |
-| `type` | `NotificationType[]` | — | Repeat param or array; filter by stored enum `type`. |
-| `isRead` | boolean | — | Filter by recipient read state. |
-| `userId` | UUID | — | Filter to a single recipient (`notification.userId`). |
+| `type` | `NotificationType[]` | - | Repeat param or array; filter by stored enum `type`. |
+| `isRead` | boolean | - | Filter by recipient read state. |
+| `userId` | UUID | - | Filter to a single recipient (`notification.userId`). |
 
 **Response:**
 
@@ -392,9 +392,9 @@ export interface NotificationMarkReadResponse {
 
 ---
 
-## 5. Platform Super Admin — send notifications (`POST /api/v1/platform/notifications/broadcast`)
+## 5. Platform Super Admin - send notifications (`POST /api/v1/platform/notifications/broadcast`)
 
-**Auth:** `SUPER_ADMIN` JWT (platform routes — not the tenant Hub `/notifications` routes).  
+**Auth:** `SUPER_ADMIN` JWT (platform routes - not the tenant Hub `/notifications` routes).  
 **Full API reference:** [`SUPER_ADMIN_API.md`](../SUPER_ADMIN_API.md).
 
 This endpoint creates notification rows in tenant orgs. Realtime: affected orgs receive **`notification:broadcast`** (digest with `bulk: true`) or **`notification:new`** for personal rows.
@@ -408,7 +408,7 @@ export interface PlatformBroadcastNotificationRequest {
   type: string;        // any non-empty string; unknown → stored as OTHER
   targetOrganizations?: string[]; // org UUIDs; omit = all active orgs (role/org-wide modes)
   targetRoles?: UserRole[];       // ADMIN | MANAGER | STAFF | …
-  targetUserIds?: string[];       // user UUIDs — cross-org individual targeting
+  targetUserIds?: string[];       // user UUIDs - cross-org individual targeting
 }
 ```
 
@@ -418,13 +418,13 @@ export interface PlatformBroadcastNotificationRequest {
 |----------|------------|--------|
 | **1** | `targetUserIds` | One **personal** row per user (`userId` set), any active org. `targetRoles` ignored. Optional `targetOrganizations` scopes eligible users. |
 | **2** | `targetRoles` (no `targetUserIds`) | One row per active user matching roles in the org filter. |
-| **3** | Neither | One **org-wide** row per org (`userId: null`) — visible to all Hub admins/managers. |
+| **3** | Neither | One **org-wide** row per org (`userId: null`) - visible to all Hub admins/managers. |
 
 **Org filter** (modes 2–3): `targetOrganizations` omitted → all `isActive=true` organizations.
 
 ### 5.3 Examples
 
-**All orgs — maintenance banner (org-wide):**
+**All orgs - maintenance banner (org-wide):**
 
 ```json
 {
@@ -434,7 +434,7 @@ export interface PlatformBroadcastNotificationRequest {
 }
 ```
 
-**Specific orgs — managers only (personal rows):**
+**Specific orgs - managers only (personal rows):**
 
 ```json
 {
@@ -488,7 +488,7 @@ Users must be **active** with a non-null `organizationId` on an **active** organ
 - **Role blast:** `targetOrganizations` + `targetRoles`.
 - **Org-wide announcement:** `targetOrganizations` only (or omit for all orgs).
 - **Type field:** send new enum strings (e.g. `PAYMENT_FAILED`) directly; no backend deploy needed for types already in the enum. Truly unknown strings persist as `OTHER` + `metadata.originalType`.
-- **Hub clients** in those orgs: personal targets get `notification:new`; bulk org-wide/platform batches often emit org-room digest with `bulk: true` — **refetch list** (see Socket.IO below).
+- **Hub clients** in those orgs: personal targets get `notification:new`; bulk org-wide/platform batches often emit org-room digest with `bulk: true` - **refetch list** (see Socket.IO below).
 
 ---
 
@@ -498,7 +498,7 @@ Users must be **active** with a non-null `organizationId` on an **active** organ
 
 - **Engine:** Socket.IO **v4**
 - **Namespace:** `/notifications`
-- **URL:** same origin as API, e.g. `https://api.example.com` with namespace path `/notifications` (client: `io(url, { path: '/socket.io/', ... })` — use your deployment’s actual Socket.IO path if customized; default is `/socket.io/`).
+- **URL:** same origin as API, e.g. `https://api.example.com` with namespace path `/notifications` (client: `io(url, { path: '/socket.io/', ... })` - use your deployment’s actual Socket.IO path if customized; default is `/socket.io/`).
 
 **Auth** (same **access** JWT as REST):
 
@@ -509,7 +509,7 @@ The server **disconnects** immediately if:
 
 - token missing / invalid JWT
 - payload `type !== 'access'`
-- `organizationId` is **null** on the token (e.g. platform super-admin without org — Hub tenant features unavailable)
+- `organizationId` is **null** on the token (e.g. platform super-admin without org - Hub tenant features unavailable)
 
 On success the socket joins rooms: `org:<organizationId>` and `user:<sub>`.
 
@@ -521,7 +521,7 @@ Env **`WEBSOCKET_CORS_ORIGIN`**: comma-separated allowed origins for this gatewa
 
 Server → client only (no client → server notification API on this namespace).
 
-**Shared “single notification” payload** (mirrors `NotificationRealtimePayload` in `notifications-realtime.service.ts`). **Does not include `metadata`** — refetch list or keep existing merged state for full detail. Includes **`aggregateCount`** so the UI can update dedup badges on merge without a full list refetch.
+**Shared “single notification” payload** (mirrors `NotificationRealtimePayload` in `notifications-realtime.service.ts`). **Does not include `metadata`** - refetch list or keep existing merged state for full detail. Includes **`aggregateCount`** so the UI can update dedup badges on merge without a full list refetch.
 
 ```typescript
 export interface NotificationRealtimePayload {
@@ -584,7 +584,7 @@ function isAdminDigest(
 
 ## 7. Client implementation examples
 
-### 7.1 Browser / Vite / React — Socket.IO client
+### 7.1 Browser / Vite / React - Socket.IO client
 
 Dependencies: `socket.io-client@4`.
 
@@ -671,8 +671,8 @@ Use the same URL, `auth: { token }`, and prefer **websocket** transport where su
 ## 9. Error handling guidance
 
 - **REST 401 / 403:** Do not treat as “notification bug”; fix auth/session. After refresh, replay pending mark-read if idempotent (`updated: 0` means nothing changed).
-- **Mark-read returns `{ updated: 0 }`:** Item not visible to user, wrong org, or wrong personal recipient — remove from UI or refetch list; do not retry blindly.
-- **Socket immediate disconnect:** Usually invalid/missing token or no `organizationId` on token — show “live updates unavailable” and fall back to polling.
+- **Mark-read returns `{ updated: 0 }`:** Item not visible to user, wrong org, or wrong personal recipient - remove from UI or refetch list; do not retry blindly.
+- **Socket immediate disconnect:** Usually invalid/missing token or no `organizationId` on token - show “live updates unavailable” and fall back to polling.
 - **Redis / cache:** No user-facing error for mark-read or unread-count from cache failures; if counts “jump” after ≤30s, that is expected when Redis was stale.
 
 ---
@@ -680,10 +680,10 @@ Use the same URL, `auth: { token }`, and prefer **websocket** transport where su
 ## 10. Performance best practices
 
 - **Badge:** Prefer **`GET /unread-count`** over scanning the list; cache in React Query with short `staleTime` (e.g. 15–30s) and invalidate on socket hints.
-- **List:** Use **cursor** pagination; avoid refetching all pages on every hint — invalidate first page only, or merge single-row WS payloads.
+- **List:** Use **cursor** pagination; avoid refetching all pages on every hint - invalidate first page only, or merge single-row WS payloads.
 - **Broadcast bulk:** `NotificationAdminBroadcastDigestPayload` means **many** DB rows; avoid building a fake row without refetch unless you show a toast only.
 - **Debouncing:** Coalesce `notification:count-updated` within one frame / 400 ms to avoid storms when many org members receive events.
-- **Personal vs org:** `notification:new` is targeted — use it to avoid excessive org-wide list churn when only one manager should see a row.
+- **Personal vs org:** `notification:new` is targeted - use it to avoid excessive org-wide list churn when only one manager should see a row.
 
 ---
 

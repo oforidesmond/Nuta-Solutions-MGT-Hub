@@ -148,10 +148,10 @@ export function DevicePerformanceSection() {
               <TableBody>
                 {perfRows.map((row, i) => (
                   <TableRow key={i}>
-                    <TableCell>{row.deviceModel ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{row.metric ?? "—"}</TableCell>
+                    <TableCell>{row.deviceModel ?? "-"}</TableCell>
+                    <TableCell className="text-muted-foreground">{row.metric ?? "-"}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {row.avgDurationMs != null ? formatNumber(row.avgDurationMs) : "—"}
+                      {row.avgDurationMs != null ? formatNumber(row.avgDurationMs) : "-"}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -187,9 +187,9 @@ export function DevicePerformanceSection() {
                 {crashRows.map((row, i) => (
                   <TableRow key={row.id ?? i}>
                     <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                      {row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}
+                      {row.createdAt ? new Date(row.createdAt).toLocaleString() : "-"}
                     </TableCell>
-                    <TableCell>{row.deviceModel ?? "—"}</TableCell>
+                    <TableCell>{row.deviceModel ?? "-"}</TableCell>
                     <TableCell className="max-w-md truncate font-mono text-xs">
                       {row.error && row.error.length > 60 ? (
                         <TooltipProvider>
@@ -203,7 +203,7 @@ export function DevicePerformanceSection() {
                           </UiTooltip>
                         </TooltipProvider>
                       ) : (
-                        row.error ?? "—"
+                        row.error ?? "-"
                       )}
                       {row.id ? (
                         <TooltipProvider>

@@ -87,7 +87,7 @@ export default function ExpiringSoonProductsPage() {
                         {p.name}
                       </Link>
                       <p className="text-sm text-muted-foreground">
-                        Nearest expiry: {p.nearestExpiryDate ? formatDateDMY(p.nearestExpiryDate) : "—"}
+                        Nearest expiry: {p.nearestExpiryDate ? formatDateDMY(p.nearestExpiryDate) : "-"}
                       </p>
                     </div>
                     {days != null && days >= 0 ? (

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,16 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createStockTake } from "@/lib/api/stock-takes";
-import { fetchBranchesList } from "@/lib/api/branches";
 import { handleApiError } from "@/lib/api/errors";
 import { productQuantity } from "@/lib/stock-status";
-import type { HubBranchOption } from "@/lib/types/staff";
 import type { HubProduct } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
-
-function activeBranches(list: HubBranchOption[]): HubBranchOption[] {
-  return list.filter((b) => b.isActive !== false);
-}
 
 function parseNonNegativeDecimal(raw: string): { ok: true; value: number } | { ok: false } {
   const t = raw.trim();
@@ -51,18 +44,7 @@ export function StockTakeRecordModal(props: {
   const { open, onOpenChange, product, onRecorded } = props;
   const [physicalInput, setPhysicalInput] = useState("");
   const [notes, setNotes] = useState("");
-  const [branchId, setBranchId] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  const branchesQuery = useQuery({
-    queryKey: ["branches", "list"],
-    queryFn: fetchBranchesList,
-    enabled: open,
-    staleTime: 60_000,
-  });
-
-  const branches = activeBranches(branchesQuery.data ?? []);
-  const showBranchSelector = branches.length > 1;
 
   const systemStock = product ? productQuantity(product) : NaN;
 
@@ -70,7 +52,6 @@ export function StockTakeRecordModal(props: {
     if (!open) {
       setPhysicalInput("");
       setNotes("");
-      setBranchId("");
       setSubmitting(false);
     }
   }, [open]);
@@ -95,7 +76,6 @@ export function StockTakeRecordModal(props: {
         productId: product.id,
         physicalCount: parsedPhysical.value,
         notes: notes.trim() || undefined,
-        branchId: showBranchSelector && branchId ? branchId : undefined,
       });
       const before = formatQtyLabel(row.quantityBefore);
       const after = formatQtyLabel(row.quantityAfter);
@@ -129,31 +109,12 @@ export function StockTakeRecordModal(props: {
               </div>
               <div className="grid gap-1.5">
                 <Label>SKU</Label>
-                <p className="font-mono text-sm text-muted-foreground">{product.sku?.trim() ? product.sku : "—"}</p>
+                <p className="font-mono text-sm text-muted-foreground">{product.sku?.trim() ? product.sku : "-"}</p>
               </div>
               <div className="grid gap-1.5">
                 <Label>Current system stock</Label>
-                <p className="tabular-nums text-sm font-medium">{Number.isFinite(systemStock) ? systemStock : "—"}</p>
+                <p className="tabular-nums text-sm font-medium">{Number.isFinite(systemStock) ? systemStock : "-"}</p>
               </div>
-              {showBranchSelector ? (
-                <div className="grid gap-1.5">
-                  <Label htmlFor="st-branch">Branch</Label>
-                  <select
-                    id="st-branch"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    value={branchId}
-                    onChange={(e) => setBranchId(e.target.value)}
-                  >
-                    <option value="">Default (no specific branch)</option>
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground">Optional — use when this count applies to a specific branch.</p>
-                </div>
-              ) : null}
               <div className="grid gap-1.5">
                 <Label htmlFor="st-physical">Physical count</Label>
                 <Input
@@ -184,7 +145,7 @@ export function StockTakeRecordModal(props: {
                           : "text-foreground",
                   )}
                 >
-                  {difference == null || !Number.isFinite(systemStock) ? "—" : difference.toLocaleString()}
+                  {difference == null || !Number.isFinite(systemStock) ? "-" : difference.toLocaleString()}
                 </span>
               </div>
               <div className="grid gap-1.5">

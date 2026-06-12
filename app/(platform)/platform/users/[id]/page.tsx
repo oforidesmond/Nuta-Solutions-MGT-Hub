@@ -121,8 +121,8 @@ export default function PlatformUserDetailPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <InfoCard title="Contact">
-          <InfoRow label="Email" value={user.email ?? "—"} />
-          <InfoRow label="Phone" value={user.phoneNumber ?? "—"} mono />
+          <InfoRow label="Email" value={user.email ?? "-"} />
+          <InfoRow label="Phone" value={user.phoneNumber ?? "-"} mono />
           <InfoRow label="User ID" value={user.id} mono />
         </InfoCard>
 
@@ -143,7 +143,7 @@ export default function PlatformUserDetailPage() {
                       </span>
                     </Link>
                   ) : (
-                    "—"
+                    "-"
                   )
                 }
               />
@@ -154,10 +154,10 @@ export default function PlatformUserDetailPage() {
               <InfoRow
                 label="Status"
                 value={
-                  orgSummary.planStatus ? <StatusBadge status={orgSummary.planStatus} /> : "—"
+                  orgSummary.planStatus ? <StatusBadge status={orgSummary.planStatus} /> : "-"
                 }
               />
-              <InfoRow label="Currency" value={orgSummary.currency ?? "—"} />
+              <InfoRow label="Currency" value={orgSummary.currency ?? "-"} />
             </>
           ) : (
             <p className="text-sm text-muted-foreground">No tenant organization on this account.</p>
@@ -205,12 +205,12 @@ export default function PlatformUserDetailPage() {
               <TableBody>
                 {activity.recentSales.map((s) => (
                   <TableRow key={s.id}>
-                    <TableCell className="px-3 font-mono text-xs">{s.receiptNumber ?? "—"}</TableCell>
+                    <TableCell className="px-3 font-mono text-xs">{s.receiptNumber ?? "-"}</TableCell>
                     <TableCell className="px-3 text-sm">
                       {formatCurrency(Number(s.totalAmount || 0))}
                     </TableCell>
                     <TableCell className="px-3 text-xs text-muted-foreground">
-                      {s.soldAt ? formatDate(s.soldAt) : "—"}
+                      {s.soldAt ? formatDate(s.soldAt) : "-"}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { NotificationsErrorBoundary } from "@/components/layout/notifications-error-boundary";
 import { NotificationsMenu } from "@/components/layout/notifications-menu";
 import { useAuthStore } from "@/stores/auth-store";
@@ -45,7 +46,10 @@ export function AppHeader() {
           >
             <Menu className="size-5" />
           </Button>
-          <SheetContent side="left" className="w-64 p-0">
+          <SheetContent
+            side="left"
+            className="gap-0 overflow-hidden p-0 data-[side=left]:w-64"
+          >
             <AppSidebar onNavigate={() => setNavOpen(false)} />
           </SheetContent>
         </Sheet>
@@ -59,6 +63,7 @@ export function AppHeader() {
         </div>
       </div>
       <div className="flex items-center gap-1">
+        <BranchSwitcher />
         <NotificationsErrorBoundary>
           <NotificationsMenu />
         </NotificationsErrorBoundary>

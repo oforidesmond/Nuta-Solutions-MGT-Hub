@@ -4,7 +4,7 @@ type LoginBrandProps = {
   description?: string;
 };
 
-/** Centered mark for auth surfaces — matches sidebar identity at login scale. */
+/** Centered mark for auth surfaces - matches sidebar identity at login scale. */
 export function LoginBrand({
   description = "Sign in with the email and password for your organization.",
 }: LoginBrandProps) {

@@ -26,7 +26,7 @@ export default function NotificationsInboxPage() {
           <p className="text-sm text-muted-foreground">
             {unreadCount > 0
               ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-              : "All caught up — tap a notification to read the full message."}
+              : "All caught up - tap a notification to read the full message."}
           </p>
         </div>
         {showSentLink ? (

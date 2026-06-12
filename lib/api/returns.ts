@@ -39,7 +39,6 @@ export async function fetchReturnsPage(
       page: params.page,
       limit: params.limit,
       staffId: params.staffId,
-      branchId: params.branchId,
     },
   });
   const { rows, meta } = unwrapListPayload(res.data);

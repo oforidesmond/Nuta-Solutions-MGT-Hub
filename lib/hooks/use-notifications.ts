@@ -116,7 +116,7 @@ export function useMarkNotificationRead() {
       toast.error("Failed to mark notification as read");
     },
     onSettled: () => {
-      // Refresh list only. Skip unread-count invalidation here — server cache can
+      // Refresh list only. Skip unread-count invalidation here - server cache can
       // stay stale ~30s and would overwrite the optimistic badge decrement.
       void queryClient.invalidateQueries({ queryKey: notificationsListQueryKey });
     },

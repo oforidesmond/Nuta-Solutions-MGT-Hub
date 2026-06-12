@@ -79,7 +79,7 @@ export function DeviceFiltersBar({
             </Label>
             <Input
               id="device-user-id"
-              placeholder="Optional — narrow to devices owned by…"
+              placeholder="Optional - narrow to devices owned by…"
               value={userIdFilter}
               onChange={(e) => onUserIdFilterChange(e.target.value)}
               className="font-mono text-xs"

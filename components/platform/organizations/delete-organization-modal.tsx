@@ -111,7 +111,7 @@ function DeleteForm({
             </li>
           </ul>
           <p className="mt-2 text-xs">
-            The data itself is retained — contact engineering for hard deletion.
+            The data itself is retained - contact engineering for hard deletion.
           </p>
         </div>
 

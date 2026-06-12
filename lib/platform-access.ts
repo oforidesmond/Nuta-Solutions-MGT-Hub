@@ -4,7 +4,7 @@ import type { HubUser } from "@/lib/types/domain";
  * SUPER_ADMIN identification mirrors the backend `SuperAdminGuard` contract:
  * the user must have the SUPER_ADMIN role AND no organizationId. A
  * SUPER_ADMIN token that carries an organizationId is treated as
- * misconfigured (defense in depth — backend rejects it with 403).
+ * misconfigured (defense in depth - backend rejects it with 403).
  */
 export function isPlatformAdmin(user: HubUser | null | undefined): boolean {
   if (!user) return false;

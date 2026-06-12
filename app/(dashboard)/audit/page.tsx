@@ -65,7 +65,7 @@ function safeJsonPretty(obj: unknown): string {
 }
 
 function cellDisplay(k: string, v: unknown): { display: string; full?: string; kind?: "id" | "payload" } {
-  if (v == null) return { display: "—" };
+  if (v == null) return { display: "-" };
 
   if (k === "payload") {
     if (typeof v === "object") {

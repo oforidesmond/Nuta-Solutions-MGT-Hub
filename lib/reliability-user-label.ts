@@ -23,5 +23,5 @@ export function reliabilityCrashStaffDisplayName(
   const fromNested = nestedUserDisplayName(row.user ?? undefined);
   if (fromNested) return fromNested;
   if (row.userId) return labelByUserId[row.userId] || row.userId;
-  return "—";
+  return "-";
 }

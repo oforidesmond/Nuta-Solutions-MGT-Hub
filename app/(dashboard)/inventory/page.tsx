@@ -92,7 +92,7 @@ export default function InventoryHubPage() {
             <CardTitle className="text-base">Tip</CardTitle>
             <CardDescription>
               Add products under <Link className="font-medium text-primary underline-offset-2 hover:underline" href="/products">All products</Link>{" "}
-              — this page is for day-to-day stock tasks.
+              - this page is for day-to-day stock tasks.
             </CardDescription>
           </div>
         </CardHeader>

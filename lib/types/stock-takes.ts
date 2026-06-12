@@ -38,8 +38,6 @@ export interface StockTakesSummary {
 export interface StockTakesListParams {
   startDate?: string;
   endDate?: string;
-  branchId?: string;
-  organisationId?: string;
   page?: number;
   limit?: number;
 }
@@ -58,5 +56,4 @@ export interface CreateStockTakePayload {
   productId: string;
   physicalCount: number;
   notes?: string;
-  branchId?: string;
 }

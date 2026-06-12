@@ -58,7 +58,7 @@ export function SyncFailuresTable({
                 <p className="font-mono text-xs text-muted-foreground">{failure.staffUserId}</p>
               </TableCell>
               <TableCell className="font-mono text-xs">
-                {failure.errorCode ?? "—"}
+                {failure.errorCode ?? "-"}
               </TableCell>
               <TableCell>
                 <SyncFailureStatusBadge status={failure.status} />
@@ -68,7 +68,7 @@ export function SyncFailuresTable({
                 <p className="font-mono text-xs text-muted-foreground">{failure.entityId}</p>
               </TableCell>
               <TableCell>
-                <p className="text-foreground">{receiptNumber(failure) ?? "—"}</p>
+                <p className="text-foreground">{receiptNumber(failure) ?? "-"}</p>
                 <p className="text-xs text-muted-foreground">{totalAmountLabel(failure)}</p>
               </TableCell>
               <TableCell className="text-xs text-muted-foreground">

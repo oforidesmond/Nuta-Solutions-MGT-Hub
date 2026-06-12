@@ -270,7 +270,7 @@ export default function DashboardHomePage() {
                   value={String(reliabilityMerged.storageCriticalLast24hCount)}
                   hint={
                     reliabilityMerged.storageLastOccurredAt
-                      ? `Last ${formatDate(reliabilityMerged.storageLastOccurredAt)} (${reliabilityMerged.storageLastLevel ?? "—"})`
+                      ? `Last ${formatDate(reliabilityMerged.storageLastOccurredAt)} (${reliabilityMerged.storageLastLevel ?? "-"})`
                       : "No recent low-storage events in summary"
                   }
                   icon={HardDrive}
@@ -414,7 +414,7 @@ function VarianceLinkCard({
   value: number | undefined;
 }) {
   const total = typeof value === "number" ? value : 0;
-  const display = isLoading ? "…" : isError ? "—" : String(total);
+  const display = isLoading ? "…" : isError ? "-" : String(total);
   const hint = isError
     ? FORCED_SALES_UI.feedUnavailable
     : isLoading

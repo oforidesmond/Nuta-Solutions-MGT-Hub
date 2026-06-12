@@ -171,7 +171,7 @@ function TemporaryItemsContent() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Temporary items</h1>
         <p className="text-sm text-muted-foreground">
-          Items stay here until you promote them or ignore them — nothing auto-dismisses. Promotion turns the
+          Items stay here until you promote them or ignore them - nothing auto-dismisses. Promotion turns the
           placeholder into a normal catalog product.
         </p>
       </div>
@@ -232,10 +232,10 @@ function TemporaryItemsContent() {
                           highlight && "bg-amber-500/10 dark:bg-amber-500/15",
                         )}
                       >
-                        <TableCell className="font-mono text-sm">{row.barcode ?? "—"}</TableCell>
+                        <TableCell className="font-mono text-sm">{row.barcode ?? "-"}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium">{row.name ?? "—"}</span>
+                            <span className="font-medium">{row.name ?? "-"}</span>
                             {days != null && days > 7 ? (
                               <Badge
                                 variant="outline"
@@ -250,10 +250,10 @@ function TemporaryItemsContent() {
                           {formatCurrency(Number.isFinite(price) ? price : 0, currency)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {Number.isFinite(qty) ? qty : "—"}
+                          {Number.isFinite(qty) ? qty : "-"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {when ? `${formatDateDMY(when)} · ${formatTime12h(when)}` : "—"}
+                          {when ? `${formatDateDMY(when)} · ${formatTime12h(when)}` : "-"}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-wrap justify-end gap-2">

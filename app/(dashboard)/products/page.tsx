@@ -513,11 +513,11 @@ export default function ProductsPage() {
                           {p.name}
                         </Link>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{p.sku ?? "—"}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{p.sku ?? "-"}</TableCell>
                       <TableCell className="text-sm">{productCategoryLabel(p)}</TableCell>
                       <TableCell className="text-right">
                         <Badge variant="outline" className={cn("tabular-nums", stockBadgeClass(tone))} title={tone === "low" ? "Below reorder level" : undefined}>
-                          {Number.isFinite(q) ? q : "—"}
+                          {Number.isFinite(q) ? q : "-"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">
@@ -596,11 +596,11 @@ export default function ProductsPage() {
                       {p.name}
                     </Link>
                     <Badge variant="outline" className={cn("shrink-0 tabular-nums", stockBadgeClass(tone))}>
-                      {Number.isFinite(q) ? q : "—"}
+                      {Number.isFinite(q) ? q : "-"}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    <span className="font-mono">{p.sku ?? "—"}</span>
+                    <span className="font-mono">{p.sku ?? "-"}</span>
                     <span className="mx-1">·</span>
                     {productCategoryLabel(p)}
                   </p>

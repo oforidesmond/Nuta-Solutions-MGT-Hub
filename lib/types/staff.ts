@@ -1,6 +1,6 @@
 import type { UserRole } from "@/lib/types/domain";
 
-/** Staff list/detail DTO — aligned with User + StaffProfile in schema.prisma. */
+/** Staff list/detail DTO - aligned with User + StaffProfile in schema.prisma. */
 export interface HubStaffMember {
   /** Use for `PATCH /staff/:id` and related routes (typically User.id). */
   id: string;
@@ -18,7 +18,7 @@ export interface HubStaffMember {
   branch?: { id: string; name: string } | null;
   /** StaffProfile.permissions JSON as string-keyed flags. */
   permissions: Record<string, boolean>;
-  /** Phase 2 — device time warning (from StaffProfile / GET staff detail). */
+  /** Phase 2 - device time warning (from StaffProfile / GET staff detail). */
   lastDeviceTimeWarningAt?: string | null;
   lastDeviceTimeOffsetMinutes?: number | null;
   lastDeviceTimeModel?: string | null;
@@ -52,8 +52,5 @@ export interface StaffPerformanceRow {
   staffId?: string | null;
 }
 
-export interface HubBranchOption {
-  id: string;
-  name: string;
-  isActive?: boolean;
-}
+/** @deprecated Use `HubBranch` from `@/lib/types/branches`. */
+export type HubBranchOption = import("@/lib/types/branches").HubBranch;

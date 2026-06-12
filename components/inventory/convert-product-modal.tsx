@@ -17,20 +17,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { executeBulkConversion, fetchProductConversions } from "@/lib/api/product-conversions";
-import { fetchBranchesList } from "@/lib/api/branches";
 import { handleApiError } from "@/lib/api/errors";
 import type { ConversionDirection, ProductConversion } from "@/lib/types/conversions";
-import type { HubBranchOption } from "@/lib/types/staff";
 import type { HubProduct } from "@/lib/types/domain";
 import { productQuantity } from "@/lib/stock-status";
 import { cn } from "@/lib/utils";
 
-function activeBranches(list: HubBranchOption[]): HubBranchOption[] {
-  return list.filter((b) => b.isActive !== false);
-}
-
 function formatQtyLabel(v: string | number | null | undefined): string {
-  if (v == null) return "—";
+  if (v == null) return "-";
   const n = Number(v);
   if (!Number.isFinite(n)) return String(v);
   return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
@@ -53,7 +47,6 @@ export function ConvertProductModal(props: {
   const { open, onOpenChange, product, onSuccess } = props;
   const [qtyInput, setQtyInput] = useState("");
   const [notes, setNotes] = useState("");
-  const [branchId, setBranchId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const convQuery = useQuery({
@@ -62,16 +55,6 @@ export function ConvertProductModal(props: {
     enabled: open && !!product?.id,
     staleTime: 15_000,
   });
-
-  const branchesQuery = useQuery({
-    queryKey: ["branches", "list"],
-    queryFn: fetchBranchesList,
-    enabled: open,
-    staleTime: 60_000,
-  });
-
-  const branches = activeBranches(branchesQuery.data ?? []);
-  const showBranch = branches.length > 1;
 
   const packRow = convQuery.data ? firstActiveParent(convQuery.data.asParent) : undefined;
   const singleRow = convQuery.data ? firstActiveChild(convQuery.data.asChild) : undefined;
@@ -113,7 +96,6 @@ export function ConvertProductModal(props: {
     if (!open) {
       setQtyInput("");
       setNotes("");
-      setBranchId("");
       setSubmitting(false);
     }
   }, [open]);
@@ -136,7 +118,6 @@ export function ConvertProductModal(props: {
         quantity: q,
         direction: mode.direction,
         notes: notes.trim() || undefined,
-        branchId: showBranch && branchId ? branchId : undefined,
       });
       const pa = res.parentAdjustment;
       const ca = res.childAdjustment;
@@ -257,25 +238,6 @@ export function ConvertProductModal(props: {
                   <li>Use {formatQtyLabel(parseFloat(qtyInput) * mode.ratio)} single(s)</li>
                   <li>Add {formatQtyLabel(qtyInput)} pack(s) to inventory</li>
                 </ul>
-              </div>
-            ) : null}
-
-            {showBranch ? (
-              <div className="space-y-2">
-                <Label htmlFor="conv-branch">Branch</Label>
-                <select
-                  id="conv-branch"
-                  className="flex h-11 min-h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
-                  value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                >
-                  <option value="">Default / organisation</option>
-                  {branches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
               </div>
             ) : null}
 

@@ -1,6 +1,6 @@
-/** Phase 2 — staff mobile / Management Hub DTOs (align with Nest). */
+/** Phase 2 - staff mobile / Management Hub DTOs (align with Nest). */
 
-/** Mirror of Prisma `NotificationType` — keep in sync with backend. */
+/** Mirror of Prisma `NotificationType` - keep in sync with backend. */
 export type HubNotificationType =
   | "TEMPORARY_ITEM_SOLD"
   | "RETURN_REQUESTED"
@@ -59,7 +59,7 @@ export interface SendNotificationResponse {
   notificationIds: string[];
 }
 
-/** Row from `GET /notifications/sent` (owner outbox) — see NOTIFICATIONS_REALTIME.md §4.4. */
+/** Row from `GET /notifications/sent` (owner outbox) - see NOTIFICATIONS_REALTIME.md §4.4. */
 export interface SentNotificationRecipient {
   id: string;
   firstName?: string | null;
@@ -97,7 +97,7 @@ export interface HubNotification {
   /** Authoritative read state from API (personal + broadcast receipts). */
   isRead?: boolean;
   readAt?: string | null;
-  /** @deprecated Use `isRead` — kept for legacy callers during migration. */
+  /** @deprecated Use `isRead` - kept for legacy callers during migration. */
   read?: boolean;
   createdAt?: string | null;
   actionUrl?: string | null;
@@ -107,7 +107,7 @@ export interface HubNotification {
   /** UUID of the related entity (e.g. sale id for STOCK_VARIANCE_SALE). */
   relatedEntityId?: string | null;
   metadata?: Record<string, unknown> | null;
-  /** Socket.IO / platform sends — human-readable sender when metadata is not loaded yet. */
+  /** Socket.IO / platform sends - human-readable sender when metadata is not loaded yet. */
   senderName?: string | null;
   dedupKey?: string | null;
   /** Merged event count for deduped types; always >= 1 (show badge when > 1). */

@@ -246,7 +246,7 @@ export default function DeviceBackupsPage() {
                       <TableCell>{reliabilityStaffDisplayName(r, userLabels)}</TableCell>
                       <TableCell className="max-w-[10rem] truncate font-mono text-xs">{r.deviceId}</TableCell>
                       <TableCell>{r.appVersion}</TableCell>
-                      <TableCell>{r.buildNumber ?? "—"}</TableCell>
+                      <TableCell>{r.buildNumber ?? "-"}</TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
                         {formatDate(r.createdAtClient)}
                       </TableCell>
@@ -254,7 +254,7 @@ export default function DeviceBackupsPage() {
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                         {formatDate(r.expiresAt)}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{r.storageProvider ?? "—"}</TableCell>
+                      <TableCell className="font-mono text-xs">{r.storageProvider ?? "-"}</TableCell>
                       <TableCell className="text-right">
                         <Button type="button" size="sm" variant="outline" onClick={() => setConfirmId(r.id)}>
                           Download

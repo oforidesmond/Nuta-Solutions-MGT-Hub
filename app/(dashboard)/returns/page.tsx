@@ -73,7 +73,7 @@ function cellDisplay(
   k: string,
   v: unknown,
 ): { display: string; full?: string; kind?: "id" | "date" | "object" } {
-  if (v == null) return { display: "—" };
+  if (v == null) return { display: "-" };
 
   if (isLikelyDateKey(k)) {
     const formatted = formatHumanDate(v);
@@ -109,7 +109,6 @@ export default function ReturnsPage() {
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
   const [staffId, setStaffId] = useState("");
-  const [branchId, setBranchId] = useState("");
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
 
@@ -125,9 +124,8 @@ export default function ReturnsPage() {
       page,
       limit,
       staffId: staffId || undefined,
-      branchId: branchId || undefined,
     }),
-    [range.startDate, range.endDate, page, limit, staffId, branchId],
+    [range.startDate, range.endDate, page, limit, staffId],
   );
 
   const listQuery = useQuery({
@@ -191,19 +189,6 @@ export default function ReturnsPage() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ret-branch">Branch ID</Label>
-              <input
-                id="ret-branch"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="Optional"
-                value={branchId}
-                onChange={(e) => {
-                  setBranchId(e.target.value);
-                  setPage(1);
-                }}
-              />
             </div>
           </div>
         </CardHeader>

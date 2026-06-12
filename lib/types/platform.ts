@@ -31,7 +31,7 @@ export type PlatformNotificationType =
   | "OTHER"
   | string;
 
-/** Labels for platform broadcast / filter UI — values must match backend enum. */
+/** Labels for platform broadcast / filter UI - values must match backend enum. */
 export const PLATFORM_NOTIFICATION_TYPE_OPTIONS: {
   value: PlatformNotificationType;
   label: string;

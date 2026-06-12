@@ -81,8 +81,6 @@ export async function fetchStockTakesPage(params: StockTakesListParams = {}): Pr
     params: {
       startDate: params.startDate,
       endDate: params.endDate,
-      branchId: params.branchId,
-      organisationId: params.organisationId,
       page: params.page,
       limit: params.limit,
     },
@@ -110,7 +108,6 @@ export async function createStockTake(payload: CreateStockTakePayload): Promise<
     productId: payload.productId,
     physicalCount: payload.physicalCount,
     notes: payload.notes?.trim() ? payload.notes.trim() : undefined,
-    branchId: payload.branchId,
   });
   const row = parseStockTakeRow(res.data);
   if (!row) throw new Error("Invalid stock count response");

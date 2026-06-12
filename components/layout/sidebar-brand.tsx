@@ -5,7 +5,7 @@ type SidebarBrandProps = {
   productLine?: string;
 };
 
-/** Sidebar header mark — logo + typographic stack (Apple-style, deference to nav). */
+/** Sidebar header mark - logo + typographic stack (Apple-style, deference to nav). */
 export function SidebarBrand({ productLine = "NutaPOS", title }: SidebarBrandProps) {
   return (
     <div className="mb-4 flex items-center gap-3 px-2 pt-1">

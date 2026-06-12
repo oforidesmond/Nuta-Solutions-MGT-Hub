@@ -11,7 +11,7 @@ import { OrgFilterPicker } from "@/components/platform/org-filter-picker";
 import { handleApiError } from "@/lib/api/errors";
 
 function formatApproxAge(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return "—";
+  if (!Number.isFinite(ms) || ms <= 0) return "-";
   const h = ms / (60 * 60 * 1000);
   if (h < 48) return `${h.toFixed(1)} hours`;
   return `${(h / 24).toFixed(1)} days`;

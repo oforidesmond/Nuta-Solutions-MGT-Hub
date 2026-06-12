@@ -39,9 +39,15 @@ export default function LoginPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { accessToken, refreshToken, user, organization } =
+      const { accessToken, refreshToken, user, organization, defaultBranchId } =
         await loginRequest(email, password);
-      setSession({ accessToken, refreshToken, user, organization });
+      setSession({
+        accessToken,
+        refreshToken,
+        user,
+        organization,
+        defaultBranchId,
+      });
       const oid = user.organizationId ?? organization?.id;
       if (oid) {
         try {

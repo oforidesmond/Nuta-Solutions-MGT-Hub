@@ -1,6 +1,6 @@
 import { bareApi } from "@/lib/api/bare-client";
 import { endpoints } from "@/lib/api/endpoints";
-import { normalizeTokensPayload } from "@/lib/api/normalize";
+import { normalizeTokensPayload, pickString } from "@/lib/api/normalize";
 import type { HubOrganization, HubUser } from "@/lib/types/domain";
 
 export async function loginRequest(email: string, password: string) {
@@ -24,6 +24,7 @@ function normalizeAuthEnvelope(raw: Record<string, unknown>): {
   refreshToken?: string;
   user: HubUser;
   organization: HubOrganization | null;
+  defaultBranchId: string | null;
 } {
   const tokens = normalizeTokensPayload(raw);
   const user = (raw.user ?? raw.data) as HubUser | undefined;
@@ -34,10 +35,13 @@ function normalizeAuthEnvelope(raw: Record<string, unknown>): {
     (raw.organization as HubOrganization | undefined) ??
     (user.organization as HubOrganization | undefined) ??
     null;
+  const defaultBranchId =
+    pickString(raw, "defaultBranchId", "default_branch_id") ?? null;
   return {
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
     user: user as HubUser,
     organization,
+    defaultBranchId,
   };
 }

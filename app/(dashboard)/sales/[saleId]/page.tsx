@@ -29,15 +29,15 @@ import { varianceReasonLabel } from "@/lib/variance-reason-labels";
 
 function createdByLabel(sale: HubSale): string {
   const c = sale.createdBy;
-  if (!c) return "—";
+  if (!c) return "-";
   const name = [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
-  return name || c.email || "—";
+  return name || c.email || "-";
 }
 
 function approverLabel(line: HubSaleLine): string {
   if (line.varianceApprovedStaffId) return line.varianceApprovedStaffId;
   if (line.varianceApprovedById) return `${line.varianceApprovedById.slice(0, 8)}…`;
-  return "—";
+  return "-";
 }
 
 export default function SaleDetailPage() {
@@ -173,7 +173,7 @@ export default function SaleDetailPage() {
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Sold at</span>
               <span>
-                {when ? `${formatDateDMY(when)} · ${formatTime12h(when)}` : "—"}
+                {when ? `${formatDateDMY(when)} · ${formatTime12h(when)}` : "-"}
               </span>
             </div>
             {synced ? (
@@ -212,7 +212,7 @@ export default function SaleDetailPage() {
                 {varianceLines.slice(0, 4).map((line, i) => (
                   <li key={line.id ?? i} className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="truncate font-medium">
-                      {line.productName ?? line.productId ?? "—"}
+                      {line.productName ?? line.productId ?? "-"}
                     </span>
                     <span className="text-muted-foreground">
                       {varianceReasonLabel(line.varianceReason ?? null)}
@@ -221,7 +221,7 @@ export default function SaleDetailPage() {
                 ))}
                 {varianceLines.length > 4 ? (
                   <li className="text-xs text-muted-foreground">
-                    +{varianceLines.length - 4} more — see line items below.
+                    +{varianceLines.length - 4} more - see line items below.
                   </li>
                 ) : null}
               </ul>
@@ -279,14 +279,14 @@ export default function SaleDetailPage() {
                     >
                       <TableCell className="max-w-[16rem]">
                         <div className="truncate font-medium">
-                          {line.productName ?? line.productId ?? "—"}
+                          {line.productName ?? line.productId ?? "-"}
                         </div>
                         {line.productSku ? (
                           <div className="text-xs text-muted-foreground">{line.productSku}</div>
                         ) : null}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {String(line.quantity ?? "—")}
+                        {String(line.quantity ?? "-")}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatCurrency(Number.isFinite(up) ? up : 0, currency)}
@@ -304,13 +304,13 @@ export default function SaleDetailPage() {
                             Yes
                           </Badge>
                         ) : (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>
                         {lineHasVariance
                           ? varianceReasonLabel(line.varianceReason ?? null)
-                          : "—"}
+                          : "-"}
                       </TableCell>
                       <TableCell className="max-w-[14rem]">
                         {note ? (
@@ -318,16 +318,16 @@ export default function SaleDetailPage() {
                             {note}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {lineHasVariance ? approverLabel(line) : "—"}
+                        {lineHasVariance ? approverLabel(line) : "-"}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {line.varianceApprovedAt
                           ? `${formatDateDMY(line.varianceApprovedAt)} · ${formatTime12h(line.varianceApprovedAt)}`
-                          : "—"}
+                          : "-"}
                       </TableCell>
                     </TableRow>
                   );

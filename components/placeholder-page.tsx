@@ -16,7 +16,7 @@ export function PlaceholderPage({ title, icon, description, bullets }: Placehold
         <div className="mb-4 text-4xl opacity-90" aria-hidden>
           {icon}
         </div>
-        <h2 className="text-base font-semibold text-foreground">{title} — coming soon</h2>
+        <h2 className="text-base font-semibold text-foreground">{title} - coming soon</h2>
         {bullets?.length ? (
           <ul className="mt-4 max-w-sm list-inside list-disc space-y-1 text-left text-sm text-muted-foreground">
             {bullets.map((b) => (

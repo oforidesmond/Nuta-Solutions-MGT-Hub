@@ -42,7 +42,10 @@ export function PlatformHeader() {
           >
             <Menu className="size-5" />
           </Button>
-          <SheetContent side="left" className="w-64 p-0">
+          <SheetContent
+            side="left"
+            className="gap-0 overflow-hidden p-0 data-[side=left]:w-64"
+          >
             <PlatformSidebar onNavigate={() => setNavOpen(false)} />
           </SheetContent>
         </Sheet>

@@ -105,7 +105,7 @@ function truncateMiddle(v: string, keep = 6): string {
 }
 
 function formatCellValue(k: string, v: unknown): { display: string; full?: string } {
-  if (v == null) return { display: "—" };
+  if (v == null) return { display: "-" };
   const s = typeof v === "string" ? v : typeof v === "number" ? String(v) : null;
   if (s && isLikelyIdKey(k) && s.length > 14) {
     return { display: truncateMiddle(s), full: s };
