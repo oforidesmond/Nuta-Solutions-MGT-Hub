@@ -169,6 +169,22 @@ export async function fetchNotificationsPage(
   };
 }
 
+/** Unread/list for a specific branch context (admin cross-branch probes). */
+export async function fetchNotificationsAtBranch(
+  branchId: string,
+  params: FetchNotificationsParams = {},
+): Promise<HubNotification[]> {
+  const res = await api.get(endpoints.notifications, {
+    params: {
+      unread: params.unread === true ? true : undefined,
+      limit: params.limit,
+      cursor: params.cursor,
+    },
+    headers: { "X-Branch-Id": branchId },
+  });
+  return unwrapNotifications(res.data);
+}
+
 export async function fetchUnreadCount(): Promise<NotificationsUnreadCountResponse> {
   const res = await api.get(endpoints.notificationsUnreadCount);
   return normalizeUnreadCount(res.data);

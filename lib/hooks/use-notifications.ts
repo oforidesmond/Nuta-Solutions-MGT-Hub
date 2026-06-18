@@ -12,6 +12,7 @@ import {
 import {
   notificationsListQueryKey,
   notificationsUnreadCountQueryKey,
+  otherBranchUnreadQueryKeyPrefix,
 } from "@/lib/notifications/query-keys";
 import { isCriticalNotificationType } from "@/lib/notifications/critical-notification";
 import {
@@ -119,6 +120,7 @@ export function useMarkNotificationRead() {
       // Refresh list only. Skip unread-count invalidation here - server cache can
       // stay stale ~30s and would overwrite the optimistic badge decrement.
       void queryClient.invalidateQueries({ queryKey: notificationsListQueryKey });
+      void queryClient.invalidateQueries({ queryKey: otherBranchUnreadQueryKeyPrefix });
     },
   });
 }

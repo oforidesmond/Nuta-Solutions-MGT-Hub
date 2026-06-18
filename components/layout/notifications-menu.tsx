@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Bell, ChevronRight, RotateCw } from "lucide-react";
 import { NotificationMenuItem } from "@/components/layout/notification-menu-item";
 import { useNotificationDetailOpener } from "@/components/notifications/notifications-detail-context";
+import { OtherBranchUnreadHint } from "@/components/notifications/other-branch-unread-hint";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,11 +20,14 @@ import {
   useNotifications,
   useUnreadCount,
 } from "@/lib/hooks/use-notifications";
+import { useAuthStore } from "@/stores/auth-store";
 import type { HubNotification } from "@/lib/types/phase2";
 import { cn } from "@/lib/utils";
 
 export function NotificationsMenu() {
   const [open, setOpen] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === "ADMIN";
   const { items, loading, error, reload } = useNotifications();
   const unreadQuery = useUnreadCount();
   const { openDetail } = useNotificationDetailOpener();
@@ -83,6 +87,15 @@ export function NotificationsMenu() {
             Notifications
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+
+          {isAdmin ? (
+            <div className="px-3 pb-2">
+              <OtherBranchUnreadHint
+                enabled={open}
+                onBeforeOpenSwitcher={() => setOpen(false)}
+              />
+            </div>
+          ) : null}
 
           {loading ? (
             <div className="space-y-2 p-3">

@@ -25,6 +25,7 @@ import { mergeNotificationIntoList } from "@/lib/notifications/merge-notificatio
 import {
   notificationsListQueryKey,
   notificationsUnreadCountQueryKey,
+  otherBranchUnreadQueryKeyPrefix,
 } from "@/lib/notifications/query-keys";
 import { notificationsSocket } from "@/lib/services/notifications-socket";
 import {
@@ -67,6 +68,7 @@ export function NotificationsRealtimeProvider({ children }: { children: ReactNod
   const syncFromRest = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: notificationsListQueryKey });
     void queryClient.invalidateQueries({ queryKey: notificationsUnreadCountQueryKey });
+    void queryClient.invalidateQueries({ queryKey: otherBranchUnreadQueryKeyPrefix });
   }, [queryClient]);
 
   const tryRefreshAndReconnect = useCallback(async () => {

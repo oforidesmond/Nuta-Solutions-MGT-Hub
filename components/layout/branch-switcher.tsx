@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, ChevronDown, Loader2 } from "lucide-react";
 import { fetchBranchesList } from "@/lib/api/branches";
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/auth-store";
+import { useBranchSwitcherStore } from "@/stores/branch-switcher-store";
 import { cn } from "@/lib/utils";
 
 export function BranchSwitcher() {
@@ -19,8 +20,17 @@ export function BranchSwitcher() {
   const user = useAuthStore((s) => s.user);
   const activeBranchId = useAuthStore((s) => s.activeBranchId);
   const setActiveBranch = useAuthStore((s) => s.setActiveBranch);
+  const consumeOpenRequest = useBranchSwitcherStore((s) => s.consumeOpenRequest);
+  const openRequested = useBranchSwitcherStore((s) => s.openRequested);
+  const [open, setOpen] = useState(false);
 
   const isAdmin = user?.role === "ADMIN";
+
+  useEffect(() => {
+    if (!openRequested) return;
+    consumeOpenRequest();
+    setOpen(true);
+  }, [openRequested, consumeOpenRequest]);
 
   const branchesQuery = useQuery({
     queryKey: ["branches"],
@@ -50,7 +60,7 @@ export function BranchSwitcher() {
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         disabled={branchesQuery.isPending}
         aria-label="Switch branch"

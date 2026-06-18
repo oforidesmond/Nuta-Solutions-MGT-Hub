@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { OtherBranchUnreadHint } from "@/components/notifications/other-branch-unread-hint";
 import { useNotificationDetailOpener } from "@/components/notifications/notifications-detail-context";
 import { NotificationsInboxList } from "@/components/notifications/notifications-inbox-list";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,8 @@ export default function NotificationsInboxPage() {
           </Button>
         ) : null}
       </div>
+
+      <OtherBranchUnreadHint enabled className="text-sm" />
 
       <NotificationsInboxList
         items={items}
