@@ -22,8 +22,10 @@ import { fetchSaleById } from "@/lib/api/sales";
 import { formatCurrency, formatDateDMY, formatTime12h, toNumericAmount } from "@/lib/format";
 import { delayedSyncTooltipText, isSaleDelayedSync } from "@/lib/sale-sync";
 import type { HubSale, HubSaleLine } from "@/lib/types/domain";
-import { cn } from "@/lib/utils";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { useAuthStore } from "@/stores/auth-store";
+import { cn } from "@/lib/utils";
 import { FORCED_SALES_UI } from "@/lib/copy/forced-sales-ui";
 import { varianceReasonLabel } from "@/lib/variance-reason-labels";
 
@@ -44,12 +46,13 @@ export default function SaleDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const saleId = params.saleId as string;
+  const activeBranchId = useActiveBranchId();
   const highlightVariance = searchParams.get("highlightVariance") === "1";
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const varianceSectionRef = useRef<HTMLDivElement | null>(null);
 
   const saleQuery = useQuery({
-    queryKey: ["sales", "detail", saleId],
+    queryKey: withBranchKey(activeBranchId, "sales", "detail", saleId),
     queryFn: () => fetchSaleById(saleId),
     enabled: Boolean(saleId),
   });

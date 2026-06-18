@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { executeBulkConversion, fetchProductConversions } from "@/lib/api/product-conversions";
 import { handleApiError } from "@/lib/api/errors";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import type { ConversionDirection, ProductConversion } from "@/lib/types/conversions";
 import type { HubProduct } from "@/lib/types/domain";
 import { productQuantity } from "@/lib/stock-status";
@@ -45,12 +47,13 @@ export function ConvertProductModal(props: {
   onSuccess?: () => void;
 }) {
   const { open, onOpenChange, product, onSuccess } = props;
+  const activeBranchId = useActiveBranchId();
   const [qtyInput, setQtyInput] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const convQuery = useQuery({
-    queryKey: ["product-conversions", product?.id],
+    queryKey: withBranchKey(activeBranchId, "product-conversions", product?.id),
     queryFn: () => fetchProductConversions(product!.id),
     enabled: open && !!product?.id,
     staleTime: 15_000,

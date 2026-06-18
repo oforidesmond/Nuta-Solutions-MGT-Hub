@@ -22,10 +22,12 @@ import {
   removeExpiredBatch,
 } from "@/lib/api/batches";
 import { handleApiError } from "@/lib/api/errors";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { formatDateDMY } from "@/lib/format";
 import type { HubBatch } from "@/lib/types/domain";
 
 export default function BatchesPage() {
+  const activeBranchId = useActiveBranchId();
   const [rows, setRows] = useState<HubBatch[]>([]);
   const [expiring, setExpiring] = useState<HubBatch[]>([]);
   const [expired, setExpired] = useState<HubBatch[]>([]);
@@ -49,7 +51,7 @@ export default function BatchesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeBranchId]);
 
   useEffect(() => {
     void load();

@@ -56,6 +56,7 @@ import type {
 import { SendStaffNotificationModal } from "@/components/notifications/send-staff-notification-modal";
 import { useAuthStore } from "@/stores/auth-store";
 import { useStaffStore } from "@/stores/staff-store";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { cn } from "@/lib/utils";
 
 /** Example keys from StaffProfile.permissions in schema.prisma. */
@@ -164,6 +165,7 @@ function CredentialsDialog({
 
 export default function StaffPage() {
   const router = useRouter();
+  const activeBranchId = useActiveBranchId();
   const me = useAuthStore((s) => s.user);
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const members = useStaffStore((s) => s.members);
@@ -237,7 +239,7 @@ export default function StaffPage() {
 
   useEffect(() => {
     void loadPerformance();
-  }, [loadPerformance]);
+  }, [loadPerformance, activeBranchId]);
 
   useEffect(() => {
     void (async () => {

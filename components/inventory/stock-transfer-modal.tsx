@@ -23,6 +23,8 @@ import {
 import { fetchProductAtBranch } from "@/lib/api/products";
 import { transferInventory } from "@/lib/api/inventory-transfer";
 import { getApiErrorCode, getApiErrorMessage } from "@/lib/api/error-codes";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { productQuantity } from "@/lib/stock-status";
 import type { HubBranch, StockTransferResult } from "@/lib/types/branches";
 import { cn } from "@/lib/utils";
@@ -66,6 +68,7 @@ function TransferForm({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const activeBranchId = useActiveBranchId();
   const activeBranches = useMemo(
     () => branches.filter((b) => b.isActive !== false),
     [branches],
@@ -82,14 +85,14 @@ function TransferForm({
   const [insufficient, setInsufficient] = useState(false);
 
   const fromStockQuery = useQuery({
-    queryKey: ["transfer-stock", product?.id, fromBranchId],
+    queryKey: withBranchKey(activeBranchId, "transfer-stock", product?.id, fromBranchId),
     queryFn: () => fetchProductAtBranch(product!.id, fromBranchId),
     enabled: Boolean(product?.id && fromBranchId),
     staleTime: 10_000,
   });
 
   const toStockQuery = useQuery({
-    queryKey: ["transfer-stock", product?.id, toBranchId],
+    queryKey: withBranchKey(activeBranchId, "transfer-stock", product?.id, toBranchId),
     queryFn: () => fetchProductAtBranch(product!.id, toBranchId),
     enabled: Boolean(product?.id && toBranchId),
     staleTime: 10_000,
@@ -122,8 +125,9 @@ function TransferForm({
       }),
     onSuccess: (res) => {
       setResult(res);
-      void queryClient.invalidateQueries({ queryKey: ["transfer-stock"] });
-      void queryClient.invalidateQueries({ queryKey: ["products"] });
+      void queryClient.invalidateQueries({
+        queryKey: withBranchKey(activeBranchId, "transfer-stock"),
+      });
     },
     onError: (err) => {
       if (getApiErrorCode(err) === "INSUFFICIENT_STOCK_FOR_TRANSFER") {

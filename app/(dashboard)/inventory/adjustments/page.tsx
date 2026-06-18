@@ -29,6 +29,8 @@ import type { DateRangePreset } from "@/lib/date-range-presets";
 import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
 import type { HubStockAdjustment } from "@/lib/types/domain";
 import { formatAdjustmentType } from "@/lib/types/inventory-adjustments";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { cn } from "@/lib/utils";
 
 type AdjustmentDisplayItem =
@@ -87,6 +89,7 @@ function buildDisplayRows(rows: HubStockAdjustment[]): AdjustmentDisplayItem[] {
 }
 
 export default function InventoryAdjustmentsPage() {
+  const activeBranchId = useActiveBranchId();
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
@@ -114,7 +117,7 @@ export default function InventoryAdjustmentsPage() {
   );
 
   const listQuery = useQuery({
-    queryKey: ["inventory", "adjustments", params],
+    queryKey: withBranchKey(activeBranchId, "inventory", "adjustments", params),
     queryFn: () => fetchInventoryAdjustmentsPage(params),
     placeholderData: (prev) => prev,
   });

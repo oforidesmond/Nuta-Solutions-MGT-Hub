@@ -62,14 +62,25 @@ export function NotificationsRealtimeProvider({ children }: { children: ReactNod
   const queryClient = useQueryClient();
   const accessToken = useAuthStore((s) => s.accessToken);
   const organizationId = useAuthStore((s) => s.organization?.id);
+  const activeBranchId = useAuthStore((s) => s.activeBranchId);
+  const listKey = useMemo(
+    () => notificationsListQueryKey(activeBranchId),
+    [activeBranchId],
+  );
+  const countKey = useMemo(
+    () => notificationsUnreadCountQueryKey(activeBranchId),
+    [activeBranchId],
+  );
+  const listKeyRef = useRef(listKey);
+  listKeyRef.current = listKey;
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const reconnectInFlight = useRef(false);
 
   const syncFromRest = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: notificationsListQueryKey });
-    void queryClient.invalidateQueries({ queryKey: notificationsUnreadCountQueryKey });
+    void queryClient.invalidateQueries({ queryKey: listKey });
+    void queryClient.invalidateQueries({ queryKey: countKey });
     void queryClient.invalidateQueries({ queryKey: otherBranchUnreadQueryKeyPrefix });
-  }, [queryClient]);
+  }, [queryClient, listKey, countKey]);
 
   const tryRefreshAndReconnect = useCallback(async () => {
     if (reconnectInFlight.current) return;
@@ -91,7 +102,7 @@ export function NotificationsRealtimeProvider({ children }: { children: ReactNod
 
     notificationsSocket.connect(accessToken, {
       onNew: (notification) => {
-        queryClient.setQueryData<HubNotification[]>(notificationsListQueryKey, (old) =>
+        queryClient.setQueryData<HubNotification[]>(listKeyRef.current, (old) =>
           mergeNotificationIntoList(old, notification),
         );
         debounceInvalidateUnreadCount(queryClient);
@@ -100,7 +111,7 @@ export function NotificationsRealtimeProvider({ children }: { children: ReactNod
 
       onBroadcast: (payload) => {
         if (isAdminBroadcastDigest(payload)) {
-          void queryClient.invalidateQueries({ queryKey: notificationsListQueryKey });
+          void queryClient.invalidateQueries({ queryKey: listKeyRef.current });
           const digestMessage =
             payload.recipientCount > 1
               ? `${payload.message} (${payload.recipientCount} recipients)`
@@ -119,7 +130,7 @@ export function NotificationsRealtimeProvider({ children }: { children: ReactNod
             ),
           });
         } else {
-          queryClient.setQueryData<HubNotification[]>(notificationsListQueryKey, (old) =>
+          queryClient.setQueryData<HubNotification[]>(listKeyRef.current, (old) =>
             mergeNotificationIntoList(old, payload),
           );
           maybeToastCritical(payload);
@@ -156,6 +167,13 @@ export function NotificationsRealtimeProvider({ children }: { children: ReactNod
       setIsSocketConnected(false);
     };
   }, [accessToken, organizationId, queryClient, tryRefreshAndReconnect]);
+
+  /** Branch switch: refresh inbox cache without tearing down the org-wide socket. */
+  useEffect(() => {
+    if (!accessToken || !organizationId) return;
+    void queryClient.invalidateQueries({ queryKey: listKey });
+    void queryClient.invalidateQueries({ queryKey: countKey });
+  }, [accessToken, organizationId, queryClient, listKey, countKey]);
 
   useEffect(() => {
     if (!accessToken || !organizationId) return;

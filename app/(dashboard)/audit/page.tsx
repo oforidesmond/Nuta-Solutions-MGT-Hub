@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fetchAuditEventsPage } from "@/lib/api/audit";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 
 function truncateMiddle(v: string, keep = 4): string {
   if (!v) return v;
@@ -109,11 +111,16 @@ function cellDisplay(k: string, v: unknown): { display: string; full?: string; k
 }
 
 export default function AuditPage() {
+  const activeBranchId = useActiveBranchId();
   const [cursorHistory, setCursorHistory] = useState<(string | undefined)[]>([undefined]);
   const activeCursor = cursorHistory[cursorHistory.length - 1];
 
+  useEffect(() => {
+    setCursorHistory([undefined]);
+  }, [activeBranchId]);
+
   const query = useQuery({
-    queryKey: ["audit", "events", activeCursor ?? "root"],
+    queryKey: withBranchKey(activeBranchId, "audit", "events", activeCursor ?? "root"),
     queryFn: () => fetchAuditEventsPage({ cursor: activeCursor, limit: 30 }),
   });
 

@@ -1,5 +1,12 @@
-export const notificationsListQueryKey = ["notifications", "list"] as const;
-export const notificationsUnreadCountQueryKey = ["notifications", "unread-count"] as const;
+import { withBranchKey } from "@/lib/query/branch-query-keys";
+
+export function notificationsListQueryKey(branchId: string | null) {
+  return withBranchKey(branchId, "notifications", "list");
+}
+
+export function notificationsUnreadCountQueryKey(branchId: string | null) {
+  return withBranchKey(branchId, "notifications", "unread-count");
+}
 
 export const otherBranchUnreadQueryKeyPrefix = ["notifications", "other-branch-unread"] as const;
 

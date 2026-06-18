@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 
+/** Branch-scoped queries must include activeBranchId via lib/query/branch-query-keys. */
 export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {

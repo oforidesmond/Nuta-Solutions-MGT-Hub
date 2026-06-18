@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchExpiringSoonProducts, fetchProducts } from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { formatDateDMY } from "@/lib/format";
 import type { HubProduct } from "@/lib/types/domain";
 
@@ -19,6 +20,7 @@ function daysUntil(iso: string): number {
 }
 
 export default function ExpiringSoonProductsPage() {
+  const activeBranchId = useActiveBranchId();
   const [rows, setRows] = useState<HubProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +51,7 @@ export default function ExpiringSoonProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeBranchId]);
 
   useEffect(() => {
     void load();

@@ -28,6 +28,8 @@ import { formatCurrency, formatDate, toNumericAmount } from "@/lib/format";
 import { formatRelativeUpdated } from "@/lib/format-relative-updated";
 import { canViewStaffReliability } from "@/lib/operations-access";
 import { POLL_DASHBOARD_MS, refetchIntervalWhenVisible } from "@/lib/query/poll-intervals";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { SendStaffNotificationModal } from "@/components/notifications/send-staff-notification-modal";
 import { canSendStaffNotifications } from "@/lib/notifications/can-send-staff-notifications";
 import { useAuthStore } from "@/stores/auth-store";
@@ -39,15 +41,16 @@ export default function DashboardHomePage() {
   const canReliability = canViewStaffReliability(user?.role);
   const canNotifyStaff = canSendStaffNotifications(user?.role);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const activeBranchId = useActiveBranchId();
 
   const summaryQuery = useQuery({
-    queryKey: ["dashboard", "summary"],
+    queryKey: withBranchKey(activeBranchId, "dashboard", "summary"),
     queryFn: fetchDashboardSummary,
     refetchInterval: () => refetchIntervalWhenVisible(POLL_DASHBOARD_MS),
   });
 
   const reliabilityQuery = useQuery({
-    queryKey: ["dashboard", "reliability-summary"],
+    queryKey: withBranchKey(activeBranchId, "dashboard", "reliability-summary"),
     queryFn: fetchReliabilityHomeSummary,
     enabled: canReliability,
     refetchInterval: () => refetchIntervalWhenVisible(POLL_DASHBOARD_MS),
@@ -67,7 +70,7 @@ export default function DashboardHomePage() {
   }, []);
 
   const varianceQuery = useQuery({
-    queryKey: ["dashboard", "variance-7d", variance7dRange],
+    queryKey: withBranchKey(activeBranchId, "dashboard", "variance-7d", variance7dRange),
     queryFn: () =>
       fetchSalesWithVariancesPage({
         startDate: variance7dRange.startDate,

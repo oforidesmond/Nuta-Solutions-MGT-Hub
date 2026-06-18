@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useNotificationsRealtime } from "@/components/layout/notifications-realtime-provider";
@@ -14,6 +15,7 @@ import {
   notificationsUnreadCountQueryKey,
   otherBranchUnreadQueryKeyPrefix,
 } from "@/lib/notifications/query-keys";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { isCriticalNotificationType } from "@/lib/notifications/critical-notification";
 import {
   notificationsRefetchInterval,
@@ -36,9 +38,14 @@ export function isNotificationUnread(n: HubNotification): boolean {
 
 export function useNotifications() {
   const { isSocketConnected } = useNotificationsRealtime();
+  const activeBranchId = useActiveBranchId();
+  const listKey = useMemo(
+    () => notificationsListQueryKey(activeBranchId),
+    [activeBranchId],
+  );
 
   const query = useQuery({
-    queryKey: notificationsListQueryKey,
+    queryKey: listKey,
     queryFn: () => fetchNotifications({ limit: 50 }),
     refetchInterval: () =>
       notificationsRefetchInterval(POLL_NOTIFICATIONS_MS, isSocketConnected),
@@ -55,9 +62,14 @@ export function useNotifications() {
 
 export function useUnreadCount() {
   const { isSocketConnected } = useNotificationsRealtime();
+  const activeBranchId = useActiveBranchId();
+  const countKey = useMemo(
+    () => notificationsUnreadCountQueryKey(activeBranchId),
+    [activeBranchId],
+  );
 
   return useQuery({
-    queryKey: notificationsUnreadCountQueryKey,
+    queryKey: countKey,
     queryFn: fetchUnreadCount,
     refetchInterval: () =>
       notificationsRefetchInterval(UNREAD_COUNT_POLL_MS, isSocketConnected),
@@ -67,21 +79,30 @@ export function useUnreadCount() {
 
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
+  const activeBranchId = useActiveBranchId();
+  const listKey = useMemo(
+    () => notificationsListQueryKey(activeBranchId),
+    [activeBranchId],
+  );
+  const countKey = useMemo(
+    () => notificationsUnreadCountQueryKey(activeBranchId),
+    [activeBranchId],
+  );
 
   return useMutation({
     mutationFn: (id: string) => markNotificationRead(id),
     onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: notificationsListQueryKey });
-      await queryClient.cancelQueries({ queryKey: notificationsUnreadCountQueryKey });
+      await queryClient.cancelQueries({ queryKey: listKey });
+      await queryClient.cancelQueries({ queryKey: countKey });
 
-      const previousList = queryClient.getQueryData<HubNotification[]>(notificationsListQueryKey);
+      const previousList = queryClient.getQueryData<HubNotification[]>(listKey);
       const previousCount = queryClient.getQueryData<NotificationsUnreadCountResponse>(
-        notificationsUnreadCountQueryKey,
+        countKey,
       );
 
       const now = new Date().toISOString();
       let nextList: HubNotification[] | undefined;
-      queryClient.setQueryData<HubNotification[]>(notificationsListQueryKey, (old) => {
+      queryClient.setQueryData<HubNotification[]>(listKey, (old) => {
         nextList = old?.map((n) =>
           n.id === id ? { ...n, isRead: true, read: true, readAt: now } : n,
         );
@@ -89,7 +110,7 @@ export function useMarkNotificationRead() {
       });
 
       queryClient.setQueryData<NotificationsUnreadCountResponse>(
-        notificationsUnreadCountQueryKey,
+        countKey,
         (old) => {
           if (!old) return old;
           const nextCount = Math.max(0, old.unreadCount - 1);
@@ -109,17 +130,17 @@ export function useMarkNotificationRead() {
     },
     onError: (_err, _id, context) => {
       if (context?.previousList !== undefined) {
-        queryClient.setQueryData(notificationsListQueryKey, context.previousList);
+        queryClient.setQueryData(listKey, context.previousList);
       }
       if (context?.previousCount !== undefined) {
-        queryClient.setQueryData(notificationsUnreadCountQueryKey, context.previousCount);
+        queryClient.setQueryData(countKey, context.previousCount);
       }
       toast.error("Failed to mark notification as read");
     },
     onSettled: () => {
       // Refresh list only. Skip unread-count invalidation here - server cache can
       // stay stale ~30s and would overwrite the optimistic badge decrement.
-      void queryClient.invalidateQueries({ queryKey: notificationsListQueryKey });
+      void queryClient.invalidateQueries({ queryKey: listKey });
       void queryClient.invalidateQueries({ queryKey: otherBranchUnreadQueryKeyPrefix });
     },
   });

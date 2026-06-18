@@ -60,6 +60,8 @@ import { productCategoryLabel } from "@/lib/product-helpers";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
 import { canManageInventoryConversions, canManageStockTakes } from "@/lib/inventory-access";
 import { canTransferStock } from "@/lib/branch-access";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { fetchProductConversions } from "@/lib/api/product-conversions";
 import { fetchBranchesList } from "@/lib/api/branches";
 import { useAuthStore } from "@/stores/auth-store";
@@ -111,6 +113,7 @@ function applyClientFilters(
 
 export default function ProductsPage() {
   const router = useRouter();
+  const activeBranchId = useActiveBranchId();
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const role = useAuthStore((s) => s.user?.role);
   const canStockTake = canManageStockTakes(role);
@@ -158,7 +161,7 @@ export default function ProductsPage() {
   const canTransferStockNow = canTransfer && activeBranches.length > 1;
 
   const actionsConversionsQuery = useQuery({
-    queryKey: ["product-conversions", actionsMenuProductId],
+    queryKey: withBranchKey(activeBranchId, "product-conversions", actionsMenuProductId),
     queryFn: () => fetchProductConversions(actionsMenuProductId!),
     enabled: !!actionsMenuProductId,
     staleTime: 15_000,
@@ -260,6 +263,7 @@ export default function ProductsPage() {
     clientMode,
     priceMin,
     priceMax,
+    activeBranchId,
   ]);
 
   useEffect(() => {

@@ -29,6 +29,8 @@ import {
 } from "@/lib/api/product-conversions";
 import { createProduct, fetchProduct, updateProduct, type ProductWriteBody } from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { canManageInventoryConversions } from "@/lib/inventory-access";
 import type { HubCategory, HubProduct } from "@/lib/types/domain";
 import { productQuantity } from "@/lib/stock-status";
@@ -50,6 +52,7 @@ type ConversionSnapshot = {
 export function ProductForm({ mode, productId }: ProductFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const activeBranchId = useActiveBranchId();
   const role = useAuthStore((s) => s.user?.role);
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const canConv = canManageInventoryConversions(role);
@@ -89,7 +92,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   const hydratedForProduct = useRef<string | null>(null);
 
   const conversionsQuery = useQuery({
-    queryKey: ["product-conversions", productId],
+    queryKey: withBranchKey(activeBranchId, "product-conversions", productId),
     queryFn: () => {
       if (!productId) throw new Error("missing id");
       return fetchProductConversions(productId);
@@ -266,7 +269,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       try {
         await deleteProductConversion(convSnapshot.id);
         setConvSnapshot(null);
-        void queryClient.invalidateQueries({ queryKey: ["product-conversions", savedId] });
+        void queryClient.invalidateQueries({
+          queryKey: withBranchKey(activeBranchId, "product-conversions", savedId),
+        });
         toast.success("Packaging link removed");
       } catch (e) {
         toast.error(handleApiError(e));
@@ -299,7 +304,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         childProductId: pair.childId,
         ratioStr: String(ratio),
       });
-      void queryClient.invalidateQueries({ queryKey: ["product-conversions", savedId] });
+      void queryClient.invalidateQueries({
+        queryKey: withBranchKey(activeBranchId, "product-conversions", savedId),
+      });
     };
 
     try {
@@ -311,7 +318,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           if (convSnapshot.ratioStr !== conversionRatioStr.trim()) {
             await updateProductConversion(convSnapshot.id, { conversionRatio: ratio });
             setConvSnapshot({ ...convSnapshot, ratioStr: conversionRatioStr.trim() });
-            void queryClient.invalidateQueries({ queryKey: ["product-conversions", savedId] });
+            void queryClient.invalidateQueries({
+          queryKey: withBranchKey(activeBranchId, "product-conversions", savedId),
+        });
             toast.success("Conversion ratio updated");
           }
         } else {
@@ -337,7 +346,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                   childProductId: pair.childId,
                   conversionRatio: ratio,
                 });
-                void queryClient.invalidateQueries({ queryKey: ["product-conversions", savedId] });
+                void queryClient.invalidateQueries({
+          queryKey: withBranchKey(activeBranchId, "product-conversions", savedId),
+        });
                 toast.success("Packaging saved");
               } catch (err2) {
                 toast.error(handleApiError(err2));

@@ -23,6 +23,8 @@ import { DateRangePresetToolbar } from "@/components/filters/date-range-preset-t
 import { PaginationBar } from "@/components/pagination/pagination-bar";
 import { fetchReturnsPage } from "@/lib/api/returns";
 import { fetchOrgUsers } from "@/lib/api/users";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import type { DateRangePreset } from "@/lib/date-range-presets";
 import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
 
@@ -112,6 +114,7 @@ function cellDisplay(
 }
 
 export default function ReturnsPage() {
+  const activeBranchId = useActiveBranchId();
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
@@ -136,7 +139,7 @@ export default function ReturnsPage() {
   );
 
   const listQuery = useQuery({
-    queryKey: ["returns", "list", params],
+    queryKey: withBranchKey(activeBranchId, "returns", "list", params),
     queryFn: () => fetchReturnsPage(params),
     placeholderData: (prev) => prev,
   });

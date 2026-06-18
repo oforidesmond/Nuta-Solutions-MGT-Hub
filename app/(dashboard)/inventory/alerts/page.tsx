@@ -18,6 +18,7 @@ import {
 import { fetchLowStockProducts, fetchProducts } from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import type { HubProduct } from "@/lib/types/domain";
 
 function shortfall(p: HubProduct): number {
@@ -28,6 +29,7 @@ function shortfall(p: HubProduct): number {
 }
 
 export default function LowStockAlertsPage() {
+  const activeBranchId = useActiveBranchId();
   const [rows, setRows] = useState<HubProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,7 +59,7 @@ export default function LowStockAlertsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeBranchId]);
 
   useEffect(() => {
     void load();

@@ -38,6 +38,8 @@ import { fetchStockTakesPage } from "@/lib/api/stock-takes";
 import { handleApiError } from "@/lib/api/errors";
 import { formatCurrency } from "@/lib/format";
 import { canManageStockTakes } from "@/lib/inventory-access";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import type { DateRangePreset } from "@/lib/date-range-presets";
 import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
 import type { StockTakeRow, StockTakesSummary } from "@/lib/types/stock-takes";
@@ -238,6 +240,7 @@ export default function StockTakePage() {
   const router = useRouter();
   const role = useAuthStore((s) => s.user?.role);
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const activeBranchId = useActiveBranchId();
   const allowed = canManageStockTakes(role);
 
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
@@ -262,7 +265,7 @@ export default function StockTakePage() {
   );
 
   const listQuery = useQuery({
-    queryKey: ["inventory", "stock-takes", params],
+    queryKey: withBranchKey(activeBranchId, "inventory", "stock-takes", params),
     queryFn: () => fetchStockTakesPage(params),
     enabled: allowed,
     placeholderData: (prev) => prev,

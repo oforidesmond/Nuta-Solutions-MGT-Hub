@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchTemporaryItems } from "@/lib/api/products";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import type { HubTemporaryItem } from "@/lib/types/phase2";
 
 export function useTemporaryItems() {
+  const activeBranchId = useActiveBranchId();
   const [items, setItems] = useState<HubTemporaryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -24,7 +26,7 @@ export function useTemporaryItems() {
 
   useEffect(() => {
     void reload();
-  }, [reload]);
+  }, [reload, activeBranchId]);
 
   return { items, loading, error, reload };
 }

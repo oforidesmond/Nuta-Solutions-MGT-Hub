@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/auth-store";
 import { useBranchSwitcherStore } from "@/stores/branch-switcher-store";
+import { isBranchScopedQueryKey } from "@/lib/query/branch-query-keys";
+import { useStaffStore } from "@/stores/staff-store";
 import { cn } from "@/lib/utils";
 
 export function BranchSwitcher() {
@@ -56,7 +58,10 @@ export function BranchSwitcher() {
   function handleSelect(branchId: string) {
     if (branchId === activeBranchId) return;
     setActiveBranch(branchId);
-    void queryClient.invalidateQueries();
+    void queryClient.invalidateQueries({
+      predicate: (q) => isBranchScopedQueryKey(q.queryKey),
+    });
+    void useStaffStore.getState().loadPerformance();
   }
 
   return (

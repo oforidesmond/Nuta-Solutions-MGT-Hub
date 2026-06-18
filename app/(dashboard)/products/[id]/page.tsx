@@ -47,10 +47,12 @@ import { formatCurrency, toNumericAmount } from "@/lib/format";
 import { formatDateDMY, formatTime12h } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
-import { useAuthStore } from "@/stores/auth-store";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { HubProduct, HubStockAdjustment } from "@/lib/types/domain";
+import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { ConvertProductModal } from "@/components/inventory/convert-product-modal";
 import { InventoryEventHistorySheet } from "@/components/inventory/inventory-event-history-sheet";
@@ -68,6 +70,7 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const id = params.id as string;
+  const activeBranchId = useActiveBranchId();
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const role = useAuthStore((s) => s.user?.role);
   const canConv = canManageInventoryConversions(role);
@@ -89,7 +92,7 @@ export default function ProductDetailPage() {
   const [resettingPrice, setResettingPrice] = useState(false);
 
   const conversionsQuery = useQuery({
-    queryKey: ["product-conversions", id],
+    queryKey: withBranchKey(activeBranchId, "product-conversions", id),
     queryFn: () => fetchProductConversions(id),
     enabled: !!id && !!product,
     staleTime: 30_000,
@@ -106,7 +109,7 @@ export default function ProductDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, router]);
+  }, [id, router, activeBranchId]);
 
   useEffect(() => {
     void load();
@@ -129,7 +132,7 @@ export default function ProductDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [tab, id]);
+  }, [tab, id, activeBranchId]);
 
   async function onDuplicate() {
     try {
@@ -167,7 +170,9 @@ export default function ProductDetailPage() {
       await updateProductConversion(editConv.id, { conversionRatio: n });
       toast.success("Conversion ratio updated");
       setEditConv(null);
-      void queryClient.invalidateQueries({ queryKey: ["product-conversions", id] });
+      void queryClient.invalidateQueries({
+        queryKey: withBranchKey(activeBranchId, "product-conversions", id),
+      });
     } catch (e) {
       toast.error(handleApiError(e));
     } finally {
@@ -200,7 +205,9 @@ export default function ProductDetailPage() {
       await deleteProductConversion(deleteConvId);
       toast.success("Packaging link removed");
       setDeleteConvId(null);
-      void queryClient.invalidateQueries({ queryKey: ["product-conversions", id] });
+      void queryClient.invalidateQueries({
+        queryKey: withBranchKey(activeBranchId, "product-conversions", id),
+      });
     } catch (e) {
       toast.error(handleApiError(e));
     } finally {
@@ -656,7 +663,9 @@ export default function ProductDetailPage() {
         product={product}
         onSuccess={() => {
           void load();
-          void queryClient.invalidateQueries({ queryKey: ["product-conversions", id] });
+          void queryClient.invalidateQueries({
+        queryKey: withBranchKey(activeBranchId, "product-conversions", id),
+      });
         }}
       />
 

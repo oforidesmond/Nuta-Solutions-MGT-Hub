@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/table";
 import { DateRangePresetToolbar } from "@/components/filters/date-range-preset-toolbar";
 import { fetchReportRevenueTrends, fetchReportSalesSummary, fetchReportStaffPerformance } from "@/lib/api/reports";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import type { DateRangePreset } from "@/lib/date-range-presets";
 import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
 import type { RevenueTrendPeriod, StaffReportPeriod } from "@/lib/types/reports";
@@ -123,6 +125,7 @@ function formatCellValue(k: string, v: unknown): { display: string; full?: strin
 }
 
 export function ReportsBusinessSection() {
+  const activeBranchId = useActiveBranchId();
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
@@ -135,18 +138,18 @@ export function ReportsBusinessSection() {
   );
 
   const salesSummaryQuery = useQuery({
-    queryKey: ["reports", "sales-summary", range.startDate, range.endDate],
+    queryKey: withBranchKey(activeBranchId, "reports", "sales-summary", range.startDate, range.endDate),
     queryFn: () => fetchReportSalesSummary({ startDate: range.startDate, endDate: range.endDate }),
     enabled: Boolean(range.startDate && range.endDate),
   });
 
   const staffPerfQuery = useQuery({
-    queryKey: ["reports", "staff-performance", staffPeriod],
+    queryKey: withBranchKey(activeBranchId, "reports", "staff-performance", staffPeriod),
     queryFn: () => fetchReportStaffPerformance({ period: staffPeriod }),
   });
 
   const revenueTrendsQuery = useQuery({
-    queryKey: ["reports", "revenue-trends", revenuePeriod],
+    queryKey: withBranchKey(activeBranchId, "reports", "revenue-trends", revenuePeriod),
     queryFn: () => fetchReportRevenueTrends({ period: revenuePeriod }),
   });
 

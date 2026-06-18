@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchProductPriceContext, updateProductPricing } from "@/lib/api/products";
 import { getApiErrorMessage } from "@/lib/api/error-codes";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { formatCurrency, toNumericAmount } from "@/lib/format";
 import type { PriceScope } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
@@ -74,10 +76,11 @@ function PriceScopeForm({
   onApplied?: () => void;
 }) {
   const queryClient = useQueryClient();
+  const activeBranchId = useActiveBranchId();
   const [scope, setScope] = useState<PriceScope | null>(null);
 
   const contextQuery = useQuery({
-    queryKey: ["product-price-context", productId],
+    queryKey: withBranchKey(activeBranchId, "product-price-context", productId),
     queryFn: () => fetchProductPriceContext(productId),
     staleTime: 0,
   });
@@ -97,8 +100,9 @@ function PriceScopeForm({
           ? "Price updated for the whole organisation"
           : "Branch price updated",
       );
-      void queryClient.invalidateQueries({ queryKey: ["products"] });
-      void queryClient.invalidateQueries({ queryKey: ["product-price-context", productId] });
+      void queryClient.invalidateQueries({
+        queryKey: withBranchKey(activeBranchId, "product-price-context", productId),
+      });
       onApplied?.();
       onClose();
     },

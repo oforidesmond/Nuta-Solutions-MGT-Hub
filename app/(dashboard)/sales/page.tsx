@@ -25,6 +25,8 @@ import {
 import { fetchOrgUsers } from "@/lib/api/users";
 import type { DateRangePreset } from "@/lib/date-range-presets";
 import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
+import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { POLL_SALES_MS, refetchIntervalWhenVisible } from "@/lib/query/poll-intervals";
 import type { PaginatedSalesResponse } from "@/lib/types/sales";
 import type { VarianceReason } from "@/lib/types/domain";
@@ -51,17 +53,18 @@ const selectClassName =
 const refineSelectClassName =
   "flex h-9 w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-function salesListQueryKey(args: Record<string, unknown>) {
-  return ["sales", "list", args] as const;
+function salesListQueryKey(branchId: string | null, args: Record<string, unknown>) {
+  return withBranchKey(branchId, "sales", "list", args);
 }
 
-function salesVarianceQueryKey(args: Record<string, unknown>) {
-  return ["sales", "variances", args] as const;
+function salesVarianceQueryKey(branchId: string | null, args: Record<string, unknown>) {
+  return withBranchKey(branchId, "sales", "variances", args);
 }
 
 export default function SalesPage() {
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const isAdmin = useAuthStore((s) => s.user?.role) === "ADMIN";
+  const activeBranchId = useActiveBranchId();
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
@@ -107,7 +110,7 @@ export default function SalesPage() {
   );
 
   const listQuery = useQuery({
-    queryKey: salesListQueryKey(listParams),
+    queryKey: salesListQueryKey(activeBranchId, listParams),
     queryFn: () => fetchSalesPage(listParams),
     placeholderData: (prev: PaginatedSalesResponse | undefined) => prev,
     refetchInterval: () => refetchIntervalWhenVisible(POLL_SALES_MS),
@@ -115,7 +118,7 @@ export default function SalesPage() {
   });
 
   const varianceQuery = useQuery({
-    queryKey: salesVarianceQueryKey(varianceParams),
+    queryKey: salesVarianceQueryKey(activeBranchId, varianceParams),
     queryFn: () => fetchSalesWithVariancesPage(varianceParams),
     placeholderData: (prev: PaginatedSalesResponse | undefined) => prev,
     refetchInterval: () => refetchIntervalWhenVisible(POLL_SALES_MS),
