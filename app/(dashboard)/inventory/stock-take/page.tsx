@@ -346,7 +346,7 @@ export default function StockTakePage() {
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="whitespace-nowrap">Rows per page</span>
               <select
-                className="h-9 rounded-lg border border-input bg-background px-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-9 rounded-lg border border-input bg-background px-2 text-sm disabled:cursor-not-allowed disabled:opacity-60 interactive-cursor"
                 value={limit}
                 disabled={filtersDisabled}
                 onChange={(e) => {

@@ -107,7 +107,7 @@ export default function InventoryHubPage() {
           <button
             type="button"
             onClick={() => setTransferOpen(true)}
-            className="group block rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="interactive-cursor group block rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Card
               className={cn(

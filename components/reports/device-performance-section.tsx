@@ -195,7 +195,7 @@ export function DevicePerformanceSection() {
                         <TooltipProvider>
                           <UiTooltip>
                             <TooltipTrigger asChild>
-                              <button type="button" className="max-w-md truncate text-left">
+                              <button type="button" className="interactive-cursor max-w-md truncate text-left">
                                 {row.error}
                               </button>
                             </TooltipTrigger>
@@ -209,7 +209,7 @@ export function DevicePerformanceSection() {
                         <TooltipProvider>
                           <UiTooltip>
                             <TooltipTrigger asChild>
-                              <button type="button" className="ml-2 align-middle font-mono text-[10px] text-muted-foreground">
+                              <button type="button" className="interactive-cursor ml-2 align-middle font-mono text-[10px] text-muted-foreground">
                                 {truncateMiddle(row.id)}
                               </button>
                             </TooltipTrigger>

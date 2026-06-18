@@ -235,7 +235,7 @@ function SendStaffNotificationForm({ onClose }: { onClose: () => void }) {
             id="sn-type"
             value={type}
             onChange={(e) => setType(e.target.value as HubManualNotificationType)}
-            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
           >
             {HUB_MANUAL_NOTIFICATION_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -275,7 +275,7 @@ function SendStaffNotificationForm({ onClose }: { onClose: () => void }) {
                     {u.label}
                     <button
                       type="button"
-                      className="rounded-full p-0.5 hover:bg-muted"
+                      className="interactive-cursor rounded-full p-0.5 hover:bg-muted"
                       onClick={() => removeUser(u.id)}
                       aria-label={`Remove ${u.label}`}
                     >
@@ -304,7 +304,7 @@ function SendStaffNotificationForm({ onClose }: { onClose: () => void }) {
               <ul className="max-h-36 overflow-auto rounded-lg border border-border/40 py-1 text-sm">
                 {filteredStaff.map((u) => (
                   <li key={u.id}>
-                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-muted/60">
+                    <label className="flex interactive-cursor items-center gap-2 px-3 py-2 hover:bg-muted/60">
                       <input
                         type="checkbox"
                         checked={selectedIds.has(u.id)}
@@ -369,7 +369,7 @@ function TargetingModeToggle({
           type="button"
           onClick={() => onModeChange(opt.value)}
           className={cn(
-            "rounded-lg border p-2.5 text-left transition-colors",
+            "interactive-cursor rounded-lg border p-2.5 text-left transition-colors",
             mode === opt.value ? "border-primary bg-primary/5" : "border-border/60 hover:border-border",
           )}
           aria-pressed={mode === opt.value}

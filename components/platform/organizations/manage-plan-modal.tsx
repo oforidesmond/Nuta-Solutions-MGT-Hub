@@ -131,7 +131,7 @@ function ManagePlanForm({
                 type="button"
                 onClick={() => setPlanType(opt.value)}
                 className={cn(
-                  "rounded-lg border p-3 text-left transition-colors",
+                  "interactive-cursor rounded-lg border p-3 text-left transition-colors",
                   planType === opt.value
                     ? "border-primary bg-primary/5"
                     : "border-border/60 hover:border-border",

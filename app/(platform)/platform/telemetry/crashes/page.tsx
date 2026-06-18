@@ -105,7 +105,7 @@ export default function TelemetryCrashesPage() {
                 setFatalFilter(e.target.value as FatalFilter);
                 setPage(1);
               }}
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
             >
               <option value="all">All</option>
               <option value="fatal">Fatal only</option>
@@ -122,7 +122,7 @@ export default function TelemetryCrashesPage() {
                 setStartDate(e.target.value);
                 setPage(1);
               }}
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
             />
           </div>
           <div className="space-y-1">
@@ -135,7 +135,7 @@ export default function TelemetryCrashesPage() {
                 setEndDate(e.target.value);
                 setPage(1);
               }}
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
             />
           </div>
         </div>

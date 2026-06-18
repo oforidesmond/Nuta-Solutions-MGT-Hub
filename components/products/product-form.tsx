@@ -498,7 +498,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
             <Label htmlFor="pf-cat">Category</Label>
             <select
               id="pf-cat"
-              className="flex h-11 min-h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
+              className="flex h-11 min-h-11 w-full rounded-lg border border-input bg-background px-3 text-sm interactive-cursor"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
             >
@@ -633,7 +633,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                       checked={hasConversion}
                       onCheckedChange={(v) => setHasConversion(v === true)}
                     />
-                    <Label htmlFor="pf-has-conv" className="cursor-pointer text-sm font-normal">
+                    <Label htmlFor="pf-has-conv" className="text-sm font-normal">
                       This product has multiple packaging levels
                     </Label>
                   </div>
@@ -654,7 +654,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                         <div className="flex items-start gap-2">
                           <RadioGroupItem id="pf-ct-parent" value="isParent" className="mt-0.5" />
                           <div className="min-w-0 flex-1 space-y-1">
-                            <Label htmlFor="pf-ct-parent" className="cursor-pointer font-medium">
+                            <Label htmlFor="pf-ct-parent" className="font-medium">
                               This is the PACK/BULK item
                             </Label>
                             <p className="text-sm text-muted-foreground">It breaks down into singles.</p>
@@ -691,7 +691,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                         <div className="flex items-start gap-2">
                           <RadioGroupItem id="pf-ct-child" value="isChild" className="mt-0.5" />
                           <div className="min-w-0 flex-1 space-y-1">
-                            <Label htmlFor="pf-ct-child" className="cursor-pointer font-medium">
+                            <Label htmlFor="pf-ct-child" className="font-medium">
                               This is the SINGLE/UNIT item
                             </Label>
                             <p className="text-sm text-muted-foreground">It comes from a bulk pack.</p>
@@ -739,7 +739,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
             <CardDescription>Turn on if you track lot numbers or expiry dates.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <label className="flex interactive-cursor items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={trackBatch}

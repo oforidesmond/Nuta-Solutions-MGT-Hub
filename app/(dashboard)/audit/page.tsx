@@ -193,7 +193,7 @@ export default function AuditPage() {
                             <TooltipProvider>
                               <UiTooltip>
                                 <TooltipTrigger asChild>
-                                  <button type="button" className="w-full truncate text-left">
+                                  <button type="button" className="interactive-cursor w-full truncate text-left">
                                     {display}
                                   </button>
                                 </TooltipTrigger>

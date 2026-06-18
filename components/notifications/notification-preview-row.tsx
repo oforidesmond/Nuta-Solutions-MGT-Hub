@@ -114,7 +114,7 @@ export function notificationPreviewRowClassName(n: HubNotification): string {
   const showDestructive = unread && isCritical && !fromPlatformSupport;
 
   return cn(
-    "relative w-full min-w-0 max-w-full cursor-pointer overflow-hidden rounded-md px-3 py-2.5 text-left transition-colors duration-200 ease-out",
+    "relative w-full min-w-0 max-w-full interactive-cursor overflow-hidden rounded-md px-3 py-2.5 text-left transition-colors duration-200 ease-out",
     "hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     unread && !isCritical && !fromPlatformSupport && "bg-primary/5 hover:bg-primary/10",
     unread &&

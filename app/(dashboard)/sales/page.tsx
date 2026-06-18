@@ -48,10 +48,10 @@ const PAYMENT_OPTIONS = [
 ];
 
 const selectClassName =
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60";
+  "interactive-cursor flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 const refineSelectClassName =
-  "flex h-9 w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "interactive-cursor flex h-9 w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function salesListQueryKey(branchId: string | null, args: Record<string, unknown>) {
   return withBranchKey(branchId, "sales", "list", args);
@@ -218,7 +218,7 @@ export default function SalesPage() {
             <label
               htmlFor="variance-only"
               className={cn(
-                "flex min-h-10 cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 transition-colors duration-200",
+                "flex min-h-10 interactive-cursor items-center gap-2.5 rounded-lg border px-3 py-2 transition-colors duration-200",
                 varianceOnly
                   ? "border-amber-500/35 bg-amber-500/8 text-foreground"
                   : "border-border/40 bg-muted/25 text-muted-foreground hover:bg-muted/40",

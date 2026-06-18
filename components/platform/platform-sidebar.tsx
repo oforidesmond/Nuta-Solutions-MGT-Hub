@@ -45,7 +45,7 @@ export function PlatformSidebar({ onNavigate }: PlatformSidebarProps) {
                     href={href}
                     onClick={() => onNavigate?.()}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-200",
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-200 interactive-cursor",
                       active
                         ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                         : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",

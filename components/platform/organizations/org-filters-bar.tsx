@@ -105,7 +105,7 @@ export function OrgFiltersBar({
           onChange={(e) =>
             onSortByChange(e.target.value as NonNullable<OrganizationListParams["sortBy"]>)
           }
-          className="h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring interactive-cursor"
         >
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -170,7 +170,7 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
       <button
         type="button"
         onClick={onRemove}
-        className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground interactive-cursor"
         aria-label={`Remove filter ${label}`}
       >
         <X className="size-3" aria-hidden />

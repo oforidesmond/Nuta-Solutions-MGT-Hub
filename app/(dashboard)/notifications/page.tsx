@@ -138,7 +138,7 @@ export default function SentNotificationsPage() {
                 setRecipientUserId(e.target.value || undefined);
                 setPage(1);
               }}
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm lg:min-w-[14rem]"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm lg:min-w-[14rem] interactive-cursor"
             >
               <option value="">All recipients</option>
               {staffRecipients.map((u) => {
@@ -160,7 +160,7 @@ export default function SentNotificationsPage() {
                 setReadFilter(e.target.value as ReadFilter);
                 setPage(1);
               }}
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm lg:w-40"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm lg:w-40 interactive-cursor"
             >
               <option value="all">All</option>
               <option value="read">Read</option>

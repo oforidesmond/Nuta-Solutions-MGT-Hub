@@ -165,7 +165,7 @@ export default function InventoryAdjustmentsPage() {
               <Label htmlFor="adj-staff">Staff</Label>
               <select
                 id="adj-staff"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm interactive-cursor"
                 value={staffId}
                 onChange={(e) => {
                   setStaffId(e.target.value);
@@ -184,7 +184,7 @@ export default function InventoryAdjustmentsPage() {
               <Label htmlFor="adj-type">Adjustment type</Label>
               <select
                 id="adj-type"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm interactive-cursor"
                 value={typeFilter}
                 onChange={(e) => {
                   setTypeFilter(e.target.value as "" | "BULK_TO_SINGLES");
@@ -291,7 +291,7 @@ export default function InventoryAdjustmentsPage() {
                     return (
                       <Fragment key={pairKey}>
                         <TableRow
-                          className="cursor-pointer bg-muted/30 hover:bg-muted/50"
+                          className="interactive-cursor bg-muted/30 hover:bg-muted/50"
                           onClick={() => setOpenPairId(open ? null : pairKey)}
                         >
                           <TableCell className="w-10 align-middle">

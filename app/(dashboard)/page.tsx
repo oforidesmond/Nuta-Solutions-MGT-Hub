@@ -382,7 +382,7 @@ function ReliabilityLinkCard({
 }) {
   const showBadge = typeof badgeCount === "number" && badgeCount > 0;
   return (
-    <Link href={href} className="block">
+    <Link href={href} className="interactive-cursor block">
       <Card className="relative h-full border-border/40 bg-card/80 shadow-sm backdrop-blur-sm transition-shadow duration-200 hover:shadow-md">
         {showBadge ? (
           <Badge
@@ -433,7 +433,7 @@ function VarianceLinkCard({
         ? FORCED_SALES_UI.hasSellAnywayLine
         : FORCED_SALES_UI.noneIn7d;
   return (
-    <Link href={href} className="block">
+    <Link href={href} className="interactive-cursor block">
       <Card className="relative h-full border-border/40 bg-card/80 shadow-sm backdrop-blur-sm transition-shadow duration-200 hover:shadow-md">
         {!isLoading && !isError && total > 0 ? (
           <Badge

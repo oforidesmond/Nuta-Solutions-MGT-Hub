@@ -34,7 +34,7 @@ export function OtherBranchUnreadHint({
       type="button"
       onClick={handleClick}
       className={cn(
-        "w-full text-left text-xs leading-snug text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline",
+        "interactive-cursor w-full text-left text-xs leading-snug text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline",
         className,
       )}
       aria-label={formattedHint}

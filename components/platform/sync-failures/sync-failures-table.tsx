@@ -42,7 +42,7 @@ export function SyncFailuresTable({
           {rows.map((failure) => (
             <TableRow
               key={failure.id}
-              className="cursor-pointer"
+              className="interactive-cursor"
               onClick={() => onSelect(failure)}
             >
               <TableCell className="px-4 py-3">

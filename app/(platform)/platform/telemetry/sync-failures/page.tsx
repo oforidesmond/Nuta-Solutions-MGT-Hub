@@ -122,7 +122,7 @@ export default function PlatformSyncFailuresPage() {
                 setStatusFilter(event.target.value as StatusFilter);
                 setPage(1);
               }}
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
             >
               <option value="OPEN">Open only</option>
               <option value="RESOLVED_RETRY">Resolved for retry</option>
@@ -140,7 +140,7 @@ export default function PlatformSyncFailuresPage() {
                 setEntityType(event.target.value as EntityTypeFilter);
                 setPage(1);
               }}
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
             >
               <option value="ALL">All</option>
               <option value="SALE">Sale</option>
@@ -156,7 +156,7 @@ export default function PlatformSyncFailuresPage() {
                 setFromDate(event.target.value);
                 setPage(1);
               }}
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
             />
           </div>
           <div className="space-y-1">
@@ -169,7 +169,7 @@ export default function PlatformSyncFailuresPage() {
                 setToDate(event.target.value);
                 setPage(1);
               }}
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
             />
           </div>
         </div>
@@ -263,7 +263,7 @@ export default function PlatformSyncFailuresPage() {
                 type="button"
                 onClick={() => openDetail(failure)}
                 className={cn(
-                  "rounded-xl border border-border/40 bg-card p-4 text-left shadow-sm transition-colors hover:bg-muted/20",
+                  "interactive-cursor rounded-xl border border-border/40 bg-card p-4 text-left shadow-sm transition-colors hover:bg-muted/20",
                   failure.status === "OPEN" && "border-destructive/30",
                 )}
               >

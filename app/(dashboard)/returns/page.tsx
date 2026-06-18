@@ -185,7 +185,7 @@ export default function ReturnsPage() {
               <Label htmlFor="ret-staff">Staff</Label>
               <select
                 id="ret-staff"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm interactive-cursor"
                 value={staffId}
                 onChange={(e) => {
                   setStaffId(e.target.value);
@@ -235,7 +235,7 @@ export default function ReturnsPage() {
                             {full ? (
                               <UiTooltip>
                                 <TooltipTrigger asChild>
-                                  <button type="button" className="w-full truncate text-left">
+                                  <button type="button" className="interactive-cursor w-full truncate text-left">
                                     {display}
                                   </button>
                                 </TooltipTrigger>

@@ -394,7 +394,7 @@ function ModeToggle({
           type="button"
           onClick={() => onModeChange(opt.value)}
           className={cn(
-            "rounded-lg border p-3 text-left transition-colors",
+            "interactive-cursor rounded-lg border p-3 text-left transition-colors",
             mode === opt.value ? "border-primary bg-primary/5" : "border-border/60 hover:border-border",
           )}
           aria-pressed={mode === opt.value}
@@ -449,7 +449,7 @@ function SharedFields({
           id="nc-type"
           value={type}
           onChange={(e) => onTypeChange(e.target.value as PlatformNotificationType)}
-          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
         >
           {PLATFORM_NOTIFICATION_TYPE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -525,7 +525,7 @@ function OrgMultiPicker({
             {org.name}
             <button
               type="button"
-              className="rounded-full p-0.5 hover:bg-muted"
+              className="interactive-cursor rounded-full p-0.5 hover:bg-muted"
               onClick={() => onRemoveOrg(org.id)}
               aria-label={`Remove ${org.name}`}
             >
@@ -554,7 +554,7 @@ function OrgMultiPicker({
                     type="button"
                     role="option"
                     aria-selected="false"
-                    className="flex w-full flex-col px-3 py-2 text-left hover:bg-muted/60"
+                    className="interactive-cursor flex w-full flex-col px-3 py-2 text-left hover:bg-muted/60"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => onAddOrg({ id: o.id, name: o.name })}
                   >
@@ -610,7 +610,7 @@ function UserPickerSection({
                 {u.label}
                 <button
                   type="button"
-                  className="rounded-full p-0.5 hover:bg-muted"
+                  className="interactive-cursor rounded-full p-0.5 hover:bg-muted"
                   onClick={() => onRemoveUser(u.id)}
                   aria-label={`Remove ${u.label}`}
                 >
@@ -638,7 +638,7 @@ function UserPickerSection({
             <ul className="max-h-36 overflow-auto rounded-lg border border-border/40 py-1 text-sm">
               {users.map((u) => (
                 <li key={u.id}>
-                  <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-muted/60">
+                  <label className="flex interactive-cursor items-center gap-2 px-3 py-2 hover:bg-muted/60">
                     <input
                       type="checkbox"
                       checked={selectedIds.has(u.id)}

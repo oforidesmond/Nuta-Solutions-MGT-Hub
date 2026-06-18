@@ -91,7 +91,7 @@ export function SalesTable({
                       <TooltipTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex size-8 items-center justify-center rounded-md text-amber-600 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-400"
+                          className="interactive-cursor inline-flex size-8 items-center justify-center rounded-md text-amber-600 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-400"
                           aria-label="Delayed sync warning"
                         >
                           <AlertTriangle className="size-4 shrink-0" aria-hidden />

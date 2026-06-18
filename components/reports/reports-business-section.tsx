@@ -263,7 +263,7 @@ export function ReportsBusinessSection() {
                                 <TooltipProvider>
                                   <UiTooltip>
                                     <TooltipTrigger asChild>
-                                      <button type="button" className="max-w-[10rem] truncate text-left">
+                                      <button type="button" className="interactive-cursor max-w-[10rem] truncate text-left">
                                         {display}
                                       </button>
                                     </TooltipTrigger>
@@ -291,7 +291,7 @@ export function ReportsBusinessSection() {
           <div className="space-y-1.5">
             <Label>Granularity</Label>
             <select
-              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm interactive-cursor"
               value={revenuePeriod}
               onChange={(e) => setRevenuePeriod(e.target.value as RevenueTrendPeriod)}
             >

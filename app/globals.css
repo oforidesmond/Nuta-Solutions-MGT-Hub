@@ -117,6 +117,10 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@utility interactive-cursor {
+  @apply md:cursor-pointer;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -126,5 +130,16 @@
   }
   html {
     @apply font-sans;
+  }
+
+  @media (width >= 768px) {
+    [data-slot="button"]:not(:disabled),
+    [data-slot="checkbox"]:not(:disabled),
+    [data-slot="radio-group-item"]:not(:disabled),
+    [data-slot="dropdown-menu-item"]:not([data-disabled]),
+    [data-slot="dropdown-menu-sub-trigger"]:not([data-disabled]),
+    [data-slot="label"] {
+      cursor: pointer;
+    }
   }
 }

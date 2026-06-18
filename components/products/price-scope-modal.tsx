@@ -246,7 +246,7 @@ function ScopeOption({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+        "interactive-cursor flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
         selected ? "border-primary bg-primary/5" : "border-border/60 hover:border-border",
       )}
     >

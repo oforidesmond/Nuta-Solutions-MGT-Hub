@@ -24,7 +24,7 @@ export function MobileBottomNav() {
               <Link
                 href={href}
                 className={cn(
-                  "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[0.65rem] font-medium transition-colors",
+                  "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[0.65rem] font-medium transition-colors interactive-cursor",
                   active
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground",

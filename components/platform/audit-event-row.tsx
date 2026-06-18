@@ -75,7 +75,7 @@ export function AuditEventRow({
       </div>
       {hasPayload ? (
         <details className="mt-2">
-          <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+          <summary className="interactive-cursor text-xs text-muted-foreground hover:text-foreground">
             Show details
           </summary>
           {event.payload && Object.keys(event.payload).length > 0 ? (

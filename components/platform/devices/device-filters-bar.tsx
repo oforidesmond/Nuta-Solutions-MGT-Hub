@@ -105,7 +105,7 @@ export function DeviceFiltersBar({
               <button
                 type="button"
                 onClick={() => onStatusChange(status.filter((v) => v !== s))}
-                className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground interactive-cursor"
                 aria-label={`Remove filter ${s}`}
               >
                 <X className="size-3" aria-hidden />

@@ -345,7 +345,7 @@ function TemporaryItemsContent() {
                 <Label htmlFor="ti-cat">Category</Label>
                 <select
                   id="ti-cat"
-                  className="flex h-11 min-h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                  className="flex h-11 min-h-11 w-full rounded-lg border border-input bg-background px-3 text-sm interactive-cursor"
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                 >

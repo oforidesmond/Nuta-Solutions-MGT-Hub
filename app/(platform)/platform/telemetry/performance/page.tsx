@@ -130,7 +130,7 @@ export default function TelemetryPerformancePage() {
             {metricOptions.length > 0 ? (
               <select
                 aria-label="Pick known metric"
-                className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                className="h-9 rounded-md border border-input bg-background px-2 text-xs interactive-cursor"
                 value=""
                 onChange={(e) => {
                   if (e.target.value) setMetric(e.target.value);

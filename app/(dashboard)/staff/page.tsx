@@ -516,7 +516,7 @@ export default function StaffPage() {
                     <Label htmlFor="add-role">Role</Label>
                     <select
                       id="add-role"
-                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 interactive-cursor"
                       value={addRole}
                       onChange={(e) => setAddRole(e.target.value as "STAFF" | "MANAGER")}
                     >
@@ -538,7 +538,7 @@ export default function StaffPage() {
                     <Label htmlFor="add-branch">Branch (optional)</Label>
                     <select
                       id="add-branch"
-                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 interactive-cursor"
                       value={addBranchId}
                       onChange={(e) => setAddBranchId(e.target.value)}
                     >
@@ -867,7 +867,7 @@ export default function StaffPage() {
                 <Label htmlFor="ed-branch">Branch</Label>
                 <select
                   id="ed-branch"
-                  className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 interactive-cursor"
                   value={editBranchId}
                   onChange={(e) => setEditBranchId(e.target.value)}
                 >
@@ -925,7 +925,7 @@ export default function StaffPage() {
             <Label htmlFor="role-pick">Role</Label>
             <select
               id="role-pick"
-              className="mt-2 flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              className="mt-2 flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 interactive-cursor"
               value={roleValue}
               onChange={(e) => setRoleValue(e.target.value)}
             >
@@ -960,7 +960,7 @@ export default function StaffPage() {
               <p className="text-sm text-muted-foreground">No permission keys yet.</p>
             ) : (
               permKeysSorted.map((key) => (
-                <label key={key} className="flex cursor-pointer items-center justify-between gap-3 text-sm">
+                <label key={key} className="flex interactive-cursor items-center justify-between gap-3 text-sm">
                   <span className="font-mono text-xs text-muted-foreground">{key}</span>
                   <input
                     type="checkbox"

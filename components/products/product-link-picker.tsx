@@ -129,7 +129,7 @@ export function ProductLinkPicker({
                       <button
                         type="button"
                         className={cn(
-                          "flex w-full flex-col rounded-md px-2 py-2 text-left text-sm hover:bg-muted/80",
+                      "interactive-cursor flex w-full flex-col rounded-md px-2 py-2 text-left text-sm hover:bg-muted/80",
                           value?.id === p.id && "bg-muted",
                         )}
                         onClick={() => {

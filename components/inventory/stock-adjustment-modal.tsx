@@ -346,7 +346,7 @@ export function StockAdjustmentModal(props: {
                   type="button"
                   onClick={() => selectType(opt.type)}
                   className={cn(
-                    "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+                    "interactive-cursor flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
                     adjustmentType === opt.type
                       ? "border-primary bg-primary/5"
                       : "border-border/60 hover:border-border",
@@ -398,7 +398,7 @@ export function StockAdjustmentModal(props: {
                       type="button"
                       onClick={() => setCorrectionDirection(opt.value)}
                       className={cn(
-                        "rounded-lg border p-2.5 text-left transition-colors",
+                        "interactive-cursor rounded-lg border p-2.5 text-left transition-colors",
                         effectiveDirection === opt.value
                           ? "border-primary bg-primary/5"
                           : "border-border/60 hover:border-border",

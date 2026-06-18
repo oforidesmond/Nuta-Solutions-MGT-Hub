@@ -108,7 +108,7 @@ export default function GrowthAnalyticsPage() {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
             />
           </div>
           <div className="space-y-1">
@@ -118,7 +118,7 @@ export default function GrowthAnalyticsPage() {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
             />
           </div>
           <div className="space-y-1">
@@ -127,7 +127,7 @@ export default function GrowthAnalyticsPage() {
               id="grow-group"
               value={groupBy}
               onChange={(e) => setGroupBy(e.target.value as "day" | "week" | "month")}
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm interactive-cursor"
             >
               <option value="day">Day</option>
               <option value="week">Week</option>

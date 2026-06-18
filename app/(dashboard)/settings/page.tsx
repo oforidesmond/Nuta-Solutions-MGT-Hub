@@ -177,7 +177,7 @@ export default function SettingsPage() {
             <CardDescription>Default tax applied for all sales.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm md:col-span-2">
+            <label className="flex min-h-11 interactive-cursor items-center gap-2 text-sm md:col-span-2">
               <input
                 type="checkbox"
                 checked={taxEnabled}
@@ -204,7 +204,7 @@ export default function SettingsPage() {
             <CardDescription>Get warned before goods go out of date.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm md:col-span-2">
+            <label className="flex min-h-11 interactive-cursor items-center gap-2 text-sm md:col-span-2">
               <input
                 type="checkbox"
                 checked={expiryAlertEnabled}
@@ -244,7 +244,7 @@ export default function SettingsPage() {
                 onChange={(e) => setMaxStaffDiscountPercent(e.target.value)}
               />
             </div>
-            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm md:col-span-2">
+            <label className="flex min-h-11 interactive-cursor items-center gap-2 text-sm md:col-span-2">
               <input
                 type="checkbox"
                 checked={alertOwnerOnExcessDiscount}

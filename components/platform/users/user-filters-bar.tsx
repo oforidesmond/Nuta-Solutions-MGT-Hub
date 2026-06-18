@@ -84,7 +84,7 @@ export function UserFiltersBar({
             <select
               value={activeFilter}
               onChange={(e) => onActiveFilterChange(e.target.value as UsersActiveFilter)}
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring interactive-cursor"
             >
               <option value="all">All</option>
               <option value="active">Active only</option>
@@ -125,7 +125,7 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
       <button
         type="button"
         onClick={onRemove}
-        className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground interactive-cursor"
         aria-label={`Remove filter ${label}`}
       >
         <X className="size-3" aria-hidden />

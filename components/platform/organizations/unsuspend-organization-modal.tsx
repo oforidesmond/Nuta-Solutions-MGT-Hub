@@ -101,7 +101,7 @@ function UnsuspendForm({
             id="unsuspend-status"
             value={planStatus}
             onChange={(e) => setPlanStatus(e.target.value as PlanStatus)}
-            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring interactive-cursor"
           >
             {RESTORE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>

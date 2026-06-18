@@ -172,7 +172,7 @@ export default function MobileCrashesPage() {
               <Label htmlFor="cr-user">Staff member</Label>
               <select
                 id="cr-user"
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 interactive-cursor"
                 value={draftUserId}
                 onChange={(e) => setDraftUserId(e.target.value)}
               >
@@ -196,7 +196,7 @@ export default function MobileCrashesPage() {
               <Label htmlFor="cr-etype">Error type</Label>
               <select
                 id="cr-etype"
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:min-w-[10rem]"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:min-w-[10rem] interactive-cursor"
                 value={draftErrorType}
                 onChange={(e) => setDraftErrorType(e.target.value)}
               >
@@ -205,7 +205,7 @@ export default function MobileCrashesPage() {
                 <option value="unhandled_rejection">unhandled_rejection</option>
               </select>
             </div>
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <label className="flex interactive-cursor items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={draftFatalOnly}
@@ -264,7 +264,7 @@ export default function MobileCrashesPage() {
                   rows.map((r, i) => (
                     <TableRow
                       key={rowKey(r, i)}
-                      className="cursor-pointer hover:bg-muted/40"
+                      className="interactive-cursor hover:bg-muted/40"
                       onClick={() => void openCrashDetail(r)}
                     >
                       <TableCell className="whitespace-nowrap text-muted-foreground">

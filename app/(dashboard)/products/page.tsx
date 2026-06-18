@@ -353,7 +353,7 @@ export default function ProductsPage() {
           )}
         >
           <select
-            className="h-11 min-h-11 rounded-lg border border-input bg-background px-3 text-sm"
+            className="h-11 min-h-11 rounded-lg border border-input bg-background px-3 text-sm interactive-cursor"
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
             aria-label="Category"
@@ -367,7 +367,7 @@ export default function ProductsPage() {
             ))}
           </select>
           <select
-            className="h-11 min-h-11 rounded-lg border border-input bg-background px-3 text-sm"
+            className="h-11 min-h-11 rounded-lg border border-input bg-background px-3 text-sm interactive-cursor"
             value={stockFilter}
             onChange={(e) => setStockFilter(e.target.value as StockFilter)}
             aria-label="Stock status"
@@ -444,7 +444,7 @@ export default function ProductsPage() {
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="whitespace-nowrap">Per page</span>
             <select
-              className="h-9 rounded-lg border border-input bg-background px-2 text-sm"
+              className="h-9 rounded-lg border border-input bg-background px-2 text-sm interactive-cursor"
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
             >
@@ -456,7 +456,7 @@ export default function ProductsPage() {
             </select>
           </label>
           <select
-            className="h-9 rounded-lg border border-input bg-background px-2 text-sm"
+            className="h-9 rounded-lg border border-input bg-background px-2 text-sm interactive-cursor"
             value={`${sortBy}-${sortOrder}`}
             onChange={(e) => {
               const [sb, so] = e.target.value.split("-") as [ProductQueryParams["sortBy"] & string, "asc" | "desc"];
