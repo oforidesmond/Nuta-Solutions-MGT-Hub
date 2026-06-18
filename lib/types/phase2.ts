@@ -12,13 +12,20 @@ export type HubNotificationType =
   | "PLAN_UPGRADE_REQUIRED"
   | "SYSTEM_ALERT"
   | "STAFF_TIME_WARNING"
-  | "STOCK_VARIANCE_SALE"
   | "OWNER_MESSAGE"
   | "STORE_ANNOUNCEMENT"
   | "SHIFT_SCHEDULE"
   | "POLICY_UPDATE"
   | "TRAINING_REMINDER"
   | "PERFORMANCE_FEEDBACK"
+  // Branch notification types (sections 7-8).
+  | "BRANCH_CREATED"
+  | "BRANCH_DEACTIVATED"
+  | "BRANCH_LIMIT_APPROACHING"
+  | "STOCK_TRANSFER_COMPLETED"
+  | "PRICE_OVERRIDE_APPLIED"
+  /** Renamed from STOCK_VARIANCE_SALE. */
+  | "BRANCH_STOCK_VARIANCE"
   | string;
 
 /** Hub manual send types (POST /notifications/send). */
@@ -104,8 +111,11 @@ export interface HubNotification {
   actionLabel?: string | null;
   /** Lowercase entity slug from API (e.g. `sale`). */
   relatedEntityType?: string | null;
-  /** UUID of the related entity (e.g. sale id for STOCK_VARIANCE_SALE). */
+  /** UUID of the related entity (e.g. sale id for BRANCH_STOCK_VARIANCE). */
   relatedEntityId?: string | null;
+  /** Branch the notification belongs to; null = org-wide (billing, plan, platform). */
+  branchId?: string | null;
+  branchName?: string | null;
   metadata?: Record<string, unknown> | null;
   /** Socket.IO / platform sends - human-readable sender when metadata is not loaded yet. */
   senderName?: string | null;

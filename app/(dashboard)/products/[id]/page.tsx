@@ -31,11 +31,19 @@ import {
   fetchProductConversions,
   updateProductConversion,
 } from "@/lib/api/product-conversions";
-import { deleteProduct, duplicateProduct, fetchProduct, fetchStockHistory } from "@/lib/api/products";
+import {
+  deleteProduct,
+  duplicateProduct,
+  fetchProduct,
+  fetchStockHistory,
+  updateProductPricing,
+} from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
+import { getApiErrorMessage } from "@/lib/api/error-codes";
 import { canManageInventoryConversions } from "@/lib/inventory-access";
+import { canManageBranches } from "@/lib/branch-access";
 import type { ProductConversion } from "@/lib/types/conversions";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, toNumericAmount } from "@/lib/format";
 import { formatDateDMY, formatTime12h } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
@@ -77,6 +85,8 @@ export default function ProductDetailPage() {
   const [deleteConvId, setDeleteConvId] = useState<string | null>(null);
   const [deletingConv, setDeletingConv] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
+  const [resetPriceOpen, setResetPriceOpen] = useState(false);
+  const [resettingPrice, setResettingPrice] = useState(false);
 
   const conversionsQuery = useQuery({
     queryKey: ["product-conversions", id],
@@ -165,6 +175,24 @@ export default function ProductDetailPage() {
     }
   }
 
+  async function onResetBranchPrice() {
+    setResettingPrice(true);
+    try {
+      await updateProductPricing(id, {
+        costPrice: null,
+        sellingPrice: null,
+        priceScope: "BRANCH",
+      });
+      toast.success("Branch prices reset to the org default");
+      setResetPriceOpen(false);
+      await load();
+    } catch (e) {
+      toast.error(getApiErrorMessage(e));
+    } finally {
+      setResettingPrice(false);
+    }
+  }
+
   async function onConfirmDeleteConv() {
     if (!deleteConvId) return;
     setDeletingConv(true);
@@ -248,14 +276,42 @@ export default function ProductDetailPage() {
                 <p className="mt-1 text-muted-foreground">Reorder at: {String(product.reorderLevel)}</p>
               ) : null}
             </div>
-            <div className="grid grid-cols-2 gap-3 border-t border-border/40 pt-4">
-              <div>
-                <p className="text-muted-foreground">Cost</p>
-                <p className="font-medium tabular-nums">{formatCurrency(Number.isFinite(cost) ? cost : 0, currency)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Selling price</p>
-                <p className="font-medium tabular-nums">{formatCurrency(Number.isFinite(sell) ? sell : 0, currency)}</p>
+            <div className="space-y-3 border-t border-border/40 pt-4">
+              {product.hasBranchPriceOverride ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Badge variant="secondary">Branch price in effect</Badge>
+                  {canManageBranches(role) ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => setResetPriceOpen(true)}
+                    >
+                      Reset to org default
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-muted-foreground">Cost</p>
+                  <p className="font-medium tabular-nums">{formatCurrency(Number.isFinite(cost) ? cost : 0, currency)}</p>
+                  {product.hasBranchPriceOverride && product.orgCostPrice != null ? (
+                    <p className="text-xs text-muted-foreground">
+                      Org: {formatCurrency(toNumericAmount(product.orgCostPrice), currency)}
+                    </p>
+                  ) : null}
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Selling price</p>
+                  <p className="font-medium tabular-nums">{formatCurrency(Number.isFinite(sell) ? sell : 0, currency)}</p>
+                  {product.hasBranchPriceOverride && product.orgSellingPrice != null ? (
+                    <p className="text-xs text-muted-foreground">
+                      Org: {formatCurrency(toNumericAmount(product.orgSellingPrice), currency)}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             </div>
             {marginPct != null && Number.isFinite(marginPct) ? (
@@ -603,6 +659,26 @@ export default function ProductDetailPage() {
           void queryClient.invalidateQueries({ queryKey: ["product-conversions", id] });
         }}
       />
+
+      <Dialog open={resetPriceOpen} onOpenChange={setResetPriceOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset to org default price?</DialogTitle>
+            <DialogDescription>
+              This removes the branch-specific price for {product.name}. This branch will use your
+              organisation&apos;s default price again.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setResetPriceOpen(false)} disabled={resettingPrice}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={resettingPrice} onClick={() => void onResetBranchPrice()}>
+              {resettingPrice ? "Resetting…" : "Reset to org default"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

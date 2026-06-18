@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductLinkPicker, type ProductPickValue } from "@/components/products/product-link-picker";
+import { PriceScopeModal } from "@/components/products/price-scope-modal";
 import { createBatch } from "@/lib/api/batches";
 import { fetchCategories } from "@/lib/api/categories";
 import {
@@ -50,6 +51,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
+  const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const canConv = canManageInventoryConversions(role);
 
   const [loading, setLoading] = useState(mode === "edit");
@@ -63,6 +65,10 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   const [categoryId, setCategoryId] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
+  /** Effective prices captured at load, used to detect price changes in edit mode. */
+  const [loadedCost, setLoadedCost] = useState("");
+  const [loadedSell, setLoadedSell] = useState("");
+  const [priceModal, setPriceModal] = useState<{ cost?: number; sell?: number } | null>(null);
   const [reorderLevel, setReorderLevel] = useState("");
   const [unit, setUnit] = useState("pcs");
   const [initialStock, setInitialStock] = useState("");
@@ -123,8 +129,12 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       setCategoryId(
         p.categoryId ?? (typeof p.category === "object" && p.category ? p.category.id : "") ?? "",
       );
-      setCostPrice(p.costPrice != null ? String(p.costPrice) : "");
-      setSellingPrice(p.sellingPrice != null ? String(p.sellingPrice) : "");
+      const costStr = p.costPrice != null ? String(p.costPrice) : "";
+      const sellStr = p.sellingPrice != null ? String(p.sellingPrice) : "";
+      setCostPrice(costStr);
+      setSellingPrice(sellStr);
+      setLoadedCost(costStr);
+      setLoadedSell(sellStr);
       setReorderLevel(p.reorderLevel != null ? String(p.reorderLevel) : "");
       setUnit(p.unit ?? p.unitOfMeasure ?? "pcs");
       if (mode === "edit") setInitialStock(String(productQuantity(p)));
@@ -354,21 +364,28 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     try {
       const cost = parseFloat(costPrice);
       const sell = parseFloat(sellingPrice);
+      // In edit mode, price changes go through the scope modal (ORG vs BRANCH)
+      // and the pricing endpoint - never via the plain product PATCH.
+      const costChanged = mode === "edit" && Number.isFinite(cost) && cost !== parseFloat(loadedCost);
+      const sellChanged = mode === "edit" && Number.isFinite(sell) && sell !== parseFloat(loadedSell);
+
       const body: ProductWriteBody = {
         name: name.trim(),
         sku: sku.trim() || undefined,
         barcode: barcode.trim() || undefined,
         description: description.trim() || undefined,
         categoryId: categoryId || undefined,
-        costPrice: cost,
-        sellingPrice: sell,
         reorderLevel: reorderLevel === "" ? undefined : parseFloat(reorderLevel),
         unit: unit.trim() || undefined,
         unitOfMeasure: unit.trim() || undefined,
       };
-      if (mode === "create" && initialStock !== "") {
-        const q = parseFloat(initialStock);
-        if (Number.isFinite(q)) body.currentStock = q;
+      if (mode === "create") {
+        body.costPrice = cost;
+        body.sellingPrice = sell;
+        if (initialStock !== "") {
+          const q = parseFloat(initialStock);
+          if (Number.isFinite(q)) body.currentStock = q;
+        }
       }
       let saved: HubProduct;
       if (mode === "create") {
@@ -406,6 +423,15 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         } catch (be) {
           toast.error(handleApiError(be));
         }
+      }
+
+      if (mode === "edit" && (costChanged || sellChanged)) {
+        // Defer navigation: the scope modal applies the price change next.
+        setPriceModal({
+          cost: costChanged ? cost : undefined,
+          sell: sellChanged ? sell : undefined,
+        });
+        return;
       }
 
       router.push(`/products/${saved.id}`);
@@ -739,6 +765,20 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           Cancel
         </Button>
       </div>
+
+      {mode === "edit" && productId ? (
+        <PriceScopeModal
+          open={priceModal != null}
+          onOpenChange={(open) => {
+            if (!open) setPriceModal(null);
+          }}
+          productId={productId}
+          proposedCostPrice={priceModal?.cost}
+          proposedSellingPrice={priceModal?.sell}
+          currency={currency}
+          onApplied={() => router.push(`/products/${productId}`)}
+        />
+      ) : null}
     </form>
   );
 }

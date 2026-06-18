@@ -1,5 +1,10 @@
 import axios, { type AxiosError } from "axios";
 import { BRANCH_FORBIDDEN_FLAG } from "@/lib/api/client";
+import {
+  ERROR_CODE_MESSAGES,
+  getApiErrorCode,
+  type BranchErrorCode,
+} from "@/lib/api/error-codes";
 
 /** User-facing message for API failures (design doc §Error Handling). */
 export function handleApiError(error: unknown): string {
@@ -10,6 +15,12 @@ export function handleApiError(error: unknown): string {
     const status = ax.response?.status;
     const raw = ax.response?.data?.message;
     const message = Array.isArray(raw) ? raw.join(", ") : raw;
+
+    // Prefer stable backend error codes over HTTP-status heuristics.
+    const code = getApiErrorCode(error);
+    if (code && code in ERROR_CODE_MESSAGES) {
+      return ERROR_CODE_MESSAGES[code as BranchErrorCode];
+    }
 
     if (status === 404) return "We could not find that item.";
     if (status === 401) return "Please sign in again to continue.";

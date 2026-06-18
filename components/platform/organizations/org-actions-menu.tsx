@@ -6,6 +6,7 @@ import {
   Activity,
   CheckCircle,
   ExternalLink,
+  GitBranch,
   MoreVertical,
   PauseCircle,
   Sliders,
@@ -22,20 +23,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ManagePlanModal } from "@/components/platform/organizations/manage-plan-modal";
+import { ManageBranchLimitModal } from "@/components/platform/organizations/manage-branch-limit-modal";
 import { SuspendOrganizationModal } from "@/components/platform/organizations/suspend-organization-modal";
 import { UnsuspendOrganizationModal } from "@/components/platform/organizations/unsuspend-organization-modal";
 import { DeleteOrganizationModal } from "@/components/platform/organizations/delete-organization-modal";
-import type { PlatformOrganization } from "@/lib/types/platform";
+import type { PlatformOrganization, PlatformOrgPlanSummary } from "@/lib/types/platform";
 
-type OpenModal = null | "plan" | "suspend" | "unsuspend" | "delete";
+type OpenModal = null | "plan" | "branch-limit" | "suspend" | "unsuspend" | "delete";
 
 interface OrgActionsMenuProps {
   org: PlatformOrganization;
+  plan?: PlatformOrgPlanSummary | null;
+  branchCount?: number | null;
   /** "header" renders a labelled outline button; "row" renders an icon-only button. */
   variant?: "header" | "row";
 }
 
-export function OrgActionsMenu({ org, variant = "header" }: OrgActionsMenuProps) {
+export function OrgActionsMenu({ org, plan, branchCount, variant = "header" }: OrgActionsMenuProps) {
   const [openModal, setOpenModal] = useState<OpenModal>(null);
   const isSuspended = org.planStatus === "SUSPENDED";
   const detailsHref = `/platform/organizations/${org.id}`;
@@ -92,6 +96,10 @@ export function OrgActionsMenu({ org, variant = "header" }: OrgActionsMenuProps)
               <Sliders className="size-4" aria-hidden />
               Manage plan
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOpenModal("branch-limit")}>
+              <GitBranch className="size-4" aria-hidden />
+              Manage branch limit
+            </DropdownMenuItem>
           </DropdownMenuGroup>
 
           <DropdownMenuSeparator />
@@ -127,6 +135,15 @@ export function OrgActionsMenu({ org, variant = "header" }: OrgActionsMenuProps)
         org={org}
         open={openModal === "plan"}
         onOpenChange={(o) => setOpenModal(o ? "plan" : null)}
+      />
+      <ManageBranchLimitModal
+        orgId={org.id}
+        orgName={org.name}
+        planType={org.planType}
+        plan={plan}
+        branchCount={branchCount ?? org.branchCount}
+        open={openModal === "branch-limit"}
+        onOpenChange={(o) => setOpenModal(o ? "branch-limit" : null)}
       />
       <SuspendOrganizationModal
         org={org}

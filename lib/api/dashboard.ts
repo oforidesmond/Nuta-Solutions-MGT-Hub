@@ -48,7 +48,14 @@ function normalizeDashboardPayload(raw: unknown): DashboardSummary {
     "total_active_products",
   ]);
 
+  const branchRaw = o.branch;
+  const branch =
+    branchRaw && typeof branchRaw === "object"
+      ? (branchRaw as DashboardSummary["branch"])
+      : null;
+
   const summary: DashboardSummary = {
+    branch,
     totalSales,
     totalRevenue,
     totalActiveProducts:

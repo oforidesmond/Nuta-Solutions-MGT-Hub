@@ -1,16 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  ArrowLeftRight,
   Boxes,
   CalendarClock,
   ClipboardList,
   ClipboardPlus,
 } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StockTransferModal } from "@/components/inventory/stock-transfer-modal";
+import { fetchBranchesList } from "@/lib/api/branches";
 import { canManageStockTakes } from "@/lib/inventory-access";
+import { canTransferStock } from "@/lib/branch-access";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -48,10 +53,24 @@ const allCards = [
 export default function InventoryHubPage() {
   const role = useAuthStore((s) => s.user?.role);
   const canStock = canManageStockTakes(role);
+  const canTransfer = canTransferStock(role);
+  const [transferOpen, setTransferOpen] = useState(false);
   const cards = useMemo(
     () => allCards.filter((c) => !c.requiresStockTakeRole || canStock),
     [canStock],
   );
+
+  const branchesQuery = useQuery({
+    queryKey: ["branches"],
+    queryFn: fetchBranchesList,
+    enabled: canTransfer,
+    staleTime: 60_000,
+  });
+  const activeBranches = useMemo(
+    () => (branchesQuery.data ?? []).filter((b) => b.isActive !== false),
+    [branchesQuery.data],
+  );
+  const showTransfer = canTransfer && activeBranches.length > 1;
 
   return (
     <div className="space-y-8">
@@ -84,7 +103,41 @@ export default function InventoryHubPage() {
             </Card>
           </Link>
         ))}
+        {showTransfer ? (
+          <button
+            type="button"
+            onClick={() => setTransferOpen(true)}
+            className="group block rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Card
+              className={cn(
+                "h-full border-border/40 bg-card/80 shadow-sm backdrop-blur-sm transition-shadow duration-200",
+                "hover:shadow-md",
+              )}
+            >
+              <CardHeader className="flex flex-row items-start gap-3 space-y-0">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <ArrowLeftRight className="size-5" aria-hidden />
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <CardTitle className="text-base font-semibold group-hover:text-primary">
+                    Transfer stock
+                  </CardTitle>
+                  <CardDescription>Move stock between your branches.</CardDescription>
+                </div>
+              </CardHeader>
+            </Card>
+          </button>
+        ) : null}
       </div>
+
+      {showTransfer ? (
+        <StockTransferModal
+          open={transferOpen}
+          onOpenChange={setTransferOpen}
+          branches={activeBranches}
+        />
+      ) : null}
       <Card className="border-dashed border-border/60 bg-muted/10">
         <CardHeader className="flex flex-row items-center gap-3">
           <Boxes className="size-8 text-muted-foreground" aria-hidden />

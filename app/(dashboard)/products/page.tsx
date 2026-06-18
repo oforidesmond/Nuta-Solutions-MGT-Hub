@@ -35,6 +35,7 @@ import {
 import { ConvertProductModal } from "@/components/inventory/convert-product-modal";
 import { StockAdjustmentModal } from "@/components/inventory/stock-adjustment-modal";
 import { StockTakeRecordModal } from "@/components/inventory/stock-take-record-modal";
+import { StockTransferModal } from "@/components/inventory/stock-transfer-modal";
 import { ProductActionsMenu } from "@/components/products/product-actions-menu";
 import {
   Dialog,
@@ -58,7 +59,9 @@ import { formatCurrency } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
 import { canManageInventoryConversions, canManageStockTakes } from "@/lib/inventory-access";
+import { canTransferStock } from "@/lib/branch-access";
 import { fetchProductConversions } from "@/lib/api/product-conversions";
+import { fetchBranchesList } from "@/lib/api/branches";
 import { useAuthStore } from "@/stores/auth-store";
 import type { HubCategory, HubProduct, PageMeta } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
@@ -112,6 +115,7 @@ export default function ProductsPage() {
   const role = useAuthStore((s) => s.user?.role);
   const canStockTake = canManageStockTakes(role);
   const canConvert = canManageInventoryConversions(role);
+  const canTransfer = canTransferStock(role);
   const [categories, setCategories] = useState<HubCategory[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -138,7 +142,20 @@ export default function ProductsPage() {
   const [stockTakeProduct, setStockTakeProduct] = useState<HubProduct | null>(null);
   const [adjustStockProduct, setAdjustStockProduct] = useState<HubProduct | null>(null);
   const [convertProduct, setConvertProduct] = useState<HubProduct | null>(null);
+  const [transferProduct, setTransferProduct] = useState<HubProduct | null>(null);
   const [actionsMenuProductId, setActionsMenuProductId] = useState<string | null>(null);
+
+  const branchesQuery = useQuery({
+    queryKey: ["branches"],
+    queryFn: fetchBranchesList,
+    enabled: canTransfer,
+    staleTime: 60_000,
+  });
+  const activeBranches = useMemo(
+    () => (branchesQuery.data ?? []).filter((b) => b.isActive !== false),
+    [branchesQuery.data],
+  );
+  const canTransferStockNow = canTransfer && activeBranches.length > 1;
 
   const actionsConversionsQuery = useQuery({
     queryKey: ["product-conversions", actionsMenuProductId],
@@ -545,11 +562,13 @@ export default function ProductsPage() {
                             product={p}
                             canStockTake={canStockTake}
                             canConvert={canConvert}
+                            canTransfer={canTransferStockNow}
                             hasConversion={hasActiveConversionForMenuRow(p)}
                             conversionsLoading={conversionsLoadingForRow(p)}
                             onAdjustStock={() => setAdjustStockProduct(p)}
                             onStockCount={() => setStockTakeProduct(p)}
                             onSplitPack={() => setConvertProduct(p)}
+                            onTransferStock={() => setTransferProduct(p)}
                             onDuplicate={() => onDuplicate(p.id)}
                             onDelete={() => setDeleteId(p.id)}
                             onOpenChange={(open) => {
@@ -596,11 +615,13 @@ export default function ProductsPage() {
                       product={p}
                       canStockTake={canStockTake}
                       canConvert={canConvert}
+                      canTransfer={canTransferStockNow}
                       hasConversion={hasActiveConversionForMenuRow(p)}
                       conversionsLoading={conversionsLoadingForRow(p)}
                       onAdjustStock={() => setAdjustStockProduct(p)}
                       onStockCount={() => setStockTakeProduct(p)}
                       onSplitPack={() => setConvertProduct(p)}
+                      onTransferStock={() => setTransferProduct(p)}
                       onDuplicate={() => onDuplicate(p.id)}
                       onDelete={() => setDeleteId(p.id)}
                       onOpenChange={(open) => {
@@ -692,6 +713,21 @@ export default function ProductsPage() {
         product={convertProduct}
         onSuccess={() => loadProducts()}
       />
+
+      {canTransferStockNow ? (
+        <StockTransferModal
+          open={!!transferProduct}
+          onOpenChange={(open) => {
+            if (!open) setTransferProduct(null);
+          }}
+          branches={activeBranches}
+          presetProduct={
+            transferProduct
+              ? { id: transferProduct.id, name: transferProduct.name ?? "Product" }
+              : null
+          }
+        />
+      ) : null}
     </div>
   );
 }

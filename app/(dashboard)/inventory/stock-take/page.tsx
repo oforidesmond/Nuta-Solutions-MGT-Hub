@@ -472,6 +472,9 @@ export default function StockTakePage() {
                             </Badge>
                           ) : null}
                         </div>
+                        {row.branchName ? (
+                          <span className="block truncate text-xs text-muted-foreground">{row.branchName}</span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="max-w-[7rem] truncate font-mono text-xs text-muted-foreground">
                         {row.product.sku?.trim() ? row.product.sku : "-"}

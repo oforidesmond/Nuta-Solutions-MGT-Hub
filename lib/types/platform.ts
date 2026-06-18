@@ -100,6 +100,8 @@ export interface PlatformOrganization {
   expiryReminderMonths?: number | null;
   maxStaffDiscountPercent?: string | number | null;
   maxStaffDiscountAmount?: string | number | null;
+  /** Active branches in the org (platform org detail). */
+  branchCount?: number;
   createdAt: string;
   updatedAt?: string | null;
   counts: PlatformOrganizationCounts;
@@ -126,6 +128,10 @@ export interface PlatformOrgPlanSummary {
   trialStartDate: string | null;
   trialEndDate: string | null;
   daysRemaining: number | null;
+  /** null = plan default; 999999 = unlimited override */
+  branchLimitOverride?: number | null;
+  /** null = unlimited (from plan or override) */
+  effectiveBranchLimit?: number | null;
 }
 
 export interface PlatformOrgDetails {
@@ -150,6 +156,17 @@ export interface UpdateOrganizationPlanDto {
   salesLimit?: number | null;
   trialEndDate?: string | null;
   reason: string;
+}
+
+export interface UpdateOrganizationBranchLimitDto {
+  limit: number | null;
+  reason?: string;
+}
+
+export interface UpdateOrganizationBranchLimitResult {
+  organizationId: string;
+  branchLimitOverride: number | null;
+  effectiveBranchLimit: number | null;
 }
 
 export interface SuspendOrganizationDto {

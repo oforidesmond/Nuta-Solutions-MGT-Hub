@@ -61,6 +61,7 @@ function salesVarianceQueryKey(args: Record<string, unknown>) {
 
 export default function SalesPage() {
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const isAdmin = useAuthStore((s) => s.user?.role) === "ADMIN";
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
@@ -347,7 +348,7 @@ export default function SalesPage() {
           {activeQuery.isPending && !data ? (
             <SalesTableSkeleton />
           ) : (
-            <SalesTable rows={data?.data ?? []} currency={currency} />
+            <SalesTable rows={data?.data ?? []} currency={currency} showBranch={isAdmin} />
           )}
           {data ? (
             <PaginationBar

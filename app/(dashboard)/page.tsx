@@ -135,6 +135,13 @@ export default function DashboardHomePage() {
         <p className="text-sm text-muted-foreground">
           Signed in as <span className="font-medium text-foreground">{signedInAs}</span>
         </p>
+        {summary?.branch?.name ? (
+          <p className="text-sm text-muted-foreground">
+            Viewing{" "}
+            <span className="font-medium text-foreground">{summary.branch.name}</span>
+            {summary.branch.isDefault ? " (default branch)" : ""}
+          </p>
+        ) : null}
         {summaryQuery.dataUpdatedAt ? (
           <p className="text-xs text-muted-foreground">
             Dashboard data updated {formatRelativeUpdated(summaryQuery.dataUpdatedAt)}

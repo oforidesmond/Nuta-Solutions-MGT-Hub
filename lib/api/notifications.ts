@@ -78,6 +78,14 @@ export function normalizeNotification(row: unknown): HubNotification {
       null,
     relatedEntityType,
     relatedEntityId,
+    branchId:
+      (r.branchId as string | null | undefined) ??
+      (r.branch_id as string | null | undefined) ??
+      null,
+    branchName:
+      (r.branchName as string | null | undefined) ??
+      (r.branch_name as string | null | undefined) ??
+      null,
     metadata: meta && typeof meta === "object" ? (meta as Record<string, unknown>) : null,
     senderName:
       (r.senderName as string | undefined) ??

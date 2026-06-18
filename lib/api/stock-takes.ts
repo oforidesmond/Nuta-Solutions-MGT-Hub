@@ -68,6 +68,8 @@ export function parseStockTakeRow(raw: unknown): StockTakeRow | null {
     quantityChange: String(o.quantityChange ?? ""),
     reason: o.reason == null ? null : String(o.reason),
     notes: o.notes == null ? null : String(o.notes),
+    branchId: o.branchId == null ? null : String(o.branchId),
+    branchName: o.branchName == null ? null : String(o.branchName),
     createdAt: String(o.createdAt ?? ""),
     financialImpact: fi == null || fi === "" ? null : String(fi),
     variancePercentage: vp == null || vp === "" ? null : String(vp),

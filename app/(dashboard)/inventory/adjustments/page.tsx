@@ -28,6 +28,7 @@ import { fetchOrgUsers } from "@/lib/api/users";
 import type { DateRangePreset } from "@/lib/date-range-presets";
 import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
 import type { HubStockAdjustment } from "@/lib/types/domain";
+import { formatAdjustmentType } from "@/lib/types/inventory-adjustments";
 import { cn } from "@/lib/utils";
 
 type AdjustmentDisplayItem =
@@ -230,10 +231,15 @@ export default function InventoryAdjustmentsPage() {
                           <TableCell />
                           <TableCell className="whitespace-nowrap text-sm">{formatWhen(row.createdAt)}</TableCell>
                           <TableCell className="max-w-[10rem] truncate text-sm">
-                            {row.type?.replace(/_/g, " ") ?? "-"}
+                            {formatAdjustmentType(row.type)}
                           </TableCell>
                           <TableCell className="max-w-[12rem]">
-                            <span className="truncate font-medium">{productLabel(row)}</span>
+                            <span className="block truncate font-medium">{productLabel(row)}</span>
+                            {row.branchName ? (
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {row.branchName}
+                              </span>
+                            ) : null}
                           </TableCell>
                           <TableCell
                             className={cn(
@@ -277,7 +283,7 @@ export default function InventoryAdjustmentsPage() {
                     const pairKey = a.id;
                     const open = openPairId === pairKey;
                     const when = formatWhen(a.createdAt ?? b.createdAt);
-                    const typeLabel = a.type?.replace(/_/g, " ") ?? b.type?.replace(/_/g, " ") ?? "Conversion";
+                    const typeLabel = formatAdjustmentType(a.type ?? b.type) || "Conversion";
 
                     return (
                       <Fragment key={pairKey}>

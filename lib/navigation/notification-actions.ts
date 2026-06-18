@@ -16,9 +16,12 @@ function labelFromPath(href: string): string {
   if (path.startsWith("/products/")) return "View product";
   if (path.startsWith("/inventory/temporary-items")) return "Review temporary items";
   if (path.startsWith("/inventory/alerts")) return "View low stock";
+  if (path.startsWith("/inventory/adjustments")) return "View stock movements";
   if (path === "/products/expiring") return "View expiring products";
+  if (path === "/products") return "Open products";
   if (path.startsWith("/staff/")) return "View staff member";
   if (path === "/staff") return "Open staff";
+  if (path.startsWith("/branches")) return "Open branches";
   if (path.startsWith("/settings")) return "Open settings";
   return "Open";
 }
@@ -27,7 +30,7 @@ function labelFromPath(href: string): string {
 export function resolveNotificationAction(n: HubNotification): NotificationAction | null {
   const href = resolveNotificationHref(n);
   if (!href) {
-    if (n.type === "STOCK_VARIANCE_SALE") {
+    if (n.type === "BRANCH_STOCK_VARIANCE") {
       return { href: "/sales", label: "Open sales" };
     }
     return null;

@@ -151,10 +151,17 @@ export function ReportsBusinessSection() {
   });
 
   const chartData = useMemo(
-    () => extractTrendSeries(revenueTrendsQuery.data ?? {}),
+    () => extractTrendSeries(revenueTrendsQuery.data?.reportData ?? {}),
     [revenueTrendsQuery.data],
   );
-  const staffRows = useMemo(() => extractRows(staffPerfQuery.data ?? {}), [staffPerfQuery.data]);
+  const staffRows = useMemo(
+    () => extractRows(staffPerfQuery.data?.reportData ?? {}),
+    [staffPerfQuery.data],
+  );
+
+  const salesBranchName = salesSummaryQuery.data?.branch?.name ?? null;
+  const staffBranchName = staffPerfQuery.data?.branch?.name ?? null;
+  const revenueBranchName = revenueTrendsQuery.data?.branch?.name ?? null;
 
   return (
     <div className="space-y-8">
@@ -177,6 +184,7 @@ export function ReportsBusinessSection() {
           <CardHeader>
             <CardTitle className="text-base">Summary for selected range</CardTitle>
             <CardDescription>
+              {salesBranchName ? `${salesBranchName} · ` : ""}
               {range.startDate} → {range.endDate}
             </CardDescription>
           </CardHeader>
@@ -187,7 +195,7 @@ export function ReportsBusinessSection() {
               <p className="text-sm text-destructive">Could not load sales summary.</p>
             ) : (
               <dl className="grid gap-2 sm:grid-cols-2">
-                {formatSummaryKv(salesSummaryQuery.data ?? {}).map(({ k, v }) => (
+                {formatSummaryKv(salesSummaryQuery.data?.reportData ?? {}).map(({ k, v }) => (
                   <div key={k} className="flex justify-between gap-4 text-sm">
                     <dt className="text-muted-foreground">{k.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}</dt>
                     <dd className="font-medium tabular-nums text-foreground">{v}</dd>
@@ -217,7 +225,9 @@ export function ReportsBusinessSection() {
         <Card className="border-border/40 bg-card/80 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Leaderboard</CardTitle>
-            <CardDescription>Period: {staffPeriod}</CardDescription>
+            <CardDescription>
+              {staffBranchName ? `${staffBranchName} · ` : ""}Period: {staffPeriod}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {staffPerfQuery.isLoading ? (
@@ -291,7 +301,9 @@ export function ReportsBusinessSection() {
         <Card className="border-border/40 bg-card/80 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Trend chart</CardTitle>
-            <CardDescription>Period: {revenuePeriod}</CardDescription>
+            <CardDescription>
+              {revenueBranchName ? `${revenueBranchName} · ` : ""}Period: {revenuePeriod}
+            </CardDescription>
           </CardHeader>
           <CardContent className="h-[280px] w-full">
             {revenueTrendsQuery.isLoading ? (

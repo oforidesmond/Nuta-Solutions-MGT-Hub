@@ -18,6 +18,8 @@ export interface StockTakeRow {
   quantityChange: string;
   reason: string | null;
   notes: string | null;
+  branchId: string | null;
+  branchName: string | null;
   createdAt: string;
   /** Negative = loss, positive = gain (decimal string from API). */
   financialImpact: string | null;

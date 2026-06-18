@@ -156,6 +156,7 @@ export default function BatchesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Product</TableHead>
+                  <TableHead>Branch</TableHead>
                   <TableHead>Batch</TableHead>
                   <TableHead className="text-right">Quantity</TableHead>
                   <TableHead>Expiry</TableHead>
@@ -174,6 +175,7 @@ export default function BatchesPage() {
                         "-"
                       )}
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{b.branchName ?? "-"}</TableCell>
                     <TableCell className="font-mono text-xs">{b.batchNumber ?? "-"}</TableCell>
                     <TableCell className="text-right tabular-nums">{String(b.remainingQuantity ?? b.quantity ?? "-")}</TableCell>
                     <TableCell>{b.expiryDate ? formatDateDMY(b.expiryDate) : "-"}</TableCell>

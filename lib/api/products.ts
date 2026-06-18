@@ -1,7 +1,13 @@
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { unwrapList } from "@/lib/api/response";
-import type { HubProduct, HubStockAdjustment, PageMeta } from "@/lib/types/domain";
+import type {
+  HubProduct,
+  HubStockAdjustment,
+  PageMeta,
+  PriceScope,
+  ProductPriceContext,
+} from "@/lib/types/domain";
 import type { HubInventoryEvent, HubTemporaryItem } from "@/lib/types/phase2";
 
 /** Backend validation cap for `GET /products` `limit` query param. */
@@ -77,6 +83,17 @@ export async function fetchProduct(id: string): Promise<HubProduct> {
   return unwrapEntity<HubProduct>(res.data);
 }
 
+/** Fetch a product with effective stock/prices for a specific branch context. */
+export async function fetchProductAtBranch(
+  id: string,
+  branchId: string,
+): Promise<HubProduct> {
+  const res = await api.get(endpoints.productById(id), {
+    headers: { "X-Branch-Id": branchId },
+  });
+  return unwrapEntity<HubProduct>(res.data);
+}
+
 export type ProductWriteBody = {
   name: string;
   sku?: string;
@@ -121,12 +138,33 @@ export async function duplicateProduct(id: string): Promise<HubProduct> {
   return unwrapEntity<HubProduct>(res.data);
 }
 
+/**
+ * Body for branch-scoped price updates. `priceScope` is required whenever a
+ * price field is present. Use `null` with `priceScope: "BRANCH"` to clear a
+ * branch override and fall back to the org default.
+ */
+export type ProductPricingBody = {
+  costPrice?: number | null;
+  sellingPrice?: number | null;
+  priceScope?: PriceScope;
+  taxRate?: number;
+  reorderLevel?: number;
+};
+
 export async function updateProductPricing(
   id: string,
-  body: { costPrice?: number; sellingPrice?: number; taxRate?: number },
+  body: ProductPricingBody,
 ): Promise<HubProduct> {
   const res = await api.patch(endpoints.productPricing(id), body);
   return unwrapEntity<HubProduct>(res.data);
+}
+
+/** Fetch org + branch prices for the price-edit modal. */
+export async function fetchProductPriceContext(
+  id: string,
+): Promise<ProductPriceContext> {
+  const res = await api.get(endpoints.productPriceContext(id));
+  return unwrapEntity<ProductPriceContext>(res.data);
 }
 
 export async function fetchLowStockProducts(): Promise<HubProduct[]> {

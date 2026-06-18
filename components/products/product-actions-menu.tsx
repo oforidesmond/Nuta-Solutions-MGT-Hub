@@ -3,6 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
+  ArrowLeftRight,
   Boxes,
   ClipboardCheck,
   Copy,
@@ -30,11 +31,14 @@ type ProductActionsMenuProps = {
   product: HubProduct;
   canStockTake: boolean;
   canConvert: boolean;
+  /** Stock transfer available (ADMIN with more than one active branch). */
+  canTransfer?: boolean;
   hasConversion: boolean;
   conversionsLoading: boolean;
   onAdjustStock: () => void;
   onStockCount: () => void;
   onSplitPack: () => void;
+  onTransferStock?: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onOpenChange?: (open: boolean) => void;
@@ -112,18 +116,21 @@ export function ProductActionsMenu({
   product,
   canStockTake,
   canConvert,
+  canTransfer = false,
   hasConversion,
   conversionsLoading,
   onAdjustStock,
   onStockCount,
   onSplitPack,
+  onTransferStock,
   onDuplicate,
   onDelete,
   onOpenChange,
   triggerVariant = "icon",
   align = "end",
 }: ProductActionsMenuProps) {
-  const showInventorySection = canStockTake || canConvert;
+  const showTransfer = canTransfer && Boolean(onTransferStock);
+  const showInventorySection = canStockTake || canConvert || showTransfer;
 
   return (
     <DropdownMenu onOpenChange={onOpenChange}>
@@ -208,6 +215,14 @@ export function ProductActionsMenu({
                   title="Split/Pack"
                   description="Convert between packs and singles"
                   onClick={onSplitPack}
+                />
+              ) : null}
+              {showTransfer ? (
+                <InventoryMenuItem
+                  icon={ArrowLeftRight}
+                  title="Transfer stock"
+                  description="Move stock to another branch"
+                  onClick={onTransferStock}
                 />
               ) : null}
             </DropdownMenuGroup>

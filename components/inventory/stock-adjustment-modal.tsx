@@ -298,7 +298,7 @@ export function StockAdjustmentModal(props: {
       const afterQty = Number(row.quantityAfter ?? newStock ?? systemStock);
       const change = Number(row.quantityChange ?? signedDelta);
       const label = ADJUSTMENT_TYPE_LABELS[adjustmentType];
-      toast.success(`Stock updated — ${afterQty} units of ${product.name} remaining`, {
+      toast.success(`Stock updated - ${afterQty} units of ${product.name} remaining`, {
         description: `${label} · ${formatSignedChange(change)} units`,
       });
       onOpenChange(false);

@@ -37,10 +37,14 @@ function varianceLineCount(s: HubSale): number | null {
 export function SalesTable({
   rows,
   currency,
+  showBranch = false,
 }: {
   rows: HubSale[];
   currency: string;
+  /** Show which branch each sale occurred at (admin / org-wide views). */
+  showBranch?: boolean;
 }) {
+  const colSpan = showBranch ? 7 : 6;
   return (
     <Table>
       <TableHeader>
@@ -48,6 +52,7 @@ export function SalesTable({
           <TableHead className="w-10" aria-label="Sync" />
           <TableHead className="w-10" aria-label={FORCED_SALES_UI.tableColumn} />
           <TableHead>Receipt</TableHead>
+          {showBranch ? <TableHead>Branch</TableHead> : null}
           <TableHead className="text-right">Total</TableHead>
           <TableHead>Date</TableHead>
           <TableHead>Created by</TableHead>
@@ -56,7 +61,7 @@ export function SalesTable({
       <TableBody>
         {rows.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={6} className="text-muted-foreground">
+            <TableCell colSpan={colSpan} className="text-muted-foreground">
               No sales yet.
             </TableCell>
           </TableRow>
@@ -141,6 +146,11 @@ export function SalesTable({
                     "N/A"
                   )}
                 </TableCell>
+                {showBranch ? (
+                  <TableCell className="text-sm text-muted-foreground">
+                    {s.branchName?.trim() ? s.branchName : "-"}
+                  </TableCell>
+                ) : null}
                 <TableCell className="text-right font-medium tabular-nums">
                   {formatCurrency(Number.isFinite(total) ? total : 0, currency)}
                 </TableCell>

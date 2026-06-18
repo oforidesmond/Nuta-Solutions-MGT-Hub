@@ -59,7 +59,7 @@ export function resolveNotificationHref(n: HubNotification): string | null {
       if (staffId) return `/staff/${encodeURIComponent(staffId)}/devices`;
       return "/staff";
     }
-    case "STOCK_VARIANCE_SALE": {
+    case "BRANCH_STOCK_VARIANCE": {
       const type = (n.relatedEntityType ?? "").toLowerCase();
       const id = n.relatedEntityId?.trim();
       if (type === "sale" && id) {
@@ -71,6 +71,20 @@ export function resolveNotificationHref(n: HubNotification): string | null {
       }
       return "/sales";
     }
+    case "STOCK_TRANSFER_COMPLETED": {
+      const productId = metaString(m, "productId", "product_id");
+      if (productId) return `/products/${encodeURIComponent(productId)}`;
+      return "/inventory/adjustments";
+    }
+    case "PRICE_OVERRIDE_APPLIED": {
+      const productId = metaString(m, "productId", "product_id");
+      if (productId) return `/products/${encodeURIComponent(productId)}`;
+      return "/products";
+    }
+    case "BRANCH_CREATED":
+    case "BRANCH_DEACTIVATED":
+    case "BRANCH_LIMIT_APPROACHING":
+      return "/branches";
     case "LOW_STOCK": {
       const productId = metaString(m, "productId", "product_id");
       if (productId) return `/products/${encodeURIComponent(productId)}`;

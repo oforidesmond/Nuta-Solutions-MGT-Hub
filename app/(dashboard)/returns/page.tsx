@@ -40,6 +40,13 @@ function isLikelyDateKey(k: string): boolean {
   return k === "returnedAt" || k === "createdAt" || k.endsWith("At");
 }
 
+/** Friendly column header for known keys (e.g. branch context). */
+function humanizeColumnKey(k: string): string {
+  if (k === "branchName") return "Branch";
+  if (k === "branchId") return "Branch ID";
+  return k;
+}
+
 function formatHumanDate(v: unknown): string | null {
   if (typeof v !== "string" || !v.trim()) return null;
   const d = new Date(v);
@@ -209,7 +216,7 @@ export default function ReturnsPage() {
                 <TableHeader>
                   <TableRow>
                     {keys.map((k) => (
-                      <TableHead key={k}>{k}</TableHead>
+                      <TableHead key={k}>{humanizeColumnKey(k)}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>

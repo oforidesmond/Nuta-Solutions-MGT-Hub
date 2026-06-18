@@ -607,6 +607,7 @@ export default function StaffPage() {
                   <TableHead className="font-mono text-xs">Staff ID</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Branch</TableHead>
                   <TableHead>Job title</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Status</TableHead>
@@ -631,6 +632,9 @@ export default function StaffPage() {
                         <Badge variant="outline" className={cn("text-xs capitalize", roleBadgeClass(String(m.role)))}>
                           {String(m.role).toLowerCase().replace("_", " ")}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {m.branch?.name ?? "-"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{m.jobTitle ?? "-"}</TableCell>
                       <TableCell>{m.phoneNumber ?? "-"}</TableCell>
@@ -752,6 +756,7 @@ export default function StaffPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Staff</TableHead>
+                  <TableHead>Branch</TableHead>
                   <TableHead className="text-right">Total sales</TableHead>
                   <TableHead className="text-right">Transactions</TableHead>
                 </TableRow>
@@ -760,6 +765,7 @@ export default function StaffPage() {
                 {performanceRows.map((row, idx) => (
                   <TableRow key={row.id ?? `${row.staffName}-${idx}`}>
                     <TableCell className="font-medium">{row.staffName}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{row.branchName ?? "-"}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatCurrency(row.totalSales, currency)}</TableCell>
                     <TableCell className="text-right tabular-nums">{row.transactionCount}</TableCell>
                   </TableRow>

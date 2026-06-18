@@ -21,9 +21,19 @@ function isAuthRoute(url: string): boolean {
   );
 }
 
+/** Routes that resolve branches from the request body / roll up all branches. */
+function isBranchAgnosticRoute(url: string): boolean {
+  return url.includes("/inventory/transfer") || url.includes("/analytics/org/");
+}
+
 function attachBranchHeader(config: InternalAxiosRequestConfig): void {
   const url = config.url ?? "";
   if (isAuthRoute(url) || url.includes("/platform/")) return;
+  if (isBranchAgnosticRoute(url)) return;
+
+  // Respect an explicit per-request override (e.g. fetching stock for a
+  // specific branch in the transfer flow); otherwise use the active branch.
+  if (config.headers["X-Branch-Id"]) return;
 
   const { activeBranchId } = useAuthStore.getState();
   if (activeBranchId) {

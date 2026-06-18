@@ -96,6 +96,11 @@ export function NotificationDetailSheet({
             <Badge variant="secondary" className="font-mono text-[0.65rem]">
               {displayNotificationType(n)}
             </Badge>
+            {n.branchName ? (
+              <Badge variant="outline">{n.branchName}</Badge>
+            ) : n.branchId === null ? (
+              <Badge variant="outline">Org-wide</Badge>
+            ) : null}
             {(n.aggregateCount ?? 1) > 1 ? (
               <Badge variant="outline">{n.aggregateCount ?? 1} events</Badge>
             ) : null}

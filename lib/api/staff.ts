@@ -325,6 +325,18 @@ function mapStaffPerformanceRow(row: Record<string, unknown>): StaffPerformanceR
         : row.staff_id != null
           ? String(row.staff_id)
           : null,
+    branchId:
+      row.branchId != null
+        ? String(row.branchId)
+        : row.branch_id != null
+          ? String(row.branch_id)
+          : null,
+    branchName:
+      row.branchName != null
+        ? String(row.branchName)
+        : row.branch_name != null
+          ? String(row.branch_name)
+          : null,
   };
 }
 

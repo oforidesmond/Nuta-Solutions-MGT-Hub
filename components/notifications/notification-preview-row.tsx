@@ -88,9 +88,20 @@ export function NotificationPreviewRow({ notification: n, className }: Notificat
         >
           {n.message || n.type.replace(/_/g, " ")}
         </span>
-        {n.createdAt ? (
-          <span className="w-full text-xs text-muted-foreground">{formatDate(n.createdAt)}</span>
-        ) : null}
+        <span className="flex w-full flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          {n.createdAt ? <span>{formatDate(n.createdAt)}</span> : null}
+          {n.branchName ? (
+            <>
+              {n.createdAt ? <span aria-hidden>·</span> : null}
+              <span>{n.branchName}</span>
+            </>
+          ) : n.branchId === null ? (
+            <>
+              {n.createdAt ? <span aria-hidden>·</span> : null}
+              <span>Org-wide</span>
+            </>
+          ) : null}
+        </span>
       </div>
     </div>
   );

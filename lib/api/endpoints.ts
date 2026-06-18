@@ -34,6 +34,7 @@ export const endpoints = {
   products: "/products",
   productById: (id: string) => `/products/${id}` as const,
   productPricing: (id: string) => `/products/${id}/pricing` as const,
+  productPriceContext: (id: string) => `/products/${id}/price-context` as const,
   productDuplicate: (id: string) => `/products/${id}/duplicate` as const,
   productStockHistory: (id: string) => `/products/${id}/stock-history` as const,
   productInventoryEvents: (id: string) => `/products/${id}/inventory-events` as const,
@@ -65,6 +66,7 @@ export const endpoints = {
   returns: "/returns",
   inventoryAdjustments: "/inventory/adjustments",
   inventoryStockTakes: "/inventory/stock-takes",
+  inventoryTransfer: "/inventory/transfer",
   reports: {
     salesSummary: "/reports/sales-summary",
     staffPerformance: "/reports/staff-performance",
@@ -80,6 +82,18 @@ export const endpoints = {
   analyticsCrash: "/analytics/crash",
   analyticsCrashes: "/analytics/crashes",
   analyticsCrashById: (id: string) => `/analytics/crashes/${id}` as const,
+  /** Org-wide analytics (ADMIN only, no X-Branch-Id). */
+  analyticsOrg: {
+    revenue: "/analytics/org/revenue",
+    profit: "/analytics/org/profit",
+    topProducts: "/analytics/org/top-products",
+    lowStock: "/analytics/org/low-stock",
+    branchComparison: "/analytics/org/branch-comparison",
+    staffPerformance: "/analytics/org/staff-performance",
+    returnsSummary: "/analytics/org/returns-summary",
+    inventoryValue: "/analytics/org/inventory-value",
+    salesVelocity: "/analytics/org/sales-velocity",
+  },
   dashboardSummary: "/dashboard/summary",
   dashboardReliabilitySummary: "/dashboard/reliability-summary",
   platform: {
@@ -88,6 +102,8 @@ export const endpoints = {
     organizationById: (id: string) => `/platform/organizations/${id}` as const,
     organizationPlan: (id: string) =>
       `/platform/organizations/${id}/plan` as const,
+    organizationBranchLimit: (id: string) =>
+      `/platform/organizations/${id}/branch-limit` as const,
     organizationSuspend: (id: string) =>
       `/platform/organizations/${id}/suspend` as const,
     organizationUnsuspend: (id: string) =>

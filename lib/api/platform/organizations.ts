@@ -16,6 +16,8 @@ import type {
   PlatformOrgDetails,
   SuspendOrganizationDto,
   UnsuspendOrganizationDto,
+  UpdateOrganizationBranchLimitDto,
+  UpdateOrganizationBranchLimitResult,
   UpdateOrganizationPlanDto,
 } from "@/lib/types/platform";
 
@@ -44,6 +46,16 @@ export async function updateOrganizationPlan(
 ): Promise<PlatformOrgDetails> {
   return platformPatch<PlatformOrgDetails>(
     endpoints.platform.organizationPlan(id),
+    dto,
+  );
+}
+
+export async function updateOrganizationBranchLimit(
+  id: string,
+  dto: UpdateOrganizationBranchLimitDto,
+): Promise<UpdateOrganizationBranchLimitResult> {
+  return platformPatch<UpdateOrganizationBranchLimitResult>(
+    endpoints.platform.organizationBranchLimit(id),
     dto,
   );
 }

@@ -59,8 +59,17 @@ export interface HubProduct {
   categoryId?: string | null;
   /** String (legacy) or nested category from API. */
   category?: HubCategory | string | null;
+  /** Effective prices for the active branch (override if set, else org default). */
   costPrice?: string | number | null;
   sellingPrice?: string | number | null;
+  /** Org-wide default prices from the product. */
+  orgCostPrice?: string | number | null;
+  orgSellingPrice?: string | number | null;
+  /** Active branch override, or null if none. */
+  branchCostPriceOverride?: string | number | null;
+  branchSellingPriceOverride?: string | number | null;
+  /** true when either branch price override is set. */
+  hasBranchPriceOverride?: boolean;
   /** Same as currentStock in Prisma; APIs may use stockQuantity */
   currentStock?: string | number | null;
   stockQuantity?: string | number | null;
@@ -79,6 +88,22 @@ export interface HubProduct {
   batches?: HubBatch[];
 }
 
+/** GET /products/:id/price-context - everything the price-edit modal needs. */
+export interface ProductPriceContext {
+  productId: string;
+  orgCostPrice?: string | null;
+  orgSellingPrice?: string | null;
+  /** null if no branch override. */
+  branchCostPrice?: string | null;
+  branchSellingPrice?: string | null;
+  effectiveCostPrice?: string | null;
+  effectiveSellingPrice?: string | null;
+  activeBranchId?: string | null;
+}
+
+/** Scope flag for price writes (required when a price field is present). */
+export type PriceScope = "ORG" | "BRANCH";
+
 export interface HubBatch {
   id: string;
   productId?: string;
@@ -89,6 +114,8 @@ export interface HubBatch {
   manufacturedDate?: string | null;
   isExpired?: boolean;
   notes?: string | null;
+  branchId?: string | null;
+  branchName?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   product?: Pick<HubProduct, "id" | "name" | "sku"> | null;
@@ -112,6 +139,8 @@ export interface HubStockAdjustment {
   notes?: string | null;
   referenceId?: string | null;
   referenceType?: string | null;
+  branchId?: string | null;
+  branchName?: string | null;
   createdAt?: string | null;
   user?: { id: string; firstName?: string | null; lastName?: string | null; email?: string } | null;
   linkedAdjustmentId?: string | null;
@@ -153,6 +182,8 @@ export interface HubSale {
   /** Pre-tax/discount subtotal when API emits it. */
   subtotal?: string | number | null;
   paymentMethod?: string | null;
+  branchId?: string | null;
+  branchName?: string | null;
   soldAt?: string | null;
   /** When the sale was persisted/synced server-side - required for delayed-sync UI. */
   syncedAt?: string | null;
@@ -184,6 +215,8 @@ export interface DashboardReliabilitySummary {
 }
 
 export interface DashboardSummary {
+  /** Active branch context for this summary (GET /dashboard/summary). */
+  branch?: { id: string; name: string; isDefault?: boolean } | null;
   /** All-time count of recorded sales/transactions - not monetary. */
   totalSales: number;
   /** All-time revenue (decimals); never substitute `totalSales` for currency KPIs. */

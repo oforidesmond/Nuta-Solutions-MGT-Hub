@@ -99,6 +99,8 @@ export function normalizeSale(raw: unknown): HubSale {
     totalAmount: (r.totalAmount ?? r.total_amount ?? 0) as string | number,
     subtotal: (r.subtotal ?? null) as string | number | null,
     paymentMethod: (r.paymentMethod ?? r.payment_method ?? null) as string | null,
+    branchId: (r.branchId ?? r.branch_id ?? null) as string | null,
+    branchName: (r.branchName ?? r.branch_name ?? null) as string | null,
     soldAt: (r.soldAt ?? r.sold_at) as string | null | undefined,
     syncedAt: (r.syncedAt ?? r.synced_at) as string | null | undefined,
     createdAt: (r.createdAt ?? r.created_at) as string | null | undefined,

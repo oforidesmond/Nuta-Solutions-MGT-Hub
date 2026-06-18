@@ -1,6 +1,8 @@
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import type {
+  BranchesListMeta,
+  BranchesListResponse,
   CreateBranchBody,
   HubBranch,
   UpdateBranchBody,
@@ -16,6 +18,16 @@ function unwrapBranches(data: unknown): HubBranch[] {
   return [];
 }
 
+function unwrapBranchesMeta(data: unknown): BranchesListMeta | null {
+  if (data && typeof data === "object") {
+    const o = data as Record<string, unknown>;
+    if (o.meta && typeof o.meta === "object") {
+      return o.meta as BranchesListMeta;
+    }
+  }
+  return null;
+}
+
 function unwrapBranch(data: unknown): HubBranch {
   if (data && typeof data === "object") {
     const o = data as Record<string, unknown>;
@@ -25,6 +37,16 @@ function unwrapBranch(data: unknown): HubBranch {
   return data as HubBranch;
 }
 
+/** Full branches response with plan-limit meta (for the branch management UI). */
+export async function fetchBranches(): Promise<BranchesListResponse> {
+  const res = await api.get(endpoints.branches);
+  return {
+    branches: unwrapBranches(res.data),
+    meta: unwrapBranchesMeta(res.data),
+  };
+}
+
+/** Branches list only (switcher, staff assignment selects). */
 export async function fetchBranchesList(): Promise<HubBranch[]> {
   const res = await api.get(endpoints.branches);
   return unwrapBranches(res.data);

@@ -19,6 +19,13 @@ import { StatCard } from "@/components/platform/stat-card";
 import { PlanBadge } from "@/components/platform/plan-badge";
 import { StatusBadge } from "@/components/platform/status-badge";
 import { formatCurrency, formatDate } from "@/lib/format";
+import {
+  formatBranchUsage,
+  formatEffectiveBranchLimit,
+  hasBranchLimitOverride,
+  isUnlimitedBranchOverride,
+  planDefaultBranchLimit,
+} from "@/lib/platform-branch-limits";
 import type { PlatformOrgPlanSummary, PlatformOrgStats } from "@/lib/types/platform";
 
 function toNumber(v: string | number | null | undefined): number {
@@ -103,6 +110,42 @@ export default function OrganizationOverviewPage() {
               label="Days remaining"
               value={`${plan.daysRemaining}`}
               highlight={plan.daysRemaining < 7}
+            />
+          ) : null}
+          <InfoRow
+            label="Branch limit"
+            value={formatEffectiveBranchLimit(
+              plan.effectiveBranchLimit ?? planDefaultBranchLimit(plan.type),
+            )}
+          />
+          {org.branchCount != null ? (
+            <InfoRow
+              label="Active branches"
+              value={formatBranchUsage(
+                org.branchCount,
+                plan.effectiveBranchLimit ?? planDefaultBranchLimit(plan.type),
+              )}
+            />
+          ) : null}
+          {hasBranchLimitOverride(plan.branchLimitOverride) ? (
+            <InfoRow
+              label="Branch limit override"
+              value={
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-medium text-amber-700 dark:text-amber-400">
+                    Custom limit
+                  </span>
+                  <span className="text-sm text-foreground">
+                    {isUnlimitedBranchOverride(plan.branchLimitOverride)
+                      ? "Unlimited"
+                      : `${plan.branchLimitOverride!.toLocaleString()} branches`}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    (plan default:{" "}
+                    {formatEffectiveBranchLimit(planDefaultBranchLimit(plan.type))})
+                  </span>
+                </span>
+              }
             />
           ) : null}
         </InfoCard>

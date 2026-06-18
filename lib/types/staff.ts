@@ -50,6 +50,8 @@ export interface StaffPerformanceRow {
   totalSales: number;
   transactionCount: number;
   staffId?: string | null;
+  branchId?: string | null;
+  branchName?: string | null;
 }
 
 /** @deprecated Use `HubBranch` from `@/lib/types/branches`. */

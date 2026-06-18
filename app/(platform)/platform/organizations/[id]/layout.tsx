@@ -106,7 +106,12 @@ export default function OrganizationDetailsLayout({
               ) : null}
             </p>
           </div>
-          <OrgActionsMenu org={organization} variant="header" />
+          <OrgActionsMenu
+            org={organization}
+            plan={query.data.plan}
+            branchCount={organization.branchCount}
+            variant="header"
+          />
         </div>
       </div>
 
