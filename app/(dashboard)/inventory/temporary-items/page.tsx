@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -25,8 +25,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  CatalogAssistField,
+  type CatalogAssistFieldHandle,
+  useSuggestionsButtonClassName,
+} from "@/components/products/catalog-assist-field";
 import { fetchCategories } from "@/lib/api/categories";
 import { handleApiError } from "@/lib/api/errors";
+import { getProductNameInvalidError } from "@/lib/api/product-name-errors";
 import { deleteProduct, promoteFromTemporary } from "@/lib/api/products";
 import { useTemporaryItems } from "@/lib/hooks/use-temporary-items";
 import { formatCurrency } from "@/lib/format";
@@ -61,6 +67,10 @@ function TemporaryItemsContent() {
   const [sellingPrice, setSellingPrice] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [suggestedNameFix, setSuggestedNameFix] = useState<string | null>(null);
+  const [footerCanUseSuggestions, setFooterCanUseSuggestions] = useState(false);
+  const assistRef = useRef<CatalogAssistFieldHandle>(null);
   const [ignoreTarget, setIgnoreTarget] = useState<HubTemporaryItem | null>(null);
   const [ignoring, setIgnoring] = useState(false);
 
@@ -89,6 +99,9 @@ function TemporaryItemsContent() {
     setCostPrice("");
     setStockQuantity("0");
     setCategoryId("");
+    setNameError(null);
+    setSuggestedNameFix(null);
+    setFooterCanUseSuggestions(false);
     setPromoteOpen(true);
   }, []);
 
@@ -114,8 +127,7 @@ function TemporaryItemsContent() {
       toast.error("Stock quantity must be a whole number (0 or more).");
       return;
     }
-    if (!name.trim()) {
-      toast.error("Name is required.");
+    if (!assistRef.current?.validateName()) {
       return;
     }
     if (!barcode.trim()) {
@@ -137,6 +149,12 @@ function TemporaryItemsContent() {
       setSelected(null);
       await reload();
     } catch (err) {
+      const nameInvalid = getProductNameInvalidError(err);
+      if (nameInvalid) {
+        setNameError(nameInvalid.message);
+        setSuggestedNameFix(nameInvalid.suggestedName ?? null);
+        return;
+      }
       toast.error(handleApiError(err));
     } finally {
       setSaving(false);
@@ -312,7 +330,7 @@ function TemporaryItemsContent() {
       </Dialog>
 
       <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <form onSubmit={onPromoteSubmit}>
             <DialogHeader>
               <DialogTitle>Promote to inventory</DialogTitle>
@@ -322,16 +340,37 @@ function TemporaryItemsContent() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="ti-name">Name</Label>
-                <Input
-                  id="ti-name"
-                  className="min-h-11"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoComplete="off"
-                />
-              </div>
+              <CatalogAssistField
+                ref={assistRef}
+                mode="promote"
+                name={name}
+                onNameChange={setName}
+                categoryId={categoryId}
+                onCategoryChange={setCategoryId}
+                categories={categories}
+                excludeProductId={selected?.id}
+                initialDraftName={selected?.name ?? undefined}
+                categoryRequired
+                nameError={nameError}
+                onNameErrorChange={setNameError}
+                onCanUseSuggestionsChange={setFooterCanUseSuggestions}
+              />
+              {suggestedNameFix ? (
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Try:</span>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 font-medium"
+                    onClick={() => {
+                      assistRef.current?.applySuggestedName(suggestedNameFix);
+                      setSuggestedNameFix(null);
+                    }}
+                  >
+                    {suggestedNameFix}
+                  </Button>
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <Label htmlFor="ti-barcode">Barcode</Label>
                 <Input
@@ -340,22 +379,6 @@ function TemporaryItemsContent() {
                   value={barcode}
                   onChange={(e) => setBarcode(e.target.value)}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ti-cat">Category</Label>
-                <select
-                  id="ti-cat"
-                  className="flex h-11 min-h-11 w-full rounded-lg border border-input bg-background px-3 text-sm interactive-cursor"
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                >
-                  <option value="">Select category</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -390,13 +413,27 @@ function TemporaryItemsContent() {
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setPromoteOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Promote"}
-              </Button>
+            <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+              <div className="flex w-full sm:w-auto" data-catalog-assist-zone>
+                {footerCanUseSuggestions ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(useSuggestionsButtonClassName, "min-h-11")}
+                    onClick={() => assistRef.current?.useSuggestions()}
+                  >
+                    Use suggestions
+                  </Button>
+                ) : null}
+              </div>
+              <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
+                <Button type="button" variant="outline" onClick={() => setPromoteOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Promote"}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>

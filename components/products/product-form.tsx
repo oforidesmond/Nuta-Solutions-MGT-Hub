@@ -18,6 +18,10 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductLinkPicker, type ProductPickValue } from "@/components/products/product-link-picker";
+import {
+  CatalogAssistField,
+  type CatalogAssistFieldHandle,
+} from "@/components/products/catalog-assist-field";
 import { PriceScopeModal } from "@/components/products/price-scope-modal";
 import { createBatch } from "@/lib/api/batches";
 import { fetchCategories } from "@/lib/api/categories";
@@ -29,6 +33,8 @@ import {
 } from "@/lib/api/product-conversions";
 import { createProduct, fetchProduct, updateProduct, type ProductWriteBody } from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
+import { getProductNameInvalidError } from "@/lib/api/product-name-errors";
+import { validateProductName } from "@/lib/product-naming";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { canManageInventoryConversions } from "@/lib/inventory-access";
@@ -48,6 +54,15 @@ type ConversionSnapshot = {
   childProductId: string;
   ratioStr: string;
 };
+
+function withoutField(
+  errors: Record<string, string>,
+  field: string,
+): Record<string, string> {
+  const next = { ...errors };
+  delete next[field];
+  return next;
+}
 
 export function ProductForm({ mode, productId }: ProductFormProps) {
   const router = useRouter();
@@ -82,6 +97,8 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   const [batchExpiry, setBatchExpiry] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [suggestedNameFix, setSuggestedNameFix] = useState<string | null>(null);
+  const assistRef = useRef<CatalogAssistFieldHandle>(null);
 
   const [packagingOpen, setPackagingOpen] = useState(false);
   const [hasConversion, setHasConversion] = useState(false);
@@ -224,7 +241,14 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
   function validate(): boolean {
     const next: Record<string, string> = {};
-    if (!name.trim()) next.name = "Product name is required.";
+    if (!name.trim()) {
+      next.name = "Product name is required.";
+    } else {
+      const naming = validateProductName(name);
+      if (!naming.valid) {
+        next.name = naming.humanMessage;
+      }
+    }
     const cost = parseFloat(costPrice);
     const sell = parseFloat(sellingPrice);
     if (!Number.isFinite(cost) || cost < 0) next.costPrice = "Enter a valid cost price (0 or more).";
@@ -447,6 +471,12 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
       router.push(`/products/${saved.id}`);
     } catch (err) {
+      const nameInvalid = getProductNameInvalidError(err);
+      if (nameInvalid) {
+        setErrors((prev) => ({ ...prev, name: nameInvalid.message }));
+        setSuggestedNameFix(nameInvalid.suggestedName ?? null);
+        return;
+      }
       toast.error(handleApiError(err));
     } finally {
       setSaving(false);
@@ -474,17 +504,49 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           <CardDescription>Name, codes, and category.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="pf-name">Product name *</Label>
-            <Input
-              id="pf-name"
-              className="min-h-11"
-              placeholder="e.g. Paracetamol 500mg"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              aria-invalid={!!errors.name}
+          <div className="md:col-span-2">
+            <CatalogAssistField
+              ref={assistRef}
+              mode={mode === "create" ? "create" : "edit"}
+              name={name}
+              onNameChange={(value) => {
+                setName(value);
+                setSuggestedNameFix(null);
+                if (errors.name) {
+                  setErrors((prev) => withoutField(prev, "name"));
+                }
+              }}
+              categoryId={categoryId}
+              onCategoryChange={setCategoryId}
+              categories={categories}
+              excludeProductId={mode === "edit" ? productId : undefined}
+              initialDraftName={mode === "create" ? name : undefined}
+              nameError={errors.name ?? null}
+              onNameErrorChange={(message) => {
+                if (message) {
+                  setErrors((prev) => ({ ...prev, name: message }));
+                } else {
+                  setErrors((prev) => withoutField(prev, "name"));
+                }
+              }}
             />
-            {errors.name ? <p className="text-sm text-destructive">{errors.name}</p> : null}
+            {suggestedNameFix ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Try:</span>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 font-medium"
+                  onClick={() => {
+                    assistRef.current?.applySuggestedName(suggestedNameFix);
+                    setSuggestedNameFix(null);
+                    setErrors((prev) => withoutField(prev, "name"));
+                  }}
+                >
+                  {suggestedNameFix}
+                </Button>
+              </div>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="pf-sku">SKU (optional)</Label>
@@ -493,22 +555,6 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           <div className="space-y-2">
             <Label htmlFor="pf-barcode">Barcode</Label>
             <Input id="pf-barcode" className="min-h-11 font-mono text-sm" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="pf-cat">Category</Label>
-            <select
-              id="pf-cat"
-              className="flex h-11 min-h-11 w-full rounded-lg border border-input bg-background px-3 text-sm interactive-cursor"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">Select category</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="pf-desc">Description</Label>

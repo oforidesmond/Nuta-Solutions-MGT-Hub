@@ -43,6 +43,7 @@ export const endpoints = {
   productConversions: "/products/conversions",
   productConversionById: (id: string) => `/products/conversions/${id}` as const,
   inventoryConvertBulk: "/inventory/convert-bulk",
+  productsCatalogAssist: "/products/catalog-assist",
   productsTemporary: "/products/temporary",
   productFromTemporary: (tempItemId: string) =>
     `/products/from-temporary/${tempItemId}` as const,
