@@ -97,7 +97,8 @@ export function normalizeSale(raw: unknown): HubSale {
   return {
     id: String(r.id ?? ""),
     totalAmount: (r.totalAmount ?? r.total_amount ?? 0) as string | number,
-    subtotal: (r.subtotal ?? null) as string | number | null,
+    subtotal: pickAmount(r, "subtotal"),
+    discountAmount: pickAmount(r, "discountAmount", "discount_amount"),
     paymentMethod: (r.paymentMethod ?? r.payment_method ?? null) as string | null,
     branchId: (r.branchId ?? r.branch_id ?? null) as string | null,
     branchName: (r.branchName ?? r.branch_name ?? null) as string | null,

@@ -5,6 +5,14 @@ import type {
   PlatformSyncFailureResolutionAction,
   PlatformSyncFailureStatus,
 } from "@/lib/types/platform";
+import {
+  computeDiscountPercent,
+  DiscountErrorCode,
+  isDiscountSyncError,
+  readAmountFromPayload,
+} from "@/lib/discount";
+
+export { isDiscountSyncError };
 
 const STATUS_LABELS: Record<PlatformSyncFailureStatus, string> = {
   OPEN: "Open",
@@ -106,4 +114,69 @@ export function readArrayFromJson(
     if (Array.isArray(candidate)) return candidate;
   }
   return null;
+}
+
+export type SyncFailureDiscountContext = {
+  discountAmount: number | null;
+  subtotal: number | null;
+  totalAmount: number | null;
+  discountPercentApplied: number | null;
+};
+
+export function readSyncFailureDiscountContext(
+  summary: JsonObject | null,
+  payload: JsonObject | null,
+): SyncFailureDiscountContext {
+  const discountAmount =
+    readAmountFromPayload(summary, ["discountAmount", "discount_amount"]) ??
+    readAmountFromPayload(payload, ["discountAmount", "discount_amount"]);
+  const subtotal =
+    readAmountFromPayload(summary, ["subtotal"]) ??
+    readAmountFromPayload(payload, ["subtotal"]);
+  const totalAmount =
+    readAmountFromJson(summary, ["totalAmount", "total_amount", "grandTotal", "total"]) ??
+    readAmountFromJson(payload, ["totalAmount", "total_amount", "grandTotal", "total"]);
+
+  const discountNum = discountAmount ?? null;
+  const subtotalNum = subtotal ?? null;
+  const totalNum =
+    totalAmount != null ? (typeof totalAmount === "number" ? totalAmount : Number(totalAmount)) : null;
+
+  const discountPercentApplied =
+    discountNum != null && discountNum > 0 && subtotalNum != null && subtotalNum > 0
+      ? computeDiscountPercent(discountNum, subtotalNum)
+      : null;
+
+  return {
+    discountAmount: discountNum,
+    subtotal: subtotalNum,
+    totalAmount: Number.isFinite(totalNum) ? totalNum : null,
+    discountPercentApplied,
+  };
+}
+
+export function discountSyncFailureGuidance(errorCode: string | null | undefined): string {
+  switch (errorCode) {
+    case DiscountErrorCode.DISCOUNT_NOT_ALLOWED:
+      return "Discounts are not permitted for this staff account. Staff can remove the discount locally and re-sync, or you can ignore the failure.";
+    case DiscountErrorCode.DISCOUNT_EXCEEDS_LIMIT:
+      return "The applied discount percent exceeds the staff member's current cap. Staff can reduce the discount on device and re-sync, or use Fix and apply with corrected discountAmount and totalAmount (cap is skipped on trusted apply).";
+    default:
+      return "";
+  }
+}
+
+export function discountResolutionHint(
+  action: PlatformSyncFailureResolutionAction,
+): string {
+  switch (action) {
+    case "RETRY":
+      return "Use after staff has fixed the discount on their device and is ready to retry the original payload.";
+    case "FIX_AND_APPLY":
+      return "Edit discountAmount and totalAmount in the patched payload. Discount cap validation is skipped on this trusted apply path.";
+    case "IGNORE_CLEAR":
+      return "Archive this failure if the sale should be dropped from the device queue.";
+    default:
+      return "";
+  }
 }

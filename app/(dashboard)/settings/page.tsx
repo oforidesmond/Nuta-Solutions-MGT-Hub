@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { patchOrganization } from "@/lib/api/organization-update";
 import { handleApiError } from "@/lib/api/errors";
 import { fetchOrganizationMe } from "@/lib/api/users";
+import {
+  formatDiscountLimitLabel,
+  parseDiscountPercentInput,
+  resolveEffectiveDiscountLimitPercent,
+} from "@/lib/discount";
 import { useAuthStore } from "@/stores/auth-store";
 
 export default function SettingsPage() {
@@ -38,7 +43,6 @@ export default function SettingsPage() {
   const [expiryAlertEnabled, setExpiryAlertEnabled] = useState(true);
   const [expiryReminderMonths, setExpiryReminderMonths] = useState("3");
   const [maxStaffDiscountPercent, setMaxStaffDiscountPercent] = useState("");
-  const [alertOwnerOnExcessDiscount, setAlertOwnerOnExcessDiscount] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -63,8 +67,20 @@ export default function SettingsPage() {
         ? String(organization.maxStaffDiscountPercent)
         : "",
     );
-    setAlertOwnerOnExcessDiscount(organization.alertOwnerOnExcessDiscount !== false);
   }, [organization]);
+
+  const discountHelper = useMemo(() => {
+    const parsed = parseDiscountPercentInput(maxStaffDiscountPercent);
+    if (!parsed.ok) return parsed.message;
+    const effective = resolveEffectiveDiscountLimitPercent(null, parsed.value);
+    if (effective == null) {
+      return "No org-wide percent cap. Staff without a personal override have no percent limit (only total-sale guards apply).";
+    }
+    if (effective === 0) {
+      return "Discounts are disabled org-wide for staff without a personal override.";
+    }
+    return `Staff without a personal override can apply up to ${formatDiscountLimitLabel(effective)} discount.`;
+  }, [maxStaffDiscountPercent]);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
@@ -72,6 +88,13 @@ export default function SettingsPage() {
       toast.error("Missing organization context.");
       return;
     }
+
+    const discountParsed = parseDiscountPercentInput(maxStaffDiscountPercent);
+    if (!discountParsed.ok) {
+      toast.error(discountParsed.message);
+      return;
+    }
+
     setSaving(true);
     try {
       const updated = await patchOrganization({
@@ -85,8 +108,7 @@ export default function SettingsPage() {
         expiryAlertEnabled,
         expiryReminderMonths: Number(expiryReminderMonths) || 3,
         maxStaffDiscountPercent:
-          maxStaffDiscountPercent === "" ? undefined : Number(maxStaffDiscountPercent),
-        alertOwnerOnExcessDiscount,
+          discountParsed.value === null ? null : discountParsed.value,
       });
       setOrganization(updated);
       toast.success("Settings saved");
@@ -229,30 +251,31 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="text-base font-medium">Discount limits (staff)</CardTitle>
             <CardDescription>
-              Cap how much discount staff can give.
+              Set the default percent cap for staff POS discounts. Sales above the cap are rejected
+              on the server - including when staff devices sync offline sales later.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="maxDisc">Max discount (%)</Label>
               <Input
                 id="maxDisc"
                 className="min-h-11"
                 inputMode="decimal"
-                placeholder="e.g. 10"
+                placeholder="e.g. 10 (leave empty for no cap, 0 to disable)"
                 value={maxStaffDiscountPercent}
                 onChange={(e) => setMaxStaffDiscountPercent(e.target.value)}
               />
+              <p
+                className={
+                  parseDiscountPercentInput(maxStaffDiscountPercent).ok
+                    ? "text-xs text-muted-foreground"
+                    : "text-xs text-destructive"
+                }
+              >
+                {discountHelper}
+              </p>
             </div>
-            <label className="flex min-h-11 interactive-cursor items-center gap-2 text-sm md:col-span-2">
-              <input
-                type="checkbox"
-                checked={alertOwnerOnExcessDiscount}
-                onChange={(e) => setAlertOwnerOnExcessDiscount(e.target.checked)}
-                className="size-4 rounded border-input"
-              />
-              Tell me when someone goes over the limit
-            </label>
           </CardContent>
         </Card>
         <Button type="submit" disabled={saving} className="min-h-11">

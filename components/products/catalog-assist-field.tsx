@@ -230,7 +230,7 @@ export const CatalogAssistField = forwardRef<CatalogAssistFieldHandle, CatalogAs
     const categoryHintText =
       assist?.categoryHint ??
       (assist?.suggestedCategoryId && assist.suggestedCategoryName && !categoryTouched
-        ? `Suggested — similar products use ${assist.suggestedCategoryName}.`
+        ? `Suggested - similar products use ${assist.suggestedCategoryName}.`
         : null);
 
     const reference = assist?.referenceProducts?.[0];

@@ -21,6 +21,7 @@ import { handleApiError } from "@/lib/api/errors";
 import { fetchSaleById } from "@/lib/api/sales";
 import { formatCurrency, formatDateDMY, formatTime12h, toNumericAmount } from "@/lib/format";
 import { delayedSyncTooltipText, isSaleDelayedSync } from "@/lib/sale-sync";
+import { computeDiscountPercent } from "@/lib/discount";
 import type { HubSale, HubSaleLine } from "@/lib/types/domain";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
@@ -108,6 +109,12 @@ export default function SaleDetailPage() {
 
   const total = toNumericAmount(sale.totalAmount);
   const subtotal = sale.subtotal != null ? toNumericAmount(sale.subtotal) : null;
+  const discount =
+    sale.discountAmount != null ? toNumericAmount(sale.discountAmount) : null;
+  const discountPercent =
+    discount != null && discount > 0 && subtotal != null && subtotal > 0
+      ? computeDiscountPercent(discount, subtotal)
+      : null;
   const when = sale.soldAt ?? sale.createdAt ?? null;
   const synced = sale.syncedAt ?? null;
   const delayed = isSaleDelayedSync(sale);
@@ -166,6 +173,24 @@ export default function SaleDetailPage() {
                   {formatCurrency(Number.isFinite(subtotal) ? subtotal : 0, currency)}
                 </span>
               </div>
+            ) : null}
+            {discount != null && discount > 0 ? (
+              <>
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="font-medium tabular-nums text-emerald-700 dark:text-emerald-300">
+                    −{formatCurrency(discount, currency)}
+                  </span>
+                </div>
+                {discountPercent != null ? (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Discount %</span>
+                    <span className="font-medium tabular-nums">
+                      {Math.round(discountPercent * 100) / 100}%
+                    </span>
+                  </div>
+                ) : null}
+              </>
             ) : null}
             {sale.paymentMethod ? (
               <div className="flex justify-between gap-4">

@@ -130,19 +130,16 @@ function TemporaryItemsContent() {
     if (!assistRef.current?.validateName()) {
       return;
     }
-    if (!barcode.trim()) {
-      toast.error("Barcode is required.");
-      return;
-    }
     setSaving(true);
     try {
+      const trimmedBarcode = barcode.trim();
       await promoteFromTemporary(selected.id, {
         name: name.trim(),
         cost_price: cost,
         category_id: categoryId,
         stock_quantity: stock,
-        barcode: barcode.trim(),
         selling_price: sell,
+        ...(trimmedBarcode ? { barcode: trimmedBarcode } : {}),
       });
       toast.success("Product added to inventory.");
       setPromoteOpen(false);
@@ -330,7 +327,7 @@ function TemporaryItemsContent() {
       </Dialog>
 
       <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[min(90vh,40rem)] overflow-y-auto sm:max-w-lg">
           <form onSubmit={onPromoteSubmit}>
             <DialogHeader>
               <DialogTitle>Promote to inventory</DialogTitle>

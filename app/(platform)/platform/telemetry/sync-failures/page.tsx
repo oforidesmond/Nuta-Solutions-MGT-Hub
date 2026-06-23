@@ -21,6 +21,7 @@ import type {
   PlatformSyncFailure,
   PlatformSyncFailureStatus,
 } from "@/lib/types/platform";
+import { DiscountErrorCode } from "@/lib/discount";
 import { cn } from "@/lib/utils";
 import {
   asJsonObject,
@@ -183,6 +184,40 @@ export default function PlatformSyncFailuresPage() {
               onChange={(event) => setErrorCode(event.target.value)}
               placeholder="Search backend error code"
             />
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={
+                  debouncedErrorCode === DiscountErrorCode.DISCOUNT_EXCEEDS_LIMIT
+                    ? "default"
+                    : "outline"
+                }
+                onClick={() => {
+                  setErrorCode(DiscountErrorCode.DISCOUNT_EXCEEDS_LIMIT);
+                  setDebouncedErrorCode(DiscountErrorCode.DISCOUNT_EXCEEDS_LIMIT);
+                  setPage(1);
+                }}
+              >
+                Discount exceeds limit
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={
+                  debouncedErrorCode === DiscountErrorCode.DISCOUNT_NOT_ALLOWED
+                    ? "default"
+                    : "outline"
+                }
+                onClick={() => {
+                  setErrorCode(DiscountErrorCode.DISCOUNT_NOT_ALLOWED);
+                  setDebouncedErrorCode(DiscountErrorCode.DISCOUNT_NOT_ALLOWED);
+                  setPage(1);
+                }}
+              >
+                Discount not allowed
+              </Button>
+            </div>
           </div>
           <div className="flex items-end gap-2">
             <Button

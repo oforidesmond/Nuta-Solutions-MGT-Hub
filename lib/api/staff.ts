@@ -75,6 +75,16 @@ export function parseStaffMember(raw: Record<string, unknown>): HubStaffMember {
       ? Number(offsetRaw)
       : undefined;
 
+  const customDiscountRaw =
+    p.customDiscountLimit ??
+    p.custom_discount_limit ??
+    raw.customDiscountLimit ??
+    raw.custom_discount_limit;
+  const customDiscountLimit =
+    customDiscountRaw === null || customDiscountRaw === undefined
+      ? null
+      : Number(customDiscountRaw);
+
   return {
     id,
     email: String(u.email ?? raw.email ?? ""),
@@ -114,6 +124,12 @@ export function parseStaffMember(raw: Record<string, unknown>): HubStaffMember {
         : p.device_time_warning_count != null
           ? Number(p.device_time_warning_count)
           : undefined,
+    customDiscountLimit:
+      customDiscountRaw === null || customDiscountRaw === undefined
+        ? null
+        : Number.isFinite(customDiscountLimit)
+          ? customDiscountLimit
+          : null,
   };
 }
 
@@ -149,6 +165,7 @@ export interface UpdateStaffBody {
   phoneNumber?: string;
   jobTitle?: string | null;
   branchId?: string | null;
+  customDiscountLimit?: number | null;
 }
 
 export async function fetchStaffList(): Promise<HubStaffMember[]> {

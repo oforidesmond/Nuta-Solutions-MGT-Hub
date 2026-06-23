@@ -181,6 +181,8 @@ export interface HubSale {
   totalAmount: string | number;
   /** Pre-tax/discount subtotal when API emits it. */
   subtotal?: string | number | null;
+  /** Order-level discount amount when API emits it. */
+  discountAmount?: string | number | null;
   paymentMethod?: string | null;
   branchId?: string | null;
   branchName?: string | null;

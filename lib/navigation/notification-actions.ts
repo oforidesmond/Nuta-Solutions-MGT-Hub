@@ -41,6 +41,9 @@ export function resolveNotificationAction(n: HubNotification): NotificationActio
 }
 
 export function displayNotificationType(n: HubNotification): string {
+  if (n.type === "DISCOUNT_ALERT") {
+    return "Discount alert (legacy)";
+  }
   if (n.type === "OTHER" && n.metadata?.originalType && typeof n.metadata.originalType === "string") {
     return n.metadata.originalType;
   }

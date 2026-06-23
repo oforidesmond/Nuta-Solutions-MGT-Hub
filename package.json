@@ -6,7 +6,8 @@
     "dev": "next dev -p 5174 --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "npx tsx --test lib/**/*.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

@@ -346,7 +346,7 @@ function DeactivateControl({
           </span>
         </TooltipTrigger>
         <TooltipContent>
-          The default branch can&apos;t be deactivated. Assign another branch as default first —
+          The default branch can&apos;t be deactivated. Assign another branch as default first -
           contact support on WhatsApp {WHATSAPP_SUPPORT} to reassign.
         </TooltipContent>
       </Tooltip>

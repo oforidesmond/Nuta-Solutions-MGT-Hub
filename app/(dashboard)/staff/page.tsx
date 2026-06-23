@@ -46,6 +46,11 @@ import {
   updateStaffRole,
 } from "@/lib/api/staff";
 import { formatCurrency, formatDate } from "@/lib/format";
+import {
+  formatDiscountLimitLabel,
+  parseDiscountPercentInput,
+  resolveEffectiveDiscountLimitPercent,
+} from "@/lib/discount";
 import type { UserRole } from "@/lib/types/domain";
 import type {
   HubBranchOption,
@@ -94,6 +99,14 @@ function roleBadgeClass(role: string) {
   if (role === "ADMIN") return "border-primary/40 bg-primary/10 text-primary";
   if (role === "MANAGER") return "border-violet-500/40 bg-violet-500/10 text-violet-900 dark:text-violet-100";
   return "border-border/60 bg-muted/40 text-muted-foreground";
+}
+
+function staffDiscountBadge(member: HubStaffMember): string {
+  if (member.customDiscountLimit != null) {
+    if (member.customDiscountLimit === 0) return "Disabled";
+    return `${member.customDiscountLimit}%`;
+  }
+  return "Org default";
 }
 
 function metadataSummary(meta: Record<string, unknown> | null | undefined) {
@@ -168,6 +181,7 @@ export default function StaffPage() {
   const activeBranchId = useActiveBranchId();
   const me = useAuthStore((s) => s.user);
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const orgMaxDiscountPercent = useAuthStore((s) => s.organization?.maxStaffDiscountPercent);
   const members = useStaffStore((s) => s.members);
   const loading = useStaffStore((s) => s.loading);
   const loadErr = useStaffStore((s) => s.error);
@@ -198,6 +212,10 @@ export default function StaffPage() {
   const [editPhone, setEditPhone] = useState("");
   const [editJobTitle, setEditJobTitle] = useState("");
   const [editBranchId, setEditBranchId] = useState("");
+  const [editDiscountMode, setEditDiscountMode] = useState<"default" | "disabled" | "custom">(
+    "default",
+  );
+  const [editDiscountPercent, setEditDiscountPercent] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
   const [resetTarget, setResetTarget] = useState<HubStaffMember | null>(null);
@@ -272,7 +290,29 @@ export default function StaffPage() {
     setEditPhone(m.phoneNumber ?? "");
     setEditJobTitle(m.jobTitle ?? "");
     setEditBranchId(m.branchId ?? "");
+    if (m.customDiscountLimit == null) {
+      setEditDiscountMode("default");
+      setEditDiscountPercent("");
+    } else if (m.customDiscountLimit === 0) {
+      setEditDiscountMode("disabled");
+      setEditDiscountPercent("");
+    } else {
+      setEditDiscountMode("custom");
+      setEditDiscountPercent(String(m.customDiscountLimit));
+    }
   };
+
+  const editEffectiveDiscountLabel = useMemo(() => {
+    let customLimit: number | null = null;
+    if (editDiscountMode === "disabled") customLimit = 0;
+    else if (editDiscountMode === "custom") {
+      const parsed = parseDiscountPercentInput(editDiscountPercent);
+      if (!parsed.ok || parsed.value == null) return null;
+      customLimit = parsed.value;
+    }
+    const effective = resolveEffectiveDiscountLimitPercent(customLimit, orgMaxDiscountPercent);
+    return formatDiscountLimitLabel(effective);
+  }, [editDiscountMode, editDiscountPercent, orgMaxDiscountPercent]);
 
   const openPermissions = (m: HubStaffMember) => {
     const keys = new Set<string>([...PRESET_PERMISSION_KEYS, ...Object.keys(m.permissions)]);
@@ -358,12 +398,31 @@ export default function StaffPage() {
     }
     setEditSaving(true);
     try {
+      let customDiscountLimit: number | null | undefined;
+      if (editDiscountMode === "default") customDiscountLimit = null;
+      else if (editDiscountMode === "disabled") customDiscountLimit = 0;
+      else {
+        const parsed = parseDiscountPercentInput(editDiscountPercent);
+        if (!parsed.ok) {
+          toast.error(parsed.message);
+          setEditSaving(false);
+          return;
+        }
+        if (parsed.value == null) {
+          toast.error("Enter a custom discount percent or choose another option.");
+          setEditSaving(false);
+          return;
+        }
+        customDiscountLimit = parsed.value;
+      }
+
       const updated = await updateStaff(editTarget.id, {
         firstName,
         lastName,
         phoneNumber: editPhone.trim() || undefined,
         jobTitle: editJobTitle.trim() || null,
         branchId: editBranchId || null,
+        customDiscountLimit,
       });
       patchMember(editTarget.id, updated);
       toast.success("Staff updated");
@@ -611,6 +670,7 @@ export default function StaffPage() {
                   <TableHead>Role</TableHead>
                   <TableHead>Branch</TableHead>
                   <TableHead>Job title</TableHead>
+                  <TableHead>Discount</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-12 text-right">
@@ -639,6 +699,9 @@ export default function StaffPage() {
                         {m.branch?.name ?? "-"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{m.jobTitle ?? "-"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {staffDiscountBadge(m)}
+                      </TableCell>
                       <TableCell>{m.phoneNumber ?? "-"}</TableCell>
                       <TableCell>
                         {m.isActive ? (
@@ -842,7 +905,9 @@ export default function StaffPage() {
           <form onSubmit={onSaveEdit}>
             <DialogHeader>
               <DialogTitle>Edit staff</DialogTitle>
-              <DialogDescription>Updates name, phone, job title, and branch assignment.</DialogDescription>
+              <DialogDescription>
+                Updates name, phone, job title, branch assignment, and discount limit override.
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
@@ -878,6 +943,37 @@ export default function StaffPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ed-discount-mode">Discount limit</Label>
+                <select
+                  id="ed-discount-mode"
+                  className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 interactive-cursor"
+                  value={editDiscountMode}
+                  onChange={(e) =>
+                    setEditDiscountMode(e.target.value as "default" | "disabled" | "custom")
+                  }
+                >
+                  <option value="default">Use organization default</option>
+                  <option value="custom">Custom percent cap</option>
+                  <option value="disabled">Disable discounts</option>
+                </select>
+                {editDiscountMode === "custom" ? (
+                  <Input
+                    id="ed-discount-pct"
+                    className="min-h-11"
+                    inputMode="decimal"
+                    placeholder="e.g. 15"
+                    value={editDiscountPercent}
+                    onChange={(e) => setEditDiscountPercent(e.target.value)}
+                  />
+                ) : null}
+                {editEffectiveDiscountLabel ? (
+                  <p className="text-xs text-muted-foreground">
+                    Effective limit for this staff member:{" "}
+                    <span className="font-medium text-foreground">{editEffectiveDiscountLabel}</span>
+                  </p>
+                ) : null}
               </div>
             </div>
             <DialogFooter>

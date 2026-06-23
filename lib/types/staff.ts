@@ -18,6 +18,8 @@ export interface HubStaffMember {
   branch?: { id: string; name: string } | null;
   /** StaffProfile.permissions JSON as string-keyed flags. */
   permissions: Record<string, boolean>;
+  /** Per-staff percent cap override; 0 disables discounts; null uses org default. */
+  customDiscountLimit?: number | null;
   /** Phase 2 - device time warning (from StaffProfile / GET staff detail). */
   lastDeviceTimeWarningAt?: string | null;
   lastDeviceTimeOffsetMinutes?: number | null;

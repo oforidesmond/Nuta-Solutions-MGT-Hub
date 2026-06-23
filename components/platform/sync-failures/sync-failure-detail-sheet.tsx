@@ -8,9 +8,12 @@ import { toast } from "sonner";
 import { ResolveSyncFailureDialog } from "@/components/platform/sync-failures/resolve-sync-failure-dialog";
 import {
   asJsonObject,
+  discountSyncFailureGuidance,
+  isDiscountSyncError,
   readAmountFromJson,
   readArrayFromJson,
   readStringFromJson,
+  readSyncFailureDiscountContext,
   safePrettyJson,
   syncFailureActionLabel,
   syncFailurePersonLabel,
@@ -171,6 +174,13 @@ function SyncFailureDetailBody({
     readArrayFromJson(summaryObject, ["items", "lines"]) ??
     readArrayFromJson(payloadObject, ["items", "lines"]);
 
+  const discountContext = useMemo(
+    () => readSyncFailureDiscountContext(summaryObject, payloadObject),
+    [summaryObject, payloadObject],
+  );
+
+  const isDiscountFailure = isDiscountSyncError(failure.errorCode);
+
   const staff = failure.staffUser ?? failure.user ?? null;
   const currency = failure.organization?.currency ?? "GHS";
 
@@ -190,6 +200,11 @@ function SyncFailureDetailBody({
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">Resolution actions</CardTitle>
+            {isDiscountFailure ? (
+              <p className="text-xs text-muted-foreground">
+                {discountSyncFailureGuidance(failure.errorCode)}
+              </p>
+            ) : null}
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             <Button type="button" size="sm" onClick={() => onActionSelect("RETRY")}>
@@ -211,6 +226,45 @@ function SyncFailureDetailBody({
             >
               Fix and apply
             </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {isDiscountFailure ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Discount context</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetadataItem label="Discount amount">
+                {discountContext.discountAmount != null
+                  ? formatCurrency(
+                      toNumericAmount(discountContext.discountAmount),
+                      currency,
+                    )
+                  : "-"}
+              </MetadataItem>
+              <MetadataItem label="Subtotal">
+                {discountContext.subtotal != null
+                  ? formatCurrency(toNumericAmount(discountContext.subtotal), currency)
+                  : "-"}
+              </MetadataItem>
+              <MetadataItem label="Applied discount %">
+                {discountContext.discountPercentApplied != null
+                  ? `${Math.round(discountContext.discountPercentApplied * 100) / 100}%`
+                  : "-"}
+              </MetadataItem>
+              <MetadataItem label="Total in payload">
+                {discountContext.totalAmount != null
+                  ? formatCurrency(toNumericAmount(discountContext.totalAmount), currency)
+                  : "-"}
+              </MetadataItem>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Enforcement uses the staff member&apos;s current cap at sync time, which may differ
+              from limits cached on the device when the sale was taken offline.
+            </p>
           </CardContent>
         </Card>
       ) : null}

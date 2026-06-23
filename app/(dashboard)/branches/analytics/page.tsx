@@ -52,7 +52,7 @@ const PERIODS: { value: OrgAnalyticsPeriod; label: string }[] = [
 ];
 
 function formatPercent(value: string | null | undefined): string {
-  if (value == null) return "—";
+  if (value == null) return "-";
   const n = toNumericAmount(value);
   return `${n.toFixed(1)}%`;
 }
@@ -659,7 +659,7 @@ function ReturnsSection({
               <MetricTile label="Returns" value={String(data.totalReturns)} />
               <MetricTile
                 label="Return rate"
-                value={data.returnRate == null ? "—" : formatPercent(data.returnRate)}
+                value={data.returnRate == null ? "-" : formatPercent(data.returnRate)}
               />
               <MetricTile
                 label="Value"
@@ -727,7 +727,7 @@ function SalesVelocitySection({ period }: { period: OrgAnalyticsPeriod }) {
                     low ? "text-destructive" : "text-foreground",
                   )}
                 >
-                  {days == null ? "—" : `${days.toFixed(1)} days left`}
+                  {days == null ? "-" : `${days.toFixed(1)} days left`}
                 </span>
               </li>
             );

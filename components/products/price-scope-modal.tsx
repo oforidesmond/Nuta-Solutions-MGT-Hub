@@ -208,7 +208,7 @@ function PriceComparison({
       <dl className="mt-1.5 grid grid-cols-3 gap-2 text-xs">
         <div>
           <dt className="text-muted-foreground">Org default</dt>
-          <dd className="tabular-nums">{org != null ? formatCurrency(toNumericAmount(org), currency) : "—"}</dd>
+          <dd className="tabular-nums">{org != null ? formatCurrency(toNumericAmount(org), currency) : "-"}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">This branch</dt>

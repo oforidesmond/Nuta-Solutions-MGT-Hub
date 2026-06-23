@@ -242,7 +242,7 @@ export type PromoteFromTemporaryBody = {
   cost_price: number;
   category_id: string;
   stock_quantity: number;
-  barcode: string;
+  barcode?: string;
   selling_price: number;
 };
 

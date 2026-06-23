@@ -8,11 +8,13 @@ import {
 } from "@/components/ui/table";
 import {
   asJsonObject,
+  isDiscountSyncError,
   readAmountFromJson,
   readStringFromJson,
   syncFailurePersonLabel,
 } from "@/components/platform/sync-failures/presentation";
 import { SyncFailureStatusBadge } from "@/components/platform/sync-failures/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate, toNumericAmount } from "@/lib/format";
 import type { PlatformSyncFailure } from "@/lib/types/platform";
 
@@ -58,7 +60,14 @@ export function SyncFailuresTable({
                 <p className="font-mono text-xs text-muted-foreground">{failure.staffUserId}</p>
               </TableCell>
               <TableCell className="font-mono text-xs">
-                {failure.errorCode ?? "-"}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span>{failure.errorCode ?? "-"}</span>
+                  {isDiscountSyncError(failure.errorCode) ? (
+                    <Badge variant="outline" className="text-[10px] font-normal">
+                      Discount
+                    </Badge>
+                  ) : null}
+                </div>
               </TableCell>
               <TableCell>
                 <SyncFailureStatusBadge status={failure.status} />

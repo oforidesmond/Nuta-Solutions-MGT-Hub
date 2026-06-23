@@ -246,7 +246,7 @@ function ManageBranchLimitForm({
               }
             >
               {formatBranchUsage(branchCount, resolvedEffectiveLimit)}
-              {usageOverLimit ? " — over current limit" : null}
+              {usageOverLimit ? " - over current limit" : null}
             </p>
           ) : null}
           <p className="mt-1.5 text-xs text-muted-foreground">
@@ -313,7 +313,7 @@ function ManageBranchLimitForm({
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             maxLength={500}
-            placeholder="e.g. Enterprise pilot — temporary branch expansion"
+            placeholder="e.g. Enterprise pilot - temporary branch expansion"
           />
           <p className="text-right text-[0.7rem] text-muted-foreground">
             {reason.length} / 500

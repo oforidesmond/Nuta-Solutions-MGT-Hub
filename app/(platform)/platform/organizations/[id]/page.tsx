@@ -19,6 +19,7 @@ import { StatCard } from "@/components/platform/stat-card";
 import { PlanBadge } from "@/components/platform/plan-badge";
 import { StatusBadge } from "@/components/platform/status-badge";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { formatDiscountLimitLabel, resolveEffectiveDiscountLimitPercent } from "@/lib/discount";
 import {
   formatBranchUsage,
   formatEffectiveBranchLimit,
@@ -155,11 +156,14 @@ export default function OrganizationOverviewPage() {
           <InfoRow label="Default tax rate" value={`${toNumber(org.defaultTaxRate)}%`} />
           <InfoRow
             label="Max staff discount"
-            value={
-              org.maxStaffDiscountPercent != null
-                ? `${toNumber(org.maxStaffDiscountPercent)}%`
-                : "None"
-            }
+            value={formatDiscountLimitLabel(
+              resolveEffectiveDiscountLimitPercent(
+                null,
+                org.maxStaffDiscountPercent != null
+                  ? toNumber(org.maxStaffDiscountPercent)
+                  : null,
+              ),
+            )}
           />
           <InfoRow
             label="Expiry alerts"

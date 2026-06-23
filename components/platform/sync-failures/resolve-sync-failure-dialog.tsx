@@ -21,7 +21,7 @@ import type {
   PlatformSyncFailureDetail,
   PlatformSyncFailureResolutionAction,
 } from "@/lib/types/platform";
-import { asJsonObject, safePrettyJson } from "@/components/platform/sync-failures/presentation";
+import { asJsonObject, discountResolutionHint, isDiscountSyncError, safePrettyJson } from "@/components/platform/sync-failures/presentation";
 
 interface ResolveSyncFailureDialogProps {
   failure: PlatformSyncFailureDetail;
@@ -97,6 +97,9 @@ export function ResolveSyncFailureDialog({
     !mutation.isPending &&
     (action !== "FIX_AND_APPLY" || payloadText.trim().length > 0);
 
+  const discountFailure = isDiscountSyncError(failure.errorCode);
+  const resolutionHint = discountFailure ? discountResolutionHint(action) : "";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={action === "FIX_AND_APPLY" ? "sm:max-w-3xl" : "sm:max-w-lg"}>
@@ -117,6 +120,17 @@ export function ResolveSyncFailureDialog({
 
           {action === "FIX_AND_APPLY" ? (
             <div className="space-y-1.5">
+              {discountFailure ? (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground">Discount failure repair</p>
+                  <p className="mt-1">
+                    Correct <span className="font-mono">discountAmount</span> and{" "}
+                    <span className="font-mono">totalAmount</span> in the payload below.
+                    Discount cap validation is skipped on trusted apply.
+                  </p>
+                  {resolutionHint ? <p className="mt-2">{resolutionHint}</p> : null}
+                </div>
+              ) : null}
               <Label htmlFor="sync-failure-payload">
                 Patched payload <span className="text-destructive">*</span>
               </Label>
@@ -139,6 +153,10 @@ export function ResolveSyncFailureDialog({
                 <p className="text-xs text-destructive">{payloadError}</p>
               ) : null}
             </div>
+          ) : null}
+
+          {discountFailure && action !== "FIX_AND_APPLY" && resolutionHint ? (
+            <p className="text-xs text-muted-foreground">{resolutionHint}</p>
           ) : null}
 
           <div className="space-y-1.5">
