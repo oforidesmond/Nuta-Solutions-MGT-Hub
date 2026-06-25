@@ -70,6 +70,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
   const activeBranchId = useActiveBranchId();
   const role = useAuthStore((s) => s.user?.role);
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const canCreateCategory = role === "ADMIN" || role === "MANAGER";
   const canConv = canManageInventoryConversions(role);
 
   const [loading, setLoading] = useState(mode === "edit");
@@ -519,6 +520,13 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
               categoryId={categoryId}
               onCategoryChange={setCategoryId}
               categories={categories}
+              onCategoryCreated={(cat) =>
+                setCategories((prev) =>
+                  prev.some((c) => c.id === cat.id) ? prev : [...prev, cat],
+                )
+              }
+              onCategoriesReload={setCategories}
+              canCreateCategory={canCreateCategory}
               excludeProductId={mode === "edit" ? productId : undefined}
               initialDraftName={mode === "create" ? name : undefined}
               nameError={errors.name ?? null}

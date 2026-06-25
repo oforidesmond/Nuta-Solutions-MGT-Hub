@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,28 +20,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AuditFiltersBar,
+  EMPTY_AUDIT_FILTERS,
+  type AuditFilterState,
+} from "@/components/audit/audit-filters-bar";
+import { ExportButton } from "@/components/exports/export-button";
 import { fetchAuditEventsPage } from "@/lib/api/audit";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { buildExportFilename } from "@/lib/exports/filename";
+import { fetchAllWithCursor } from "@/lib/exports/fetch-paginated";
+import { auditEventToRow } from "@/lib/exports/row-mappers";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
+import {
+  auditEventProductId,
+  auditEventTypeLabel,
+  type AuditEventRow,
+} from "@/lib/types/audit";
+import { safeJsonPretty } from "@/lib/audit-display";
+import { useAuthStore } from "@/stores/auth-store";
 
-function truncateMiddle(v: string, keep = 4): string {
-  if (!v) return v;
-  if (v.length <= keep * 2 + 3) return v;
-  return `${v.slice(0, keep)}...${v.slice(-keep)}`;
-}
-
-function isLikelyIdKey(k: string): boolean {
-  return k === "id" || k === "userId" || k === "organizationId" || k === "aggregateId" || k.endsWith("Id");
-}
-
-function isLikelyDateKey(k: string): boolean {
-  return k === "createdAt" || k.endsWith("At");
-}
-
-function formatHumanDate(v: unknown): string | null {
-  if (typeof v !== "string" || !v.trim()) return null;
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return null;
+function formatWhen(row: AuditEventRow): string {
+  const raw = row.occurredAt ?? row.createdAt;
+  if (!raw) return "—";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
   return d.toLocaleString(undefined, {
     year: "numeric",
     month: "short",
@@ -50,82 +54,55 @@ function formatHumanDate(v: unknown): string | null {
   });
 }
 
-function safeJsonStringify(obj: unknown): string {
-  try {
-    return JSON.stringify(obj);
-  } catch {
-    return String(obj);
-  }
+function formatActor(row: AuditEventRow): string {
+  if (row.actor?.name) return row.actor.name;
+  if (row.userId) return row.userId.slice(0, 8) + "…";
+  return "—";
 }
 
-function safeJsonPretty(obj: unknown): string {
-  try {
-    return JSON.stringify(obj, null, 2);
-  } catch {
-    return String(obj);
-  }
+function toIsoStart(date: string): string | undefined {
+  if (!date) return undefined;
+  return new Date(`${date}T00:00:00`).toISOString();
 }
 
-function cellDisplay(k: string, v: unknown): { display: string; full?: string; kind?: "id" | "payload" } {
-  if (v == null) return { display: "-" };
-
-  if (k === "payload") {
-    if (typeof v === "object") {
-      const compact = safeJsonStringify(v);
-      const pretty = safeJsonPretty(v);
-      return {
-        display: compact.length > 40 ? `${compact.slice(0, 40)}…` : compact,
-        full: pretty,
-        kind: "payload",
-      };
-    }
-    const s = String(v);
-    return {
-      display: s.length > 40 ? `${s.slice(0, 40)}…` : s,
-      full: s.length > 40 ? s : undefined,
-      kind: s.length > 40 ? "payload" : undefined,
-    };
-  }
-
-  if (isLikelyDateKey(k)) {
-    const formatted = formatHumanDate(v);
-    if (formatted) return { display: formatted, full: String(v) };
-  }
-
-  const s = typeof v === "string" ? v : typeof v === "number" ? String(v) : typeof v === "boolean" ? String(v) : null;
-  if (s && isLikelyIdKey(k) && s.length > 12) {
-    return { display: truncateMiddle(s), full: s, kind: "id" };
-  }
-
-  if (typeof v === "object") {
-    const compact = safeJsonStringify(v);
-    const pretty = safeJsonPretty(v);
-    return {
-      display: compact.length > 40 ? `${compact.slice(0, 40)}…` : compact,
-      full: pretty,
-      kind: "payload",
-    };
-  }
-
-  return { display: String(v) };
+function toIsoEnd(date: string): string | undefined {
+  if (!date) return undefined;
+  return new Date(`${date}T23:59:59.999`).toISOString();
 }
 
 export default function AuditPage() {
   const activeBranchId = useActiveBranchId();
+  const orgName = useAuthStore((s) => s.organization?.name) ?? "org";
+  const [filters, setFilters] = useState<AuditFilterState>(EMPTY_AUDIT_FILTERS);
   const [cursorHistory, setCursorHistory] = useState<(string | undefined)[]>([undefined]);
   const activeCursor = cursorHistory[cursorHistory.length - 1];
 
+  const queryParams = useMemo(
+    () => ({
+      cursor: activeCursor,
+      limit: 30,
+      productId: filters.productId,
+      userId: filters.userId,
+      branchId: filters.branchId || undefined,
+      eventType: filters.eventType.length > 0 ? filters.eventType : undefined,
+      aggregateType: filters.aggregateType,
+      startDate: toIsoStart(filters.startDate),
+      endDate: toIsoEnd(filters.endDate),
+    }),
+    [activeCursor, filters],
+  );
+
   useEffect(() => {
     setCursorHistory([undefined]);
-  }, [activeBranchId]);
+  }, [activeBranchId, filters]);
 
   const query = useQuery({
-    queryKey: withBranchKey(activeBranchId, "audit", "events", activeCursor ?? "root"),
-    queryFn: () => fetchAuditEventsPage({ cursor: activeCursor, limit: 30 }),
+    queryKey: withBranchKey(activeBranchId, "audit", "events", queryParams),
+    queryFn: () => fetchAuditEventsPage(queryParams),
+    placeholderData: keepPreviousData,
   });
 
   const items = query.data?.items ?? [];
-  const keys = items[0] ? Object.keys(items[0]).slice(0, 10) : [];
   const next = query.data?.nextCursor;
 
   const onNext = () => {
@@ -137,18 +114,73 @@ export default function AuditPage() {
     setCursorHistory((h) => (h.length > 1 ? h.slice(0, -1) : h));
   };
 
+  const clearFilters = () => {
+    setFilters(EMPTY_AUDIT_FILTERS);
+    setCursorHistory([undefined]);
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Activity log</h1>
-        <p className="text-sm text-muted-foreground">Audit all actions and events.</p>
+        <p className="text-sm text-muted-foreground">
+          Review actions across your business. Filter by product, staff, or event type.
+        </p>
       </div>
+
+      <AuditFiltersBar filters={filters} onChange={setFilters} onClear={clearFilters} />
 
       <Card className="border-border/40 bg-card/80 shadow-sm">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base font-medium">Events</CardTitle>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" disabled={cursorHistory.length <= 1} onClick={onPrev}>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              filename={buildExportFilename({
+                orgName,
+                reportType: "activity-log",
+                from: filters.startDate || undefined,
+                to: filters.endDate || undefined,
+              })}
+              columns={[
+                { key: "occurredAt", header: "When" },
+                { key: "eventType", header: "Event" },
+                { key: "actor", header: "Actor" },
+                { key: "branch", header: "Branch" },
+                { key: "aggregateType", header: "Entity type" },
+                { key: "aggregateId", header: "Entity id" },
+                { key: "productId", header: "Product id" },
+                { key: "payload", header: "Details" },
+              ]}
+              getRows={async () => {
+                const exportParams = {
+                  limit: 50,
+                  productId: filters.productId,
+                  userId: filters.userId,
+                  branchId: filters.branchId || undefined,
+                  eventType: filters.eventType.length > 0 ? filters.eventType : undefined,
+                  aggregateType: filters.aggregateType,
+                  startDate: toIsoStart(filters.startDate),
+                  endDate: toIsoEnd(filters.endDate),
+                };
+                const { rows, truncated } = await fetchAllWithCursor({
+                  fetchPage: async (cursor) => {
+                    const page = await fetchAuditEventsPage({ ...exportParams, cursor });
+                    return { items: page.items, nextCursor: page.nextCursor };
+                  },
+                });
+                return {
+                  rows: rows.map(auditEventToRow),
+                  truncated,
+                };
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={cursorHistory.length <= 1}
+              onClick={onPrev}
+            >
               Previous page
             </Button>
             <Button type="button" variant="outline" size="sm" disabled={!next} onClick={onNext}>
@@ -166,52 +198,67 @@ export default function AuditPage() {
               ))}
             </div>
           ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No audit events.</p>
+            <p className="text-sm text-muted-foreground">No audit events match these filters.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  {keys.map((k) => (
-                    <TableHead key={k}>{k}</TableHead>
-                  ))}
+                  <TableHead>When</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Actor</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Details</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((row, idx) => (
-                  <TableRow key={idx}>
-                    {keys.map((k) => {
-                      const { display, full, kind } = cellDisplay(k, row[k]);
-                      const widthClass =
-                        kind === "id"
-                          ? "max-w-[9rem]"
-                          : k === "payload"
-                            ? "max-w-[18rem]"
-                            : "max-w-[14rem]";
-                      return (
-                        <TableCell key={k} className={`${widthClass} truncate`} title={full ? undefined : display}>
-                          {full ? (
-                            <TooltipProvider>
-                              <UiTooltip>
-                                <TooltipTrigger asChild>
-                                  <button type="button" className="interactive-cursor w-full truncate text-left">
-                                    {display}
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px]">
-                                    {full}
-                                  </pre>
-                                </TooltipContent>
-                              </UiTooltip>
-                            </TooltipProvider>
-                          ) : (
-                            display
-                          )}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))}
+                {items.map((row, idx) => {
+                  const productId = auditEventProductId(row);
+                  const payload = row.payload;
+                  const payloadText = payload ? safeJsonPretty(payload) : null;
+                  return (
+                    <TableRow key={row.id ?? idx}>
+                      <TableCell className="whitespace-nowrap text-sm">{formatWhen(row)}</TableCell>
+                      <TableCell className="text-sm">
+                        {auditEventTypeLabel(row.eventType)}
+                      </TableCell>
+                      <TableCell className="text-sm">{formatActor(row)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {row.branchName ?? row.branchId?.slice(0, 8) ?? "—"}
+                      </TableCell>
+                      <TableCell className="max-w-[14rem]">
+                        {productId ? (
+                          <Link
+                            href={`/products/${productId}`}
+                            className="text-sm text-primary underline-offset-2 hover:underline"
+                          >
+                            View product
+                          </Link>
+                        ) : payloadText ? (
+                          <TooltipProvider>
+                            <UiTooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="interactive-cursor max-w-full truncate text-left text-sm"
+                                >
+                                  {payloadText.slice(0, 48)}
+                                  {payloadText.length > 48 ? "…" : ""}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <pre className="max-h-64 max-w-md overflow-auto whitespace-pre-wrap break-all font-mono text-[11px]">
+                                  {payloadText}
+                                </pre>
+                              </TooltipContent>
+                            </UiTooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

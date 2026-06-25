@@ -112,6 +112,11 @@ export function normalizeSale(raw: unknown): HubSale {
     isDelayedSync: pickBoolean(r, "isDelayedSync", "is_delayed_sync"),
     hasStockVariance:
       pickBoolean(r, "hasStockVariance", "has_stock_variance") ?? itemsHaveVariance,
+    isVoided:
+      pickBoolean(r, "isVoided", "is_voided", "voided") ??
+      (r.status === "VOIDED" || r.status === "voided" ? true : undefined),
+    voidedAt: (pickStringy(r, "voidedAt", "voided_at") ?? null) as string | null,
+    voidReason: (pickStringy(r, "voidReason", "void_reason") ?? null) as string | null,
     items,
   };
 }
@@ -251,4 +256,13 @@ export async function downloadSalesExportBlob(params: SalesExportParams): Promis
     responseType: "blob",
   });
   return res.data as Blob;
+}
+
+/** ADMIN/MANAGER — void sale and reverse ledger entries (Phase 6 UI). */
+export async function voidSale(
+  saleId: string,
+  body: { voidReason: string },
+): Promise<unknown> {
+  const res = await api.post(endpoints.saleVoid(saleId), body);
+  return res.data;
 }

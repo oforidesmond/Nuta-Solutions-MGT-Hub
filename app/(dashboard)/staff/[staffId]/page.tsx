@@ -2,16 +2,23 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { StaffStockActivitySheet } from "@/components/insights/staff-stock-activity-sheet";
 import { fetchStaffById } from "@/lib/api/staff";
+import { canViewOrgAnalytics } from "@/lib/branch-access";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function StaffProfilePage() {
   const params = useParams();
   const staffId = typeof params?.staffId === "string" ? params.staffId : "";
+  const role = useAuthStore((s) => s.user?.role);
+  const canInsights = canViewOrgAnalytics(role);
+  const [activityOpen, setActivityOpen] = useState(false);
 
   const query = useQuery({
     queryKey: ["staff", "byId", staffId],
@@ -30,9 +37,22 @@ export default function StaffProfilePage() {
             {query.isPending ? <Skeleton className="inline-block h-8 w-48" /> : m ? staffName(m) : "-"}
           </h1>
         </div>
-        <Button variant="outline" size="sm" render={<Link href="/staff" />}>
-          Back to team
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {canInsights && m ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-9"
+              onClick={() => setActivityOpen(true)}
+            >
+              Stock activity review
+            </Button>
+          ) : null}
+          <Button variant="outline" size="sm" className="min-h-9" render={<Link href="/staff" />}>
+            Back to team
+          </Button>
+        </div>
       </div>
 
       {query.isError ? (
@@ -83,6 +103,13 @@ export default function StaffProfilePage() {
           </Card>
         </div>
       ) : null}
+
+      <StaffStockActivitySheet
+        userId={m?.id ?? null}
+        staffName={m ? staffName(m) : null}
+        open={activityOpen}
+        onOpenChange={setActivityOpen}
+      />
     </div>
   );
 }

@@ -42,6 +42,10 @@ import { handleApiError } from "@/lib/api/errors";
 import { formatCurrency, toNumericAmount } from "@/lib/format";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
+import { SectionCard } from "@/components/analytics/section-card";
+import { QueryState } from "@/components/analytics/query-state";
+import { MetricTile } from "@/components/analytics/metric-tile";
+import { StockLossInsightsSection } from "@/components/insights/stock-loss-insights-section";
 
 const PERIODS: { value: OrgAnalyticsPeriod; label: string }[] = [
   { value: "today", label: "Today" },
@@ -83,6 +87,7 @@ export default function OrgAnalyticsPage() {
       </div>
 
       <HeadlineSection period={period} currency={currency} />
+      <StockLossInsightsSection period={period} currency={currency} />
       <RevenueBreakdownSection period={period} currency={currency} />
       <BranchComparisonSection period={period} currency={currency} />
       <TopProductsSection period={period} currency={currency} />
@@ -124,93 +129,6 @@ function PeriodSelector({
           {p.label}
         </button>
       ))}
-    </div>
-  );
-}
-
-function SectionCard({
-  title,
-  description,
-  icon: Icon,
-  children,
-  action,
-}: {
-  title: string;
-  description?: string;
-  icon?: typeof TrendingUp;
-  children: React.ReactNode;
-  action?: React.ReactNode;
-}) {
-  return (
-    <Card className="border-border/40 bg-card/80 shadow-sm">
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-        <div className="flex items-start gap-3">
-          {Icon ? (
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Icon className="size-5" aria-hidden />
-            </div>
-          ) : null}
-          <div className="space-y-1">
-            <CardTitle className="text-base">{title}</CardTitle>
-            {description ? <CardDescription>{description}</CardDescription> : null}
-          </div>
-        </div>
-        {action}
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
-  );
-}
-
-function QueryState({
-  isPending,
-  isError,
-  error,
-  empty,
-  children,
-  skeletonHeight = "h-40",
-}: {
-  isPending: boolean;
-  isError: boolean;
-  error?: unknown;
-  empty?: boolean;
-  children: React.ReactNode;
-  skeletonHeight?: string;
-}) {
-  if (isPending) return <Skeleton className={cn("w-full rounded-lg", skeletonHeight)} />;
-  if (isError) return <p className="text-sm text-destructive">{handleApiError(error)}</p>;
-  if (empty) return <p className="text-sm text-muted-foreground">No data for this period.</p>;
-  return <>{children}</>;
-}
-
-function MetricTile({
-  label,
-  value,
-  sub,
-  highlight,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-lg border p-4",
-        highlight ? "border-primary/30 bg-primary/5" : "border-border/40 bg-card/60",
-      )}
-    >
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "mt-1 text-2xl font-semibold tabular-nums",
-          highlight ? "text-primary" : "text-foreground",
-        )}
-      >
-        {value}
-      </p>
-      {sub ? <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p> : null}
     </div>
   );
 }

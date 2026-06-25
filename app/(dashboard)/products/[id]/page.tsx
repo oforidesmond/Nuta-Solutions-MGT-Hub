@@ -35,7 +35,6 @@ import {
   deleteProduct,
   duplicateProduct,
   fetchProduct,
-  fetchStockHistory,
   updateProductPricing,
 } from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
@@ -44,20 +43,21 @@ import { canManageInventoryConversions } from "@/lib/inventory-access";
 import { canManageBranches } from "@/lib/branch-access";
 import type { ProductConversion } from "@/lib/types/conversions";
 import { formatCurrency, toNumericAmount } from "@/lib/format";
-import { formatDateDMY, formatTime12h } from "@/lib/format";
+import { formatDateDMY } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { HubProduct, HubStockAdjustment } from "@/lib/types/domain";
+import type { HubProduct } from "@/lib/types/domain";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { ConvertProductModal } from "@/components/inventory/convert-product-modal";
-import { InventoryEventHistorySheet } from "@/components/inventory/inventory-event-history-sheet";
+import { ProductActivityTab } from "@/components/products/product-activity-tab";
+import { BatchTraceDrawer } from "@/components/batches/batch-trace-drawer";
 
-type Tab = "batches" | "history" | "sales";
+type Tab = "batches" | "activity";
 
 function stockBadgeClass(tone: ReturnType<typeof getStockStatus>) {
   if (tone === "out") return "bg-destructive/15 text-destructive border-destructive/30";
@@ -76,10 +76,8 @@ export default function ProductDetailPage() {
   const canConv = canManageInventoryConversions(role);
 
   const [product, setProduct] = useState<HubProduct | null>(null);
-  const [history, setHistory] = useState<HubStockAdjustment[]>([]);
   const [tab, setTab] = useState<Tab>("batches");
   const [loading, setLoading] = useState(true);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editConv, setEditConv] = useState<ProductConversion | null>(null);
@@ -90,6 +88,13 @@ export default function ProductDetailPage() {
   const [convertOpen, setConvertOpen] = useState(false);
   const [resetPriceOpen, setResetPriceOpen] = useState(false);
   const [resettingPrice, setResettingPrice] = useState(false);
+  const [traceBatch, setTraceBatch] = useState<{
+    productId: string;
+    id: string;
+    label?: string;
+    productName?: string;
+    expiryDate?: string | null;
+  } | null>(null);
 
   const conversionsQuery = useQuery({
     queryKey: withBranchKey(activeBranchId, "product-conversions", id),
@@ -114,25 +119,6 @@ export default function ProductDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    if (tab !== "history" || !id) return;
-    let cancelled = false;
-    (async () => {
-      setHistoryLoading(true);
-      try {
-        const h = await fetchStockHistory(id);
-        if (!cancelled) setHistory(h);
-      } catch {
-        if (!cancelled) setHistory([]);
-      } finally {
-        if (!cancelled) setHistoryLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [tab, id, activeBranchId]);
 
   async function onDuplicate() {
     try {
@@ -245,7 +231,6 @@ export default function ProductDetailPage() {
           All products
         </Button>
         <div className="flex flex-wrap gap-2">
-          <InventoryEventHistorySheet productId={id} />
           <Button type="button" variant="outline" size="sm" className="min-h-9" onClick={() => void onDuplicate()}>
             <Copy className="size-4" aria-hidden />
             Duplicate
@@ -341,8 +326,7 @@ export default function ProductDetailPage() {
               {(
                 [
                   { key: "batches" as const, label: "Batches" },
-                  { key: "history" as const, label: "Stock history" },
-                  { key: "sales" as const, label: "Sales (soon)" },
+                  { key: "activity" as const, label: "Activity" },
                 ] as const
               ).map(({ key, label }) => (
                 <Button
@@ -374,7 +358,34 @@ export default function ProductDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {batches.map((b) => (
-                      <TableRow key={b.id}>
+                      <TableRow
+                        key={b.id}
+                        className="interactive-cursor"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`View batch trace for ${b.batchNumber ?? b.id.slice(0, 8)}`}
+                        onClick={() =>
+                          setTraceBatch({
+                            productId: id,
+                            id: b.id,
+                            label: b.batchNumber ?? b.id.slice(0, 8),
+                            productName: product.name,
+                            expiryDate: b.expiryDate,
+                          })
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setTraceBatch({
+                              productId: id,
+                              id: b.id,
+                              label: b.batchNumber ?? b.id.slice(0, 8),
+                              productName: product.name,
+                              expiryDate: b.expiryDate,
+                            });
+                          }
+                        }}
+                      >
                         <TableCell className="font-mono text-xs">{b.batchNumber ?? b.id.slice(0, 8)}</TableCell>
                         <TableCell className="text-right tabular-nums">{String(b.remainingQuantity ?? b.quantity ?? "-")}</TableCell>
                         <TableCell>{b.expiryDate ? formatDateDMY(b.expiryDate) : "-"}</TableCell>
@@ -391,42 +402,12 @@ export default function ProductDetailPage() {
                 </Table>
               )
             ) : null}
-            {tab === "history" ? (
-              historyLoading ? (
-                <Skeleton className="h-24 w-full" />
-              ) : history.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No stock movements recorded yet.</p>
-              ) : (
-                <ul className="space-y-4">
-                  {history.map((h) => {
-                    const when = h.createdAt;
-                    const by = h.user
-                      ? [h.user.firstName, h.user.lastName].filter(Boolean).join(" ") || h.user.email
-                      : "-";
-                    const change = Number(h.quantityChange ?? 0);
-                    return (
-                      <li key={h.id} className="rounded-lg border border-border/40 bg-muted/20 p-3 text-sm">
-                        <p className="font-medium text-foreground">
-                          {when ? `${formatDateDMY(when)} · ${formatTime12h(when)}` : "-"}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {h.type?.replace(/_/g, " ") ?? "Adjustment"}{" "}
-                          <span className={change >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}>
-                            {change >= 0 ? "+" : ""}
-                            {change}
-                          </span>{" "}
-                          units
-                        </p>
-                        <p className="text-xs text-muted-foreground">By {by}</p>
-                        {h.notes ? <p className="mt-1 text-xs">{h.notes}</p> : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )
-            ) : null}
-            {tab === "sales" ? (
-              <p className="text-sm text-muted-foreground">Sales performance for this product will appear here.</p>
+            {tab === "activity" ? (
+              <ProductActivityTab
+                productId={id}
+                productName={product?.name}
+                enabled={tab === "activity"}
+              />
             ) : null}
           </CardContent>
         </Card>
@@ -688,6 +669,18 @@ export default function ProductDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BatchTraceDrawer
+        productId={traceBatch?.productId ?? id}
+        batchId={traceBatch?.id ?? null}
+        batchLabel={traceBatch?.label}
+        productName={traceBatch?.productName}
+        expiryDate={traceBatch?.expiryDate}
+        open={!!traceBatch}
+        onOpenChange={(open) => {
+          if (!open) setTraceBatch(null);
+        }}
+      />
     </div>
   );
 }

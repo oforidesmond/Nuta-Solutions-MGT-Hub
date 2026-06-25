@@ -14,6 +14,7 @@ import {
   Bug,
   AlertTriangle,
   PackageX,
+  TrendingDown,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,12 +22,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { fetchDashboardSummary } from "@/lib/api/dashboard";
+import { fetchOrgInsightShrinkage, fetchOrgInsightSlowStock } from "@/lib/api/org-insights";
 import { fetchSalesWithVariancesPage } from "@/lib/api/sales";
 import { FORCED_SALES_UI } from "@/lib/copy/forced-sales-ui";
 import { fetchReliabilityHomeSummary, mergeReliabilityForHome } from "@/lib/api/staff-reliability";
 import { formatCurrency, formatDate, toNumericAmount } from "@/lib/format";
 import { formatRelativeUpdated } from "@/lib/format-relative-updated";
 import { canViewStaffReliability } from "@/lib/operations-access";
+import { canViewOrgAnalytics } from "@/lib/branch-access";
+import { orgInsightKeys } from "@/lib/query/product-lifecycle-keys";
 import { POLL_DASHBOARD_MS, refetchIntervalWhenVisible } from "@/lib/query/poll-intervals";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
@@ -39,6 +43,7 @@ export default function DashboardHomePage() {
   const organization = useAuthStore((s) => s.organization);
   const user = useAuthStore((s) => s.user);
   const canReliability = canViewStaffReliability(user?.role);
+  const canOrgInsights = canViewOrgAnalytics(user?.role);
   const canNotifyStaff = canSendStaffNotifications(user?.role);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const activeBranchId = useActiveBranchId();
@@ -79,6 +84,20 @@ export default function DashboardHomePage() {
         limit: 1,
       }),
     refetchInterval: () => refetchIntervalWhenVisible(POLL_DASHBOARD_MS),
+  });
+
+  const shrinkageTeaserQuery = useQuery({
+    queryKey: orgInsightKeys.shrinkage(activeBranchId, "month"),
+    queryFn: () => fetchOrgInsightShrinkage({ period: "month" }),
+    enabled: canOrgInsights,
+    staleTime: 60_000,
+  });
+
+  const slowStockTeaserQuery = useQuery({
+    queryKey: orgInsightKeys.slowStock(activeBranchId),
+    queryFn: () => fetchOrgInsightSlowStock(),
+    enabled: canOrgInsights,
+    staleTime: 120_000,
   });
 
   const businessName = organization?.name ?? "your shop";
@@ -195,6 +214,41 @@ export default function DashboardHomePage() {
           </div>
         )}
       </section>
+
+      {canOrgInsights ? (
+        <section aria-label="Stock and loss insights">
+          <div className="mb-3">
+            <h2 className="text-sm font-semibold text-foreground">Stock &amp; loss</h2>
+            <p className="text-xs text-muted-foreground">Org-wide patterns worth a look this month</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <InsightTeaserCard
+              href="/branches/analytics#stock-loss-insights"
+              title="Stock loss to review"
+              icon={TrendingDown}
+              isLoading={shrinkageTeaserQuery.isPending}
+              value={
+                shrinkageTeaserQuery.isError
+                  ? "—"
+                  : String(shrinkageTeaserQuery.data?.highConcernCount ?? 0)
+              }
+              hint="Products with high stock loss concern"
+            />
+            <InsightTeaserCard
+              href="/branches/analytics#stock-loss-insights"
+              title="Slow-moving stock"
+              icon={Package}
+              isLoading={slowStockTeaserQuery.isPending}
+              value={
+                slowStockTeaserQuery.isError
+                  ? "—"
+                  : String(slowStockTeaserQuery.data?.items?.length ?? 0)
+              }
+              hint="Products with stock but weak sales"
+            />
+          </div>
+        </section>
+      ) : null}
 
       <section aria-label={FORCED_SALES_UI.sectionAria7d}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -453,6 +507,43 @@ function VarianceLinkCard({
         </CardHeader>
         <CardContent className="space-y-1">
           <p className="text-2xl font-semibold tracking-tight">{display}</p>
+          <p className="text-xs text-muted-foreground">{hint}</p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function InsightTeaserCard({
+  href,
+  title,
+  icon: Icon,
+  value,
+  hint,
+  isLoading,
+}: {
+  href: string;
+  title: string;
+  icon: typeof TrendingDown;
+  value: string;
+  hint: string;
+  isLoading?: boolean;
+}) {
+  return (
+    <Link href={href} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Card className="interactive-cursor border-border/40 bg-card/80 shadow-sm transition-shadow duration-200 hover:shadow-md">
+        <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-2">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Icon className="size-5" aria-hidden />
+          </div>
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          {isLoading ? (
+            <Skeleton className="h-8 w-16" />
+          ) : (
+            <p className="text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
+          )}
           <p className="text-xs text-muted-foreground">{hint}</p>
         </CardContent>
       </Card>

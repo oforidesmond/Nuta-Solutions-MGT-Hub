@@ -56,7 +56,7 @@ interface SendStaffNotificationModalProps {
 export function SendStaffNotificationModal({ open, onOpenChange }: SendStaffNotificationModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl">
         <SendStaffNotificationForm key={String(open)} onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

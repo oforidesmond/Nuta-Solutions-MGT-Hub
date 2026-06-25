@@ -81,13 +81,7 @@ export default function PlatformDeviceDetailPage() {
     );
   }
 
-  const { device, activity: rawActivity } = query.data;
-  const activity = {
-    salesCount: Number(rawActivity?.salesCount ?? 0),
-    backupsCount: Number(rawActivity?.backupsCount ?? 0),
-    crashesCount: Number(rawActivity?.crashesCount ?? 0),
-    recentSales: rawActivity?.recentSales ?? [],
-  };
+  const { device, activity } = query.data;
   const title = device.deviceName ?? device.deviceModel ?? device.deviceUuid.slice(0, 12);
   const ownerName = device.user
     ? [device.user.firstName, device.user.lastName].filter(Boolean).join(" ").trim() ||

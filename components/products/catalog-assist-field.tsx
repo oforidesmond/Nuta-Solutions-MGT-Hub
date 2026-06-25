@@ -11,6 +11,7 @@ import { fetchCatalogAssist } from "@/lib/api/catalog-assist";
 import { validateProductName } from "@/lib/product-naming";
 import type { CatalogAssistResponse } from "@/lib/types/catalog-assist";
 import type { HubCategory } from "@/lib/types/domain";
+import { CategoryPicker } from "@/components/products/category-picker";
 import { cn } from "@/lib/utils";
 
 /** Subtle filled treatment so "Use suggestions" reads as a button, not helper text. */
@@ -39,6 +40,9 @@ type CatalogAssistFieldProps = {
   categoryId: string;
   onCategoryChange: (value: string) => void;
   categories: HubCategory[];
+  onCategoryCreated?: (category: HubCategory) => void;
+  onCategoriesReload?: (categories: HubCategory[]) => void;
+  canCreateCategory?: boolean;
   excludeProductId?: string;
   /** Initial draft when dialog opens — triggers assist fetch even before edits. */
   initialDraftName?: string;
@@ -59,6 +63,9 @@ export const CatalogAssistField = forwardRef<CatalogAssistFieldHandle, CatalogAs
       categoryId,
       onCategoryChange,
       categories,
+      onCategoryCreated,
+      onCategoriesReload,
+      canCreateCategory = true,
       excludeProductId,
       initialDraftName,
       categoryRequired = false,
@@ -312,22 +319,18 @@ export const CatalogAssistField = forwardRef<CatalogAssistFieldHandle, CatalogAs
             Category
             {categoryRequired ? " *" : null}
           </Label>
-          <select
+          <CategoryPicker
             id={categoryIdAttr}
-            className="flex h-11 min-h-11 w-full rounded-lg border border-input bg-background px-3 text-sm interactive-cursor"
             value={categoryId}
-            onChange={(e) => {
+            onChange={(id) => {
               setCategoryTouched(true);
-              onCategoryChange(e.target.value);
+              onCategoryChange(id);
             }}
-          >
-            <option value="">Select category</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            categories={categories}
+            onCategoryCreated={onCategoryCreated}
+            onCategoriesReload={onCategoriesReload}
+            canCreate={canCreateCategory}
+          />
           {categoryHintText ? (
             <p className="text-xs text-muted-foreground">{categoryHintText}</p>
           ) : null}

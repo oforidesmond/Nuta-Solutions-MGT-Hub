@@ -36,6 +36,7 @@ import { ConvertProductModal } from "@/components/inventory/convert-product-moda
 import { StockAdjustmentModal } from "@/components/inventory/stock-adjustment-modal";
 import { StockTakeRecordModal } from "@/components/inventory/stock-take-record-modal";
 import { StockTransferModal } from "@/components/inventory/stock-transfer-modal";
+import { ExportButton } from "@/components/exports/export-button";
 import { ProductActionsMenu } from "@/components/products/product-actions-menu";
 import {
   Dialog,
@@ -55,6 +56,12 @@ import {
   type ProductQueryParams,
 } from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
+import { EXPORT_ROW_CAP } from "@/lib/exports/constants";
+import { buildExportFilename } from "@/lib/exports/filename";
+import {
+  PRODUCT_LIST_EXPORT_COLUMNS,
+  productToExportRow,
+} from "@/lib/exports/product-export";
 import { formatCurrency } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
@@ -115,6 +122,7 @@ export default function ProductsPage() {
   const router = useRouter();
   const activeBranchId = useActiveBranchId();
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const orgName = useAuthStore((s) => s.organization?.name) ?? "export";
   const role = useAuthStore((s) => s.user?.role);
   const canStockTake = canManageStockTakes(role);
   const canConvert = canManageInventoryConversions(role);
@@ -317,9 +325,28 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" className="min-h-9" onClick={() => toast.message("Export to Excel will be available soon.")}>
-            Export to Excel
-          </Button>
+          <ExportButton
+            label="Export to Excel"
+            filename={buildExportFilename({ orgName, reportType: "products" })}
+            columns={PRODUCT_LIST_EXPORT_COLUMNS}
+            disabled={loading}
+            getRows={async () => {
+              const raw = await fetchAllProducts({
+                search: debouncedSearch || undefined,
+                categoryId: categoryId || undefined,
+                lowStock: stockFilter === "low" ? true : undefined,
+                sortBy,
+                sortOrder,
+              });
+              const filtered = applyClientFilters(raw, stockFilter, priceMin, priceMax);
+              const truncated = filtered.length > EXPORT_ROW_CAP;
+              const slice = filtered.slice(0, EXPORT_ROW_CAP);
+              return {
+                rows: slice.map(productToExportRow),
+                truncated,
+              };
+            }}
+          />
           <Button type="button" className="min-h-9" render={<Link href="/products/new" />}>
             <Plus className="size-4" aria-hidden />
             Add product

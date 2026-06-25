@@ -52,6 +52,8 @@ function fullDaysSince(iso: string | null | undefined): number | null {
 
 function TemporaryItemsContent() {
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const role = useAuthStore((s) => s.user?.role);
+  const canCreateCategory = role === "ADMIN" || role === "MANAGER";
   const searchParams = useSearchParams();
   const highlightProductId =
     searchParams.get("highlightProductId") ?? searchParams.get("productId");
@@ -327,7 +329,7 @@ function TemporaryItemsContent() {
       </Dialog>
 
       <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
-        <DialogContent className="max-h-[min(90vh,40rem)] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg">
           <form onSubmit={onPromoteSubmit}>
             <DialogHeader>
               <DialogTitle>Promote to inventory</DialogTitle>
@@ -345,6 +347,13 @@ function TemporaryItemsContent() {
                 categoryId={categoryId}
                 onCategoryChange={setCategoryId}
                 categories={categories}
+                onCategoryCreated={(cat) =>
+                  setCategories((prev) =>
+                    prev.some((c) => c.id === cat.id) ? prev : [...prev, cat],
+                  )
+                }
+                onCategoriesReload={setCategories}
+                canCreateCategory={canCreateCategory}
                 excludeProductId={selected?.id}
                 initialDraftName={selected?.name ?? undefined}
                 categoryRequired

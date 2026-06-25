@@ -177,6 +177,7 @@ export async function fetchExpiringSoonProducts(): Promise<HubProduct[]> {
   return unwrapList<HubProduct>(res.data, 1, 200).items;
 }
 
+/** @deprecated Use `fetchProductLifecyclePage` from `@/lib/api/product-lifecycle`. */
 export async function fetchStockHistory(productId: string): Promise<HubStockAdjustment[]> {
   const res = await api.get(endpoints.productStockHistory(productId));
   const data = res.data;
@@ -254,6 +255,7 @@ export async function promoteFromTemporary(
   return unwrapEntity<HubProduct>(res.data);
 }
 
+/** @deprecated Use `fetchProductLifecyclePage` from `@/lib/api/product-lifecycle`. */
 export async function fetchInventoryEvents(productId: string): Promise<HubInventoryEvent[]> {
   const res = await api.get(endpoints.productInventoryEvents(productId));
   const data = res.data;

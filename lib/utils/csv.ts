@@ -10,11 +10,21 @@ function escapeCell(val: unknown): string {
   return s;
 }
 
-/** Build CSV text from homogeneous row objects using provided column order (keys). */
-export function rowsToCsv(rows: Record<string, unknown>[], columns: string[]): string {
-  const header = columns.map(escapeCell).join(",");
+type CsvColumnSpec = string | { key: string; header: string };
+
+function normalizeColumns(columns: CsvColumnSpec[]): { key: string; header: string }[] {
+  return columns.map((c) =>
+    typeof c === "string" ? { key: c, header: c } : c,
+  );
+}
+
+/** Build CSV text from homogeneous row objects using provided column order (keys or key+header). */
+export function rowsToCsv(rows: Record<string, unknown>[], columns: CsvColumnSpec[]): string {
+  const specs = normalizeColumns(columns);
+  const keys = specs.map((s) => s.key);
+  const header = specs.map((s) => escapeCell(s.header)).join(",");
   const lines = rows.map((row) =>
-    columns.map((c) => escapeCell(row[c])).join(","),
+    keys.map((c) => escapeCell(row[c])).join(","),
   );
   return [header, ...lines].join("\r\n");
 }

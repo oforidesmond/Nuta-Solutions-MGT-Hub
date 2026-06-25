@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -11,16 +12,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { Package } from "lucide-react";
+import { MetricTile } from "@/components/analytics/metric-tile";
+import { ExportButton } from "@/components/exports/export-button";
+import { SectionCard } from "@/components/analytics/section-card";
+import { QueryState } from "@/components/analytics/query-state";
+import { DateRangePresetToolbar } from "@/components/filters/date-range-preset-toolbar";
 import { Label } from "@/components/ui/label";
-import {
-  Tooltip as UiTooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -29,150 +28,224 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DateRangePresetToolbar } from "@/components/filters/date-range-preset-toolbar";
-import { fetchReportRevenueTrends, fetchReportSalesSummary, fetchReportStaffPerformance } from "@/lib/api/reports";
+import { dateRangeToStaffPeriod, rangeFromPreset } from "@/lib/analytics-period";
+import {
+  fetchReportRevenueTrends,
+  fetchReportSalesSummary,
+  fetchReportStaffPerformance,
+  fetchReportTopProducts,
+  normalizeBranchLedgerSummary,
+  normalizeRevenueTrendPoints,
+  normalizeStaffPerformanceRows,
+  normalizeTopProducts,
+} from "@/lib/api/reports";
+import { formatCurrency, toNumericAmount } from "@/lib/format";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
-import { withBranchKey } from "@/lib/query/branch-query-keys";
+import { canViewOrgAnalytics } from "@/lib/branch-access";
 import type { DateRangePreset } from "@/lib/date-range-presets";
-import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
-import type { RevenueTrendPeriod, StaffReportPeriod } from "@/lib/types/reports";
+import { toYyyyMmDd } from "@/lib/date-range-presets";
+import { reportKeys } from "@/lib/query/report-keys";
+import { buildExportFilename } from "@/lib/exports/filename";
+import type { ProductLifecycleFinancialBlock } from "@/lib/types/product-lifecycle";
+import type { RevenueTrendPeriod } from "@/lib/types/reports";
+import { useAuthStore } from "@/stores/auth-store";
+import { cn } from "@/lib/utils";
 
-function extractRows(obj: Record<string, unknown>): Record<string, unknown>[] {
-  const r = obj.rows ?? obj.data ?? obj.staff ?? obj.items ?? obj.results ?? obj.leaderboard;
-  if (Array.isArray(r)) return r as Record<string, unknown>[];
-
-  const rankings = obj.rankings;
-  if (rankings && typeof rankings === "object") {
-    const o = rankings as Record<string, unknown>;
-    const preferred = o.byRevenue ?? o.bySalesCount ?? o.byReturnsCount;
-    if (Array.isArray(preferred)) return preferred as Record<string, unknown>[];
-    for (const v of Object.values(o)) {
-      if (Array.isArray(v)) return v as Record<string, unknown>[];
-    }
+function pickBlockAmount(block: ProductLifecycleFinancialBlock | undefined, ...keys: string[]): number {
+  if (!block) return 0;
+  for (const k of keys) {
+    const v = block[k];
+    if (v != null) return toNumericAmount(v as string | number);
   }
-
-  return [];
+  return 0;
 }
 
-function extractTrendSeries(obj: Record<string, unknown>): { name: string; value: number }[] {
-  const raw = obj.buckets ?? obj.data ?? obj.points ?? obj.series ?? obj.trends;
-  const rows = Array.isArray(raw)
-    ? raw
-    : raw && typeof raw === "object" && Array.isArray((raw as Record<string, unknown>).buckets)
-      ? ((raw as Record<string, unknown>).buckets as unknown[])
-      : [];
-  if (!rows.length) return [];
-  return rows.map((row, i) => {
-    if (row && typeof row === "object") {
-      const o = row as Record<string, unknown>;
-      const name = String(o.period ?? o.label ?? o.date ?? o.bucket ?? o.week ?? i);
-      const v = o.amount ?? o.revenue ?? o.total ?? o.value ?? o.sum;
-      const value = typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) || 0 : 0;
-      return { name, value };
-    }
-    return { name: String(i), value: 0 };
-  });
-}
-
-function formatSummaryKv(data: Record<string, unknown>): { k: string; v: string }[] {
-  const skip = new Set(["data", "items", "meta"]);
-  return Object.entries(data)
-    .filter(([k, v]) => !skip.has(k) && v !== null && typeof v !== "object")
-    .slice(0, 12)
-    .map(([k, v]) => {
-      const asNum =
-        typeof v === "number"
-          ? v
-          : typeof v === "string" && v.trim() && !Number.isNaN(Number(v))
-            ? Number(v)
-            : null;
-      if (asNum != null && Number.isFinite(asNum)) {
-        return {
-          k,
-          v: new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(asNum),
-        };
-      }
-      return { k, v: String(v) };
-    });
-}
-
-function isLikelyIdKey(k: string): boolean {
-  return k === "userId" || k === "staffId" || k.endsWith("Id");
-}
-
-function truncateMiddle(v: string, keep = 6): string {
-  if (!v) return v;
-  if (v.length <= keep * 2 + 3) return v;
-  return `${v.slice(0, keep)}...${v.slice(-keep)}`;
-}
-
-function formatCellValue(k: string, v: unknown): { display: string; full?: string } {
-  if (v == null) return { display: "-" };
-  const s = typeof v === "string" ? v : typeof v === "number" ? String(v) : null;
-  if (s && isLikelyIdKey(k) && s.length > 14) {
-    return { display: truncateMiddle(s), full: s };
-  }
-  if (typeof v === "number" && Number.isFinite(v)) {
-    return { display: new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(v) };
-  }
-  if (typeof v === "string" && v.trim() && !Number.isNaN(Number(v))) {
-    const n = Number(v);
-    if (Number.isFinite(n)) {
-      return { display: new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(n) };
-    }
-  }
-  return { display: String(v) };
+function formatPercent(value: string | null | undefined): string {
+  if (value == null) return "";
+  const n = toNumericAmount(value);
+  return `${n.toFixed(1)}%`;
 }
 
 export function ReportsBusinessSection() {
   const activeBranchId = useActiveBranchId();
+  const organization = useAuthStore((s) => s.organization);
+  const currency = organization?.currency ?? "GHS";
+  const orgName = organization?.name ?? "org";
+  const role = useAuthStore((s) => s.user?.role);
+  const showOrgLink = canViewOrgAnalytics(role);
+
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
-  const [staffPeriod, setStaffPeriod] = useState<StaffReportPeriod>("30d");
-  const [revenuePeriod, setRevenuePeriod] = useState<RevenueTrendPeriod>("weekly");
+  const [revenueGranularity, setRevenueGranularity] = useState<RevenueTrendPeriod>("weekly");
+  const [topBy, setTopBy] = useState<"revenue" | "quantity">("revenue");
 
   const range = useMemo(
-    () => rangeForPreset(preset, customStart, customEnd),
+    () => rangeFromPreset(preset, customStart, customEnd),
     [preset, customStart, customEnd],
   );
 
+  const staffPeriod = useMemo(
+    () => dateRangeToStaffPeriod(range.startDate, range.endDate),
+    [range.startDate, range.endDate],
+  );
+
   const salesSummaryQuery = useQuery({
-    queryKey: withBranchKey(activeBranchId, "reports", "sales-summary", range.startDate, range.endDate),
+    queryKey: reportKeys.salesSummary(activeBranchId, range.startDate, range.endDate),
     queryFn: () => fetchReportSalesSummary({ startDate: range.startDate, endDate: range.endDate }),
     enabled: Boolean(range.startDate && range.endDate),
+    staleTime: 60_000,
   });
 
   const staffPerfQuery = useQuery({
-    queryKey: withBranchKey(activeBranchId, "reports", "staff-performance", staffPeriod),
-    queryFn: () => fetchReportStaffPerformance({ period: staffPeriod }),
+    queryKey: reportKeys.staffPerformance(
+      activeBranchId,
+      staffPeriod,
+      range.startDate,
+      range.endDate,
+    ),
+    queryFn: () =>
+      fetchReportStaffPerformance({
+        period: staffPeriod,
+        startDate: range.startDate,
+        endDate: range.endDate,
+      }),
+    staleTime: 60_000,
   });
 
   const revenueTrendsQuery = useQuery({
-    queryKey: withBranchKey(activeBranchId, "reports", "revenue-trends", revenuePeriod),
-    queryFn: () => fetchReportRevenueTrends({ period: revenuePeriod }),
+    queryKey: reportKeys.revenueTrends(activeBranchId, revenueGranularity, preset),
+    queryFn: () =>
+      fetchReportRevenueTrends({
+        period: revenueGranularity,
+        startDate: range.startDate,
+        endDate: range.endDate,
+      }),
+    staleTime: 60_000,
   });
 
-  const chartData = useMemo(
-    () => extractTrendSeries(revenueTrendsQuery.data?.reportData ?? {}),
-    [revenueTrendsQuery.data],
-  );
+  const topProductsQuery = useQuery({
+    queryKey: reportKeys.topProducts(activeBranchId, range.startDate, range.endDate, topBy),
+    queryFn: () =>
+      fetchReportTopProducts({
+        startDate: range.startDate,
+        endDate: range.endDate,
+        by: topBy,
+        limit: 10,
+      }),
+    enabled: Boolean(range.startDate && range.endDate),
+    staleTime: 60_000,
+  });
+
+  const ledgerSummary = useMemo(() => {
+    if (!salesSummaryQuery.data) return null;
+    return normalizeBranchLedgerSummary(salesSummaryQuery.data, {
+      from: range.startDate,
+      to: range.endDate,
+    });
+  }, [salesSummaryQuery.data, range.startDate, range.endDate]);
+
   const staffRows = useMemo(
-    () => extractRows(staffPerfQuery.data?.reportData ?? {}),
+    () => normalizeStaffPerformanceRows(staffPerfQuery.data?.reportData ?? {}),
     [staffPerfQuery.data],
   );
 
-  const salesBranchName = salesSummaryQuery.data?.branch?.name ?? null;
-  const staffBranchName = staffPerfQuery.data?.branch?.name ?? null;
-  const revenueBranchName = revenueTrendsQuery.data?.branch?.name ?? null;
+  const chartData = useMemo(
+    () => normalizeRevenueTrendPoints(revenueTrendsQuery.data?.reportData ?? {}),
+    [revenueTrendsQuery.data],
+  );
+
+  const topProducts = useMemo(() => {
+    if (!topProductsQuery.data) return [];
+    return normalizeTopProducts(topProductsQuery.data, {
+      from: range.startDate,
+      to: range.endDate,
+    }).products;
+  }, [topProductsQuery.data, range.startDate, range.endDate]);
+
+  const branchLabel =
+    ledgerSummary?.branch?.name ??
+    salesSummaryQuery.data?.branch?.name ??
+    staffPerfQuery.data?.branch?.name ??
+    null;
+
+  const soldAmount = pickBlockAmount(ledgerSummary?.sales, "revenue");
+  const profitAmount = pickBlockAmount(ledgerSummary?.sales, "grossProfit");
+  const cogsAmount = pickBlockAmount(ledgerSummary?.cogs, "cogs") || pickBlockAmount(ledgerSummary?.sales, "cogs");
+  const stockLost = pickBlockAmount(ledgerSummary?.shrinkage, "loss", "lossAmount");
+  const returnCount =
+    typeof ledgerSummary?.returns?.count === "number"
+      ? ledgerSummary.returns.count
+      : pickBlockAmount(ledgerSummary?.returns, "quantity");
+
+  const exportRange = { from: range.startDate, to: range.endDate };
+  const summaryFilename = buildExportFilename({
+    orgName,
+    reportType: "reports-summary",
+    ...exportRange,
+  });
+  const staffFilename = buildExportFilename({
+    orgName,
+    reportType: "staff-performance",
+    ...exportRange,
+  });
+  const trendsFilename = buildExportFilename({
+    orgName,
+    reportType: `revenue-trends-${revenueGranularity}`,
+    ...exportRange,
+  });
+  const productsFilename = buildExportFilename({
+    orgName,
+    reportType: `top-products-${topBy}`,
+    ...exportRange,
+  });
 
   return (
     <div className="space-y-8">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            {branchLabel ? `${branchLabel} · ` : ""}
+            Figures from your stock and sales ledger for the selected period.
+          </p>
+          {showOrgLink ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              <Link
+                href="/branches/analytics"
+                className="font-medium text-foreground underline underline-offset-2"
+              >
+                See all branches → Org-wide analytics
+              </Link>
+            </p>
+          ) : null}
+        </div>
+        <ExportButton
+          filename={summaryFilename}
+          columns={[
+            { key: "metric", header: "Metric" },
+            { key: "value", header: "Value" },
+          ]}
+          disabled={!ledgerSummary || salesSummaryQuery.isPending}
+          getRows={async () => ({
+            rows: [
+              { metric: "Sold", value: formatCurrency(soldAmount, currency) },
+              { metric: "Profit on sales", value: formatCurrency(profitAmount, currency) },
+              { metric: "What it cost you", value: formatCurrency(cogsAmount, currency) },
+              { metric: "Stock lost", value: formatCurrency(stockLost, currency) },
+              { metric: "Returns", value: String(returnCount) },
+              { metric: "Branch", value: branchLabel ?? "" },
+              { metric: "Period from", value: range.startDate },
+              { metric: "Period to", value: range.endDate },
+            ],
+          })}
+        />
+      </div>
+
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-medium tracking-tight">Sales summary</h2>
           <p className="text-sm text-muted-foreground">
-            Requires both start and end dates. Choose a preset or custom range.
+            Sold, profit, stock lost, and returns for this branch.
           </p>
         </div>
         <DateRangePresetToolbar
@@ -183,138 +256,142 @@ export function ReportsBusinessSection() {
           onCustomStartChange={setCustomStart}
           onCustomEndChange={setCustomEnd}
         />
-        <Card className="border-border/40 bg-card/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Summary for selected range</CardTitle>
-            <CardDescription>
-              {salesBranchName ? `${salesBranchName} · ` : ""}
-              {range.startDate} → {range.endDate}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {salesSummaryQuery.isLoading ? (
-              <Skeleton className="h-24 w-full" />
-            ) : salesSummaryQuery.isError ? (
-              <p className="text-sm text-destructive">Could not load sales summary.</p>
-            ) : (
-              <dl className="grid gap-2 sm:grid-cols-2">
-                {formatSummaryKv(salesSummaryQuery.data?.reportData ?? {}).map(({ k, v }) => (
-                  <div key={k} className="flex justify-between gap-4 text-sm">
-                    <dt className="text-muted-foreground">{k.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}</dt>
-                    <dd className="font-medium tabular-nums text-foreground">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-          </CardContent>
-        </Card>
+        <SectionCard
+          title="Summary for selected range"
+          description={`${range.startDate} → ${range.endDate}`}
+        >
+          {salesSummaryQuery.isPending ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : salesSummaryQuery.isError ? (
+            <p className="text-sm text-destructive">Could not load sales summary.</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <MetricTile label="Sold" value={formatCurrency(soldAmount, currency)} />
+              <MetricTile label="Profit on sales" value={formatCurrency(profitAmount, currency)} />
+              <MetricTile label="What it cost you" value={formatCurrency(cogsAmount, currency)} />
+              <MetricTile
+                label="Stock lost"
+                value={formatCurrency(stockLost, currency)}
+                highlight={stockLost > 0}
+              />
+              <MetricTile label="Returns" value={String(returnCount)} />
+            </div>
+          )}
+        </SectionCard>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-medium tracking-tight">Staff performance</h2>
-        <div className="flex flex-wrap gap-2">
-          {(["7d", "30d", "90d", "this_month"] as const).map((p) => (
-            <Button
-              key={p}
-              type="button"
-              size="sm"
-              variant={staffPeriod === p ? "default" : "outline"}
-              onClick={() => setStaffPeriod(p)}
-            >
-              {p}
-            </Button>
-          ))}
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium tracking-tight">Staff performance</h2>
+            <p className="text-sm text-muted-foreground">
+              Leaderboard for {range.startDate} → {range.endDate}
+            </p>
+          </div>
+          <ExportButton
+            filename={staffFilename}
+            columns={[
+              { key: "name", header: "Staff" },
+              { key: "branchName", header: "Branch" },
+              { key: "totalSales", header: "Sales" },
+              { key: "transactions", header: "Receipts" },
+            ]}
+            disabled={staffRows.length === 0 || staffPerfQuery.isPending}
+            getRows={async () => ({
+              rows: staffRows.map((row) => ({
+                name: row.name,
+                branchName: row.branchName ?? "",
+                totalSales: formatCurrency(toNumericAmount(row.totalSales), currency),
+                transactions: row.transactions,
+              })),
+            })}
+          />
         </div>
-        <Card className="border-border/40 bg-card/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Leaderboard</CardTitle>
-            <CardDescription>
-              {staffBranchName ? `${staffBranchName} · ` : ""}Period: {staffPeriod}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {staffPerfQuery.isLoading ? (
-              <Skeleton className="h-40 w-full" />
-            ) : staffPerfQuery.isError ? (
-              <p className="text-sm text-destructive">Could not load staff performance.</p>
-            ) : staffRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No rows returned for this period.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {Object.keys(staffRows[0] ?? {})
-                      .slice(0, 8)
-                      .map((k) => (
-                        <TableHead key={k}>{k}</TableHead>
-                      ))}
+        <SectionCard title="Leaderboard" description={branchLabel ? branchLabel : undefined}>
+          {staffPerfQuery.isPending ? (
+            <Skeleton className="h-40 w-full" />
+          ) : staffPerfQuery.isError ? (
+            <p className="text-sm text-destructive">Could not load staff performance.</p>
+          ) : staffRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No staff activity for this period.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Staff</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead className="text-right">Sales</TableHead>
+                  <TableHead className="text-right">Receipts</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {staffRows.map((row, idx) => (
+                  <TableRow key={row.staffId ?? row.userId ?? idx}>
+                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{row.branchName ?? "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatCurrency(toNumericAmount(row.totalSales), currency)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{row.transactions}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {staffRows.map((row, idx) => (
-                    <TableRow key={idx}>
-                      {Object.keys(staffRows[0] ?? {})
-                        .slice(0, 8)
-                        .map((k) => {
-                          const { display, full } = formatCellValue(k, row[k]);
-                          return (
-                            <TableCell key={k} className={isLikelyIdKey(k) ? "font-mono text-xs" : undefined}>
-                              {full ? (
-                                <TooltipProvider>
-                                  <UiTooltip>
-                                    <TooltipTrigger asChild>
-                                      <button type="button" className="interactive-cursor max-w-[10rem] truncate text-left">
-                                        {display}
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>{full}</TooltipContent>
-                                  </UiTooltip>
-                                </TooltipProvider>
-                              ) : (
-                                display
-                              )}
-                            </TableCell>
-                          );
-                        })}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </SectionCard>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-medium tracking-tight">Revenue trends</h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium tracking-tight">Revenue trends</h2>
+            <p className="text-sm text-muted-foreground">How sales moved over time.</p>
+          </div>
+          <ExportButton
+            filename={trendsFilename}
+            columns={[
+              { key: "period", header: "Period" },
+              { key: "revenue", header: "Revenue" },
+            ]}
+            disabled={chartData.length === 0 || revenueTrendsQuery.isPending}
+            getRows={async () => ({
+              rows: chartData.map((point) => ({
+                period: point.name,
+                revenue: formatCurrency(toNumericAmount(point.value), currency),
+              })),
+            })}
+          />
+        </div>
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1.5">
-            <Label>Granularity</Label>
+            <Label htmlFor="revenue-granularity">Granularity</Label>
             <select
-              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm interactive-cursor"
-              value={revenuePeriod}
-              onChange={(e) => setRevenuePeriod(e.target.value as RevenueTrendPeriod)}
+              id="revenue-granularity"
+              className="flex h-10 min-h-9 rounded-md border border-input bg-background px-3 py-2 text-sm interactive-cursor"
+              value={revenueGranularity}
+              onChange={(e) => setRevenueGranularity(e.target.value as RevenueTrendPeriod)}
             >
-              <option value="daily">daily</option>
-              <option value="weekly">weekly</option>
-              <option value="monthly">monthly</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
             </select>
           </div>
         </div>
-        <Card className="border-border/40 bg-card/80 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Trend chart</CardTitle>
-            <CardDescription>
-              {revenueBranchName ? `${revenueBranchName} · ` : ""}Period: {revenuePeriod}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-[280px] w-full">
-            {revenueTrendsQuery.isLoading ? (
+        <SectionCard
+          title="Trend chart"
+          description={`${range.startDate} → ${range.endDate} · ${revenueGranularity}`}
+        >
+          <div className="h-[280px] w-full">
+            {revenueTrendsQuery.isPending ? (
               <Skeleton className="h-full w-full" />
             ) : revenueTrendsQuery.isError ? (
               <p className="text-sm text-destructive">Could not load revenue trends.</p>
             ) : chartData.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No series data in the response.</p>
+              <p className="text-sm text-muted-foreground">No trend data for this period.</p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -340,8 +417,97 @@ export function ReportsBusinessSection() {
                 </LineChart>
               </ResponsiveContainer>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium tracking-tight">Product performance</h2>
+            <p className="text-sm text-muted-foreground">Best sellers at this branch.</p>
+          </div>
+          <ExportButton
+            filename={productsFilename}
+            columns={[
+              { key: "rank", header: "Rank" },
+              { key: "name", header: "Product" },
+              { key: "value", header: topBy === "revenue" ? "Revenue" : "Quantity sold" },
+              { key: "contributionPercent", header: "Share %" },
+            ]}
+            disabled={topProducts.length === 0 || topProductsQuery.isPending}
+            getRows={async () => ({
+              rows: topProducts.map((p, i) => ({
+                rank: i + 1,
+                name: p.name,
+                value:
+                  topBy === "revenue"
+                    ? formatCurrency(toNumericAmount(p.totalRevenue), currency)
+                    : String(p.totalQuantitySold),
+                contributionPercent: p.contributionPercent
+                  ? formatPercent(p.contributionPercent)
+                  : "",
+              })),
+            })}
+          />
+        </div>
+        <SectionCard
+          title="Top products"
+          description={`${range.startDate} → ${range.endDate}`}
+          icon={Package}
+          action={
+            <div className="inline-flex gap-1 rounded-lg border border-border/40 bg-card p-1">
+              {(["revenue", "quantity"] as const).map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setTopBy(b)}
+                  aria-pressed={topBy === b}
+                  className={cn(
+                    "interactive-cursor rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors",
+                    topBy === b ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          <QueryState
+            isPending={topProductsQuery.isPending}
+            isError={topProductsQuery.isError}
+            error={topProductsQuery.error}
+            empty={topProducts.length === 0}
+            emptyMessage="No product sales for this period."
+          >
+            <ul className="space-y-1">
+              {topProducts.map((p, i) => (
+                <li key={p.productId}>
+                  <Link
+                    href={`/products/${p.productId}?tab=activity`}
+                    className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/40"
+                  >
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums text-muted-foreground">
+                      {i + 1}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{p.name}</span>
+                    <span className="shrink-0 text-sm tabular-nums">
+                      {topBy === "revenue"
+                        ? formatCurrency(toNumericAmount(p.totalRevenue), currency)
+                        : `${p.totalQuantitySold} sold`}
+                    </span>
+                    {p.contributionPercent ? (
+                      <span className="w-14 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                        {formatPercent(p.contributionPercent)}
+                      </span>
+                    ) : null}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </QueryState>
+        </SectionCard>
       </section>
     </div>
   );

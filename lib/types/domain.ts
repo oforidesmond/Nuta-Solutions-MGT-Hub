@@ -200,6 +200,10 @@ export interface HubSale {
   isDelayedSync?: boolean;
   /** True if any line on the sale was recorded as a stock variance. */
   hasStockVariance?: boolean;
+  /** True when the sale was voided (stock restored, ledger reversed). */
+  isVoided?: boolean;
+  voidedAt?: string | null;
+  voidReason?: string | null;
   /** Present on `GET /sales`, `GET /sales/with-variances`, and `GET /sales/:id`. */
   items?: HubSaleLine[];
 }

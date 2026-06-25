@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, PackageX } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Ban, PackageX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { VoidSaleDialog } from "@/components/sales/void-sale-dialog";
 import { handleApiError } from "@/lib/api/errors";
 import { fetchSaleById } from "@/lib/api/sales";
 import { formatCurrency, formatDateDMY, formatTime12h, toNumericAmount } from "@/lib/format";
+import { canVoidSale } from "@/lib/inventory-access";
 import { delayedSyncTooltipText, isSaleDelayedSync } from "@/lib/sale-sync";
 import { computeDiscountPercent } from "@/lib/discount";
 import type { HubSale, HubSaleLine } from "@/lib/types/domain";
@@ -50,6 +52,9 @@ export default function SaleDetailPage() {
   const activeBranchId = useActiveBranchId();
   const highlightVariance = searchParams.get("highlightVariance") === "1";
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const role = useAuthStore((s) => s.user?.role);
+  const canVoid = canVoidSale(role);
+  const [voidOpen, setVoidOpen] = useState(false);
   const varianceSectionRef = useRef<HTMLDivElement | null>(null);
 
   const saleQuery = useQuery({
@@ -120,6 +125,7 @@ export default function SaleDetailPage() {
   const delayed = isSaleDelayedSync(sale);
   const receipt = sale.receiptNumber?.trim() || sale.receiptNumberMobile?.trim() || null;
   const variance = sale.hasStockVariance === true || varianceLines.length > 0;
+  const isVoided = sale.isVoided === true;
 
   return (
     <div className="space-y-6">
@@ -133,7 +139,13 @@ export default function SaleDetailPage() {
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Sale</h1>
-          {variance ? (
+          {isVoided ? (
+            <Badge variant="outline" className="border-muted-foreground/50 text-muted-foreground">
+              <Ban className="mr-1 size-3.5" aria-hidden />
+              Sale cancelled
+            </Badge>
+          ) : null}
+          {!isVoided && variance ? (
             <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-300">
               <PackageX className="mr-1 size-3.5" aria-hidden />
               {FORCED_SALES_UI.badge}
@@ -365,6 +377,37 @@ export default function SaleDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {isVoided && sale.voidReason ? (
+        <p className="text-sm text-muted-foreground">
+          Cancellation reason: <span className="text-foreground">{sale.voidReason}</span>
+          {sale.voidedAt ? (
+            <>
+              {" "}
+              · {formatDateDMY(sale.voidedAt)} · {formatTime12h(sale.voidedAt)}
+            </>
+          ) : null}
+        </p>
+      ) : null}
+
+      {canVoid && !isVoided ? (
+        <div className="border-t border-border/40 pt-6">
+          <button
+            type="button"
+            onClick={() => setVoidOpen(true)}
+            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Cancel this sale (admin)
+          </button>
+        </div>
+      ) : null}
+
+      <VoidSaleDialog
+        sale={sale}
+        open={voidOpen}
+        onOpenChange={setVoidOpen}
+        onSuccess={() => void saleQuery.refetch()}
+      />
     </div>
   );
 }

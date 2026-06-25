@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { BatchTraceDrawer } from "@/components/batches/batch-trace-drawer";
 import {
   fetchBatches,
   fetchExpiredBatches,
@@ -26,6 +27,26 @@ import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { formatDateDMY } from "@/lib/format";
 import type { HubBatch } from "@/lib/types/domain";
 
+type TraceTarget = {
+  productId: string;
+  id: string;
+  label?: string;
+  productName?: string;
+  expiryDate?: string | null;
+};
+
+function openTrace(b: HubBatch): TraceTarget | null {
+  const productId = b.productId ?? b.product?.id;
+  if (!productId) return null;
+  return {
+    productId,
+    id: b.id,
+    label: b.batchNumber ?? b.id.slice(0, 8),
+    productName: b.product?.name,
+    expiryDate: b.expiryDate,
+  };
+}
+
 export default function BatchesPage() {
   const activeBranchId = useActiveBranchId();
   const [rows, setRows] = useState<HubBatch[]>([]);
@@ -33,6 +54,16 @@ export default function BatchesPage() {
   const [expired, setExpired] = useState<HubBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [traceBatch, setTraceBatch] = useState<TraceTarget | null>(null);
+
+  const showTrace = useCallback((b: HubBatch) => {
+    const target = openTrace(b);
+    if (target) {
+      setTraceBatch(target);
+      return;
+    }
+    toast.error("Product information is missing for this batch.");
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -96,16 +127,27 @@ export default function BatchesPage() {
                         Batch {b.batchNumber ?? b.id.slice(0, 8)} · expired {b.expiryDate ? formatDateDMY(b.expiryDate) : "-"}
                       </p>
                     </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      className="min-h-9 shrink-0"
-                      disabled={workingId === b.id}
-                      onClick={() => void onRemoveExpired(b.id)}
-                    >
-                      {workingId === b.id ? "Working…" : "Remove from stock"}
-                    </Button>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="min-h-9"
+                        onClick={() => showTrace(b)}
+                      >
+                        View trace
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className="min-h-9"
+                        disabled={workingId === b.id}
+                        onClick={() => void onRemoveExpired(b.id)}
+                      >
+                        {workingId === b.id ? "Working…" : "Remove from stock"}
+                      </Button>
+                    </div>
                   </div>
                 ))
               )}
@@ -126,11 +168,22 @@ export default function BatchesPage() {
                     <p className="text-xs text-muted-foreground">
                       Batch {b.batchNumber ?? "-"} · expires {b.expiryDate ? formatDateDMY(b.expiryDate) : "-"}
                     </p>
-                    {b.product?.id ? (
-                      <Link className="mt-2 inline-block text-xs font-medium text-primary underline-offset-2 hover:underline" href={`/products/${b.product.id}`}>
-                        View product
-                      </Link>
-                    ) : null}
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-0 text-xs text-primary"
+                        onClick={() => showTrace(b)}
+                      >
+                        View trace
+                      </Button>
+                      {b.product?.id ? (
+                        <Link className="inline-block text-xs font-medium text-primary underline-offset-2 hover:underline" href={`/products/${b.product.id}`}>
+                          View product
+                        </Link>
+                      ) : null}
+                    </div>
                   </div>
                 ))
               )}
@@ -142,7 +195,7 @@ export default function BatchesPage() {
       <Card className="border-border/40 bg-card/80 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base font-medium">All batches</CardTitle>
-          <CardDescription>Recent batches across your catalog.</CardDescription>
+          <CardDescription>Tap a row to see where that batch went.</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -167,10 +220,27 @@ export default function BatchesPage() {
               </TableHeader>
               <TableBody>
                 {rows.map((b) => (
-                  <TableRow key={b.id}>
+                  <TableRow
+                    key={b.id}
+                    className="interactive-cursor"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View batch trace for ${b.batchNumber ?? b.id.slice(0, 8)}`}
+                    onClick={() => showTrace(b)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        showTrace(b);
+                      }
+                    }}
+                  >
                     <TableCell className="font-medium">
                       {b.product?.id ? (
-                        <Link className="text-primary underline-offset-2 hover:underline" href={`/products/${b.product.id}`}>
+                        <Link
+                          className="text-primary underline-offset-2 hover:underline"
+                          href={`/products/${b.product.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {b.product.name}
                         </Link>
                       ) : (
@@ -191,6 +261,18 @@ export default function BatchesPage() {
           )}
         </CardContent>
       </Card>
+
+      <BatchTraceDrawer
+        productId={traceBatch?.productId ?? null}
+        batchId={traceBatch?.id ?? null}
+        batchLabel={traceBatch?.label}
+        productName={traceBatch?.productName}
+        expiryDate={traceBatch?.expiryDate}
+        open={!!traceBatch}
+        onOpenChange={(open) => {
+          if (!open) setTraceBatch(null);
+        }}
+      />
     </div>
   );
 }

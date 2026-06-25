@@ -52,6 +52,21 @@ export function formatTime12h(iso: string | null | undefined): string {
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
+/** Today / Yesterday / DD/MM/YYYY for ledger activity rows. */
+export function formatLedgerWhen(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+  const time = formatTime12h(iso);
+  if (d >= startOfToday) return `Today ${time}`;
+  if (d >= startOfYesterday) return `Yesterday ${time}`;
+  return `${formatDateDMY(iso)} · ${time}`;
+}
+
 export function formatFileSize(bytes: number | string | null | undefined): string {
   const n = typeof bytes === "string" ? parseFloat(bytes) : Number(bytes);
   if (!Number.isFinite(n) || n < 0) return "-";
