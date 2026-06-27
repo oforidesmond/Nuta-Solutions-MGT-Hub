@@ -1,8 +1,17 @@
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
+import { cleanQueryParams } from "@/lib/api/query-params";
 
 /** Period values accepted by org-wide analytics endpoints. */
-export type OrgAnalyticsPeriod = "today" | "week" | "month" | "quarter" | "year";
+export type OrgAnalyticsPeriod = "today" | "week" | "month" | "quarter" | "year" | "custom";
+
+export interface OrgTopProductsParams {
+  period: OrgAnalyticsPeriod;
+  from?: string;
+  to?: string;
+  by?: "revenue" | "quantity";
+  limit?: number;
+}
 
 export interface OrgPeriodRange {
   from: string;
@@ -144,13 +153,15 @@ export async function fetchOrgProfit(period: OrgAnalyticsPeriod): Promise<OrgPro
   return unwrap<OrgProfit>(res.data);
 }
 
-export async function fetchOrgTopProducts(
-  period: OrgAnalyticsPeriod,
-  by: "revenue" | "quantity",
-  limit = 10,
-): Promise<OrgTopProducts> {
+export async function fetchOrgTopProducts(params: OrgTopProductsParams): Promise<OrgTopProducts> {
   const res = await api.get(endpoints.analyticsOrg.topProducts, {
-    params: { period, by, limit },
+    params: cleanQueryParams({
+      period: params.period,
+      from: params.period === "custom" ? params.from : undefined,
+      to: params.period === "custom" ? params.to : undefined,
+      by: params.by ?? "revenue",
+      limit: params.limit ?? 10,
+    }),
   });
   return unwrap<OrgTopProducts>(res.data);
 }

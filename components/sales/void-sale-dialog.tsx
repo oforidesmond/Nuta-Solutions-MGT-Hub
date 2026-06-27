@@ -95,6 +95,12 @@ function VoidSaleForm({
       void queryClient.invalidateQueries({
         queryKey: reportKeys.all(activeBranchId),
       });
+      void queryClient.invalidateQueries({
+        queryKey: withBranchKey(activeBranchId, "inventory", "adjustments"),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: withBranchKey(activeBranchId, "audit", "events"),
+      });
 
       toast.success(`Sale ${receipt} has been cancelled.`);
       onClose();
@@ -115,7 +121,8 @@ function VoidSaleForm({
           Cancel this sale
         </DialogTitle>
         <DialogDescription>
-          This is recorded in your activity log and cannot be undone.
+          Stock is restored and the cancellation is recorded in your activity log and each
+          product&apos;s Activity tab. This cannot be undone.
         </DialogDescription>
       </DialogHeader>
 
@@ -132,7 +139,7 @@ function VoidSaleForm({
           <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs">
             <li>Put stock back on your shelves</li>
             <li>Reverse the sale from your totals</li>
-            <li>Record the cancellation in the activity log</li>
+            <li>Record the cancellation in the activity log and product Activity tabs</li>
           </ul>
           <p className="mt-2 text-xs font-medium">
             This cannot be undone.
@@ -167,8 +174,8 @@ function VoidSaleForm({
             className="mt-0.5 size-4 rounded"
           />
           <span>
-            I understand this puts stock back, reverses the sale from my totals,
-            and is recorded in the activity log. This cannot be undone.
+            I understand this puts stock back, reverses the sale from my totals, and is recorded
+            in the activity log and product Activity tabs. This cannot be undone.
           </span>
         </label>
       </div>

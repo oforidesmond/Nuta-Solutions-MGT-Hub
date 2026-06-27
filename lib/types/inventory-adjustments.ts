@@ -26,6 +26,10 @@ export const ADJUSTMENT_DISPLAY_LABELS: Record<string, string> = {
   STOCK_TRANSFER_IN: "Transfer in",
 };
 
+export const ADJUSTMENT_FILTER_OPTIONS = Object.entries(ADJUSTMENT_DISPLAY_LABELS).map(
+  ([value, label]) => ({ value, label }),
+);
+
 export function formatAdjustmentType(type: string | null | undefined): string {
   if (!type) return "-";
   return ADJUSTMENT_DISPLAY_LABELS[type] ?? type.replace(/_/g, " ");

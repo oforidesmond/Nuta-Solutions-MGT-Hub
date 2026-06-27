@@ -18,6 +18,20 @@ export function datePresetToOrgPeriod(preset: DateRangePreset): OrgAnalyticsPeri
   }
 }
 
+/** Map date-range preset to staff-performance API period. */
+export function presetToStaffPeriod(preset: DateRangePreset): StaffReportPeriod {
+  switch (preset) {
+    case "today":
+    case "this_week":
+      return "7d";
+    case "this_month":
+      return "this_month";
+    case "custom":
+    default:
+      return "30d";
+  }
+}
+
 /** Derive staff-performance API period from a date range (days span). */
 export function dateRangeToStaffPeriod(startDate: string, endDate: string): StaffReportPeriod {
   const start = new Date(`${startDate}T00:00:00`);
@@ -35,4 +49,26 @@ export function rangeFromPreset(
   customEnd?: string,
 ): { startDate: string; endDate: string } {
   return rangeForPreset(preset, customStart, customEnd);
+}
+
+/** Resolve staff-performance period from preset or custom range. */
+export function resolveStaffPeriod(
+  preset: DateRangePreset,
+  startDate: string,
+  endDate: string,
+): StaffReportPeriod {
+  if (preset === "custom") return dateRangeToStaffPeriod(startDate, endDate);
+  return presetToStaffPeriod(preset);
+}
+
+/** Resolve org top-products query params from date preset or custom range. */
+export function resolveOrgTopProductsQuery(
+  preset: DateRangePreset,
+  startDate: string,
+  endDate: string,
+): { period: OrgAnalyticsPeriod; from?: string; to?: string } {
+  if (preset === "custom") {
+    return { period: "custom", from: startDate, to: endDate };
+  }
+  return { period: datePresetToOrgPeriod(preset) };
 }

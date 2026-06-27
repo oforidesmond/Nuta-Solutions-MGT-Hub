@@ -82,7 +82,6 @@ export const endpoints = {
     salesSummary: "/reports/sales-summary",
     staffPerformance: "/reports/staff-performance",
     revenueTrends: "/reports/revenue-trends",
-    topProducts: "/reports/top-products",
   },
   auditEvents: "/audit/events",
   notifications: "/notifications",

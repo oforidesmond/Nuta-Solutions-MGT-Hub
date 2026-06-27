@@ -1,17 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip as UiTooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -20,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AuditEventDetailsCell } from "@/components/audit/audit-event-details-cell";
 import {
   AuditFiltersBar,
   EMPTY_AUDIT_FILTERS,
@@ -27,17 +22,13 @@ import {
 } from "@/components/audit/audit-filters-bar";
 import { ExportButton } from "@/components/exports/export-button";
 import { fetchAuditEventsPage } from "@/lib/api/audit";
+import { formatAuditBranchLabel } from "@/lib/audit-display";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { buildExportFilename } from "@/lib/exports/filename";
 import { fetchAllWithCursor } from "@/lib/exports/fetch-paginated";
 import { auditEventToRow } from "@/lib/exports/row-mappers";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
-import {
-  auditEventProductId,
-  auditEventTypeLabel,
-  type AuditEventRow,
-} from "@/lib/types/audit";
-import { safeJsonPretty } from "@/lib/audit-display";
+import { auditEventTypeLabel, type AuditEventRow } from "@/lib/types/audit";
 import { useAuthStore } from "@/stores/auth-store";
 
 function formatWhen(row: AuditEventRow): string {
@@ -70,10 +61,22 @@ function toIsoEnd(date: string): string | undefined {
   return new Date(`${date}T23:59:59.999`).toISOString();
 }
 
+function initialFiltersFromSearchParams(searchParams: URLSearchParams): AuditFilterState {
+  const eventTypeParam = searchParams.get("eventType")?.trim();
+  if (!eventTypeParam) return EMPTY_AUDIT_FILTERS;
+  return {
+    ...EMPTY_AUDIT_FILTERS,
+    eventType: [eventTypeParam],
+  };
+}
+
 export default function AuditPage() {
+  const searchParams = useSearchParams();
   const activeBranchId = useActiveBranchId();
   const orgName = useAuthStore((s) => s.organization?.name) ?? "org";
-  const [filters, setFilters] = useState<AuditFilterState>(EMPTY_AUDIT_FILTERS);
+  const [filters, setFilters] = useState<AuditFilterState>(() =>
+    initialFiltersFromSearchParams(searchParams),
+  );
   const [cursorHistory, setCursorHistory] = useState<(string | undefined)[]>([undefined]);
   const activeCursor = cursorHistory[cursorHistory.length - 1];
 
@@ -211,54 +214,19 @@ export default function AuditPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((row, idx) => {
-                  const productId = auditEventProductId(row);
-                  const payload = row.payload;
-                  const payloadText = payload ? safeJsonPretty(payload) : null;
-                  return (
-                    <TableRow key={row.id ?? idx}>
-                      <TableCell className="whitespace-nowrap text-sm">{formatWhen(row)}</TableCell>
-                      <TableCell className="text-sm">
-                        {auditEventTypeLabel(row.eventType)}
-                      </TableCell>
-                      <TableCell className="text-sm">{formatActor(row)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {row.branchName ?? row.branchId?.slice(0, 8) ?? "—"}
-                      </TableCell>
-                      <TableCell className="max-w-[14rem]">
-                        {productId ? (
-                          <Link
-                            href={`/products/${productId}`}
-                            className="text-sm text-primary underline-offset-2 hover:underline"
-                          >
-                            View product
-                          </Link>
-                        ) : payloadText ? (
-                          <TooltipProvider>
-                            <UiTooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="interactive-cursor max-w-full truncate text-left text-sm"
-                                >
-                                  {payloadText.slice(0, 48)}
-                                  {payloadText.length > 48 ? "…" : ""}
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <pre className="max-h-64 max-w-md overflow-auto whitespace-pre-wrap break-all font-mono text-[11px]">
-                                  {payloadText}
-                                </pre>
-                              </TooltipContent>
-                            </UiTooltip>
-                          </TooltipProvider>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {items.map((row, idx) => (
+                  <TableRow key={row.id ?? idx}>
+                    <TableCell className="whitespace-nowrap text-sm">{formatWhen(row)}</TableCell>
+                    <TableCell className="text-sm">{auditEventTypeLabel(row.eventType)}</TableCell>
+                    <TableCell className="text-sm">{formatActor(row)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatAuditBranchLabel(row)}
+                    </TableCell>
+                    <TableCell>
+                      <AuditEventDetailsCell row={row} />
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           )}

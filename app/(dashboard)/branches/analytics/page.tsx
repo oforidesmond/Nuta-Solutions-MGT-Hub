@@ -353,7 +353,7 @@ function TopProductsSection({
   const [by, setBy] = useState<"revenue" | "quantity">("revenue");
   const query = useQuery({
     queryKey: ["org-analytics", "top-products", period, by],
-    queryFn: () => fetchOrgTopProducts(period, by, 10),
+    queryFn: () => fetchOrgTopProducts({ period, by, limit: 10 }),
   });
   const products = query.data?.products ?? [];
 

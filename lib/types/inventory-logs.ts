@@ -3,7 +3,7 @@ export interface InventoryLogListParams {
   endDate?: string;
   page?: number;
   limit?: number;
-  staffId?: string;
+  productId?: string;
   /** e.g. BULK_TO_SINGLES - server returns only that adjustment type */
   type?: string;
 }

@@ -5,7 +5,7 @@ import type { OrgInsightProductRow, OrgInsightStaffRow } from "@/lib/types/org-i
 import { productConcernLabel, rowDisplayName } from "@/lib/types/org-insights";
 import type { ProductLedgerEntry } from "@/lib/types/product-lifecycle";
 import { ledgerCategoryLabel } from "@/lib/types/product-lifecycle";
-import { safeJsonPretty } from "@/lib/audit-display";
+import { formatAuditBranchLabel, safeJsonPretty } from "@/lib/audit-display";
 
 export function lifecycleEntryToRow(entry: ProductLedgerEntry): Record<string, unknown> {
   return {
@@ -31,7 +31,7 @@ export function auditEventToRow(row: AuditEventRow): Record<string, unknown> {
     occurredAt: row.occurredAt ?? row.createdAt ?? "",
     eventType: auditEventTypeLabel(row.eventType),
     actor: row.actor?.name ?? row.userId ?? "",
-    branch: row.branchName ?? row.branchId ?? "",
+    branch: formatAuditBranchLabel(row),
     aggregateType: row.aggregateType ?? "",
     aggregateId: row.aggregateId ?? "",
     productId: productId ?? "",

@@ -7,7 +7,7 @@
  * | Branch P&L summary  | GET /reports/sales-summary        | Sold, Profit on sales, Stock lost, Returns         |
  * | Revenue trend chart | GET /reports/revenue-trends       | breakdown[] buckets only (no client summing)       |
  * | Staff leaderboard   | GET /reports/staff-performance    | name, transactions, total sales                    |
- * | Top products        | GET /reports/top-products         | name, qty sold, revenue → link to product Activity |
+ * | Top products        | GET /analytics/org/top-products   | org-wide; ADMIN only (see analytics-org.ts)        |
  *
  * Frontend presents API string decimals only — no revenue/COGS/margin math in TSX.
  */
@@ -22,8 +22,6 @@ import type {
   ReportRevenueTrendsParams,
   ReportSalesSummaryParams,
   ReportStaffPerformanceParams,
-  ReportTopProducts,
-  ReportTopProductsParams,
   RevenueTrendPoint,
   StaffReportRow,
 } from "@/lib/types/reports";
@@ -209,49 +207,6 @@ export function normalizeRevenueTrendPoints(reportData: Record<string, unknown>)
   });
 }
 
-/** Normalize top-products reportData. */
-export function normalizeTopProducts(
-  envelope: ReportEnvelope,
-  fallbackRange?: { from: string; to: string },
-): ReportTopProducts {
-  const d = envelope.reportData;
-  const periodRaw = asRecord(d.period) ?? asRecord(d.dateRange);
-  const period = periodRaw
-    ? {
-        from: String(periodRaw.from ?? periodRaw.startDate ?? fallbackRange?.from ?? ""),
-        to: String(periodRaw.to ?? periodRaw.endDate ?? fallbackRange?.to ?? ""),
-      }
-    : fallbackRange
-      ? { from: fallbackRange.from, to: fallbackRange.to }
-      : null;
-
-  const list = (d.products ?? d.items ?? d.data ?? []) as unknown[];
-  const products = Array.isArray(list)
-    ? list.map((raw) => {
-        const p = asRecord(raw) ?? {};
-        return {
-          productId: String(p.productId ?? p.id ?? ""),
-          name: String(p.name ?? p.productName ?? "—"),
-          totalQuantitySold:
-            typeof p.totalQuantitySold === "number"
-              ? p.totalQuantitySold
-              : typeof p.quantitySold === "number"
-                ? p.quantitySold
-                : toNumericAmount(p.totalQuantitySold as string | number),
-          totalRevenue: String(p.totalRevenue ?? p.revenue ?? "0"),
-          contributionPercent:
-            p.contributionPercent != null
-              ? String(p.contributionPercent)
-              : p.contribution != null
-                ? String(p.contribution)
-                : null,
-        };
-      })
-    : [];
-
-  return { period, products };
-}
-
 export async function fetchReportSalesSummary(
   params: ReportSalesSummaryParams,
 ): Promise<ReportEnvelope> {
@@ -270,8 +225,6 @@ export async function fetchReportStaffPerformance(
   const res = await api.get(endpoints.reports.staffPerformance, {
     params: cleanQueryParams({
       period: params.period,
-      startDate: params.startDate,
-      endDate: params.endDate,
     }),
   });
   return unwrapReportEnvelope(res.data);
@@ -285,20 +238,6 @@ export async function fetchReportRevenueTrends(
       period: params.period,
       startDate: params.startDate,
       endDate: params.endDate,
-    }),
-  });
-  return unwrapReportEnvelope(res.data);
-}
-
-export async function fetchReportTopProducts(
-  params: ReportTopProductsParams,
-): Promise<ReportEnvelope> {
-  const res = await api.get(endpoints.reports.topProducts, {
-    params: cleanQueryParams({
-      startDate: params.startDate,
-      endDate: params.endDate,
-      by: params.by ?? "revenue",
-      limit: params.limit ?? 10,
     }),
   });
   return unwrapReportEnvelope(res.data);

@@ -10,21 +10,12 @@ export interface ReportSalesSummaryParams {
 
 export interface ReportStaffPerformanceParams {
   period: StaffReportPeriod;
-  startDate?: string;
-  endDate?: string;
 }
 
 export interface ReportRevenueTrendsParams {
   period: RevenueTrendPeriod;
   startDate?: string;
   endDate?: string;
-}
-
-export interface ReportTopProductsParams {
-  startDate: string;
-  endDate: string;
-  by?: "revenue" | "quantity";
-  limit?: number;
 }
 
 export interface ReportBranchContext {
@@ -56,17 +47,4 @@ export interface StaffReportRow {
 export interface RevenueTrendPoint {
   name: string;
   value: number;
-}
-
-export interface ReportTopProductRow {
-  productId: string;
-  name: string;
-  totalQuantitySold: number;
-  totalRevenue: string;
-  contributionPercent?: string | null;
-}
-
-export interface ReportTopProducts {
-  period: { from: string; to: string } | null;
-  products: ReportTopProductRow[];
 }

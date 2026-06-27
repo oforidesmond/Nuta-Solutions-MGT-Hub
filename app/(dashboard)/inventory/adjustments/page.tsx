@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Link2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,12 +24,18 @@ import {
 } from "@/components/ui/tooltip";
 import { DateRangePresetToolbar } from "@/components/filters/date-range-preset-toolbar";
 import { PaginationBar } from "@/components/pagination/pagination-bar";
+import {
+  ProductLinkPicker,
+  type ProductPickValue,
+} from "@/components/products/product-link-picker";
 import { fetchInventoryAdjustmentsPage } from "@/lib/api/inventory-logs";
-import { fetchOrgUsers } from "@/lib/api/users";
 import type { DateRangePreset } from "@/lib/date-range-presets";
 import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
 import type { HubStockAdjustment } from "@/lib/types/domain";
-import { formatAdjustmentType } from "@/lib/types/inventory-adjustments";
+import {
+  ADJUSTMENT_FILTER_OPTIONS,
+  formatAdjustmentType,
+} from "@/lib/types/inventory-adjustments";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { cn } from "@/lib/utils";
@@ -53,7 +60,7 @@ function formatWhen(iso: string | null | undefined): string {
 function userLabel(row: HubStockAdjustment): string {
   const u = row.user;
   if (!u) return "-";
-  const name = [u.firstName, u.lastName].filter(Boolean).join(" ");
+  const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
   return name || u.email || "-";
 }
 
@@ -63,6 +70,28 @@ function productLabel(row: HubStockAdjustment): string {
 
 function qtyChangeNum(row: HubStockAdjustment): number {
   return Number(row.quantityChange ?? 0);
+}
+
+function LinkedAdjustmentCell({ row }: { row: HubStockAdjustment }) {
+  const linked = row.linkedAdjustment;
+  if (!linked) return <span className="text-muted-foreground">-</span>;
+
+  return (
+    <UiTooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex cursor-default items-center gap-1 text-muted-foreground">
+          <Link2 className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{linked.product?.name ?? "Linked"}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">
+        <p className="text-xs">
+          Paired leg: {linked.quantityChange ?? "-"} on{" "}
+          {linked.product?.name ?? "product"}
+        </p>
+      </TooltipContent>
+    </UiTooltip>
+  );
 }
 
 function buildDisplayRows(rows: HubStockAdjustment[]): AdjustmentDisplayItem[] {
@@ -93,8 +122,8 @@ export default function InventoryAdjustmentsPage() {
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
-  const [staffId, setStaffId] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"" | "BULK_TO_SINGLES">("");
+  const [product, setProduct] = useState<ProductPickValue | null>(null);
+  const [typeFilter, setTypeFilter] = useState("");
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [openPairId, setOpenPairId] = useState<string | null>(null);
@@ -110,22 +139,16 @@ export default function InventoryAdjustmentsPage() {
       endDate: range.endDate,
       page,
       limit,
-      staffId: staffId || undefined,
+      productId: product?.id,
       type: typeFilter || undefined,
     }),
-    [range.startDate, range.endDate, page, limit, staffId, typeFilter],
+    [range.startDate, range.endDate, page, limit, product?.id, typeFilter],
   );
 
   const listQuery = useQuery({
     queryKey: withBranchKey(activeBranchId, "inventory", "adjustments", params),
     queryFn: () => fetchInventoryAdjustmentsPage(params),
     placeholderData: (prev) => prev,
-  });
-
-  const usersQuery = useQuery({
-    queryKey: ["org", "users"],
-    queryFn: fetchOrgUsers,
-    staleTime: 120_000,
   });
 
   const displayRows = useMemo(() => {
@@ -137,7 +160,17 @@ export default function InventoryAdjustmentsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Stock adjustments</h1>
-        <p className="text-sm text-muted-foreground">History of stock adjustments.</p>
+        <p className="text-sm text-muted-foreground">
+          Manual stock changes, conversions, and transfers. Sale cancellations restore stock too —
+          see the{" "}
+          <Link
+            href="/audit?eventType=SALE_VOIDED"
+            className="text-primary underline-offset-2 hover:underline"
+          >
+            Activity log
+          </Link>{" "}
+          or each product&apos;s Activity tab.
+        </p>
       </div>
 
       <Card className="border-border/40 bg-card/80 shadow-sm">
@@ -161,25 +194,16 @@ export default function InventoryAdjustmentsPage() {
             }}
           />
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="max-w-md space-y-1.5">
-              <Label htmlFor="adj-staff">Staff</Label>
-              <select
-                id="adj-staff"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm interactive-cursor"
-                value={staffId}
-                onChange={(e) => {
-                  setStaffId(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="">All staff</option>
-                {(usersQuery.data ?? []).map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {[u.firstName, u.lastName].filter(Boolean).join(" ") || u.email}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <ProductLinkPicker
+              id="adj-product"
+              label="Product"
+              placeholder="All products"
+              value={product}
+              onChange={(next) => {
+                setProduct(next);
+                setPage(1);
+              }}
+            />
             <div className="max-w-md space-y-1.5">
               <Label htmlFor="adj-type">Adjustment type</Label>
               <select
@@ -187,13 +211,17 @@ export default function InventoryAdjustmentsPage() {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm interactive-cursor"
                 value={typeFilter}
                 onChange={(e) => {
-                  setTypeFilter(e.target.value as "" | "BULK_TO_SINGLES");
+                  setTypeFilter(e.target.value);
                   setPage(1);
                   setOpenPairId(null);
                 }}
               >
                 <option value="">All types</option>
-                <option value="BULK_TO_SINGLES">Bulk conversions (BULK_TO_SINGLES)</option>
+                {ADJUSTMENT_FILTER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -220,7 +248,7 @@ export default function InventoryAdjustmentsPage() {
                     <TableHead>Product</TableHead>
                     <TableHead className="text-right">Qty change</TableHead>
                     <TableHead>Notes</TableHead>
-                    <TableHead>Staff</TableHead>
+                    <TableHead>Recorded by</TableHead>
                     <TableHead>Linked</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -259,24 +287,7 @@ export default function InventoryAdjustmentsPage() {
                           </TableCell>
                           <TableCell className="max-w-[10rem] truncate text-sm">{userLabel(row)}</TableCell>
                           <TableCell className="text-sm">
-                            {row.linkedAdjustment ? (
-                              <UiTooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-flex cursor-default items-center gap-1 text-muted-foreground">
-                                    <Link2 className="size-3.5 shrink-0" aria-hidden />
-                                    <span className="truncate">{row.linkedAdjustment.product?.name ?? "Linked"}</span>
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-xs">
-                                  <p className="text-xs">
-                                    Paired leg: {row.linkedAdjustment.quantityChange ?? "-"} on{" "}
-                                    {row.linkedAdjustment.product?.name ?? "product"}
-                                  </p>
-                                </TooltipContent>
-                              </UiTooltip>
-                            ) : (
-                              "-"
-                            )}
+                            <LinkedAdjustmentCell row={row} />
                           </TableCell>
                         </TableRow>
                       );
@@ -321,7 +332,9 @@ export default function InventoryAdjustmentsPage() {
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">-</TableCell>
                           <TableCell className="text-sm text-muted-foreground">-</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">-</TableCell>
+                          <TableCell className="text-sm">
+                            <LinkedAdjustmentCell row={a} />
+                          </TableCell>
                         </TableRow>
                         {open ? (
                           <>
@@ -342,7 +355,9 @@ export default function InventoryAdjustmentsPage() {
                               </TableCell>
                               <TableCell className="max-w-[14rem] truncate text-sm">{a.notes?.trim() || "-"}</TableCell>
                               <TableCell className="max-w-[10rem] truncate text-sm">{userLabel(a)}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground">-</TableCell>
+                              <TableCell className="text-sm">
+                                <LinkedAdjustmentCell row={a} />
+                              </TableCell>
                             </TableRow>
                             <TableRow className="bg-muted/15">
                               <TableCell />
@@ -361,7 +376,9 @@ export default function InventoryAdjustmentsPage() {
                               </TableCell>
                               <TableCell className="max-w-[14rem] truncate text-sm">{b.notes?.trim() || "-"}</TableCell>
                               <TableCell className="max-w-[10rem] truncate text-sm">{userLabel(b)}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground">-</TableCell>
+                              <TableCell className="text-sm">
+                                <LinkedAdjustmentCell row={b} />
+                              </TableCell>
                             </TableRow>
                           </>
                         ) : null}

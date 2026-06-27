@@ -28,16 +28,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { dateRangeToStaffPeriod, rangeFromPreset } from "@/lib/analytics-period";
+import { resolveOrgTopProductsQuery, resolveStaffPeriod, rangeFromPreset } from "@/lib/analytics-period";
+import { fetchOrgTopProducts } from "@/lib/api/analytics-org";
 import {
   fetchReportRevenueTrends,
   fetchReportSalesSummary,
   fetchReportStaffPerformance,
-  fetchReportTopProducts,
   normalizeBranchLedgerSummary,
   normalizeRevenueTrendPoints,
   normalizeStaffPerformanceRows,
-  normalizeTopProducts,
 } from "@/lib/api/reports";
 import { formatCurrency, toNumericAmount } from "@/lib/format";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
@@ -86,8 +85,13 @@ export function ReportsBusinessSection() {
   );
 
   const staffPeriod = useMemo(
-    () => dateRangeToStaffPeriod(range.startDate, range.endDate),
-    [range.startDate, range.endDate],
+    () => resolveStaffPeriod(preset, range.startDate, range.endDate),
+    [preset, range.startDate, range.endDate],
+  );
+
+  const topProductsQueryParams = useMemo(
+    () => resolveOrgTopProductsQuery(preset, range.startDate, range.endDate),
+    [preset, range.startDate, range.endDate],
   );
 
   const salesSummaryQuery = useQuery({
@@ -98,23 +102,18 @@ export function ReportsBusinessSection() {
   });
 
   const staffPerfQuery = useQuery({
-    queryKey: reportKeys.staffPerformance(
-      activeBranchId,
-      staffPeriod,
-      range.startDate,
-      range.endDate,
-    ),
-    queryFn: () =>
-      fetchReportStaffPerformance({
-        period: staffPeriod,
-        startDate: range.startDate,
-        endDate: range.endDate,
-      }),
+    queryKey: reportKeys.staffPerformance(activeBranchId, staffPeriod),
+    queryFn: () => fetchReportStaffPerformance({ period: staffPeriod }),
     staleTime: 60_000,
   });
 
   const revenueTrendsQuery = useQuery({
-    queryKey: reportKeys.revenueTrends(activeBranchId, revenueGranularity, preset),
+    queryKey: reportKeys.revenueTrends(
+      activeBranchId,
+      revenueGranularity,
+      range.startDate,
+      range.endDate,
+    ),
     queryFn: () =>
       fetchReportRevenueTrends({
         period: revenueGranularity,
@@ -125,15 +124,19 @@ export function ReportsBusinessSection() {
   });
 
   const topProductsQuery = useQuery({
-    queryKey: reportKeys.topProducts(activeBranchId, range.startDate, range.endDate, topBy),
+    queryKey: reportKeys.orgTopProducts(
+      topProductsQueryParams.period,
+      topProductsQueryParams.from,
+      topProductsQueryParams.to,
+      topBy,
+    ),
     queryFn: () =>
-      fetchReportTopProducts({
-        startDate: range.startDate,
-        endDate: range.endDate,
+      fetchOrgTopProducts({
+        ...topProductsQueryParams,
         by: topBy,
         limit: 10,
       }),
-    enabled: Boolean(range.startDate && range.endDate),
+    enabled: showOrgLink,
     staleTime: 60_000,
   });
 
@@ -155,13 +158,7 @@ export function ReportsBusinessSection() {
     [revenueTrendsQuery.data],
   );
 
-  const topProducts = useMemo(() => {
-    if (!topProductsQuery.data) return [];
-    return normalizeTopProducts(topProductsQuery.data, {
-      from: range.startDate,
-      to: range.endDate,
-    }).products;
-  }, [topProductsQuery.data, range.startDate, range.endDate]);
+  const topProducts = topProductsQuery.data?.products ?? [];
 
   const branchLabel =
     ledgerSummary?.branch?.name ??
@@ -421,11 +418,12 @@ export function ReportsBusinessSection() {
         </SectionCard>
       </section>
 
+      {showOrgLink ? (
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-medium tracking-tight">Product performance</h2>
-            <p className="text-sm text-muted-foreground">Best sellers at this branch.</p>
+            <p className="text-sm text-muted-foreground">Best sellers across the organisation.</p>
           </div>
           <ExportButton
             filename={productsFilename}
@@ -509,6 +507,7 @@ export function ReportsBusinessSection() {
           </QueryState>
         </SectionCard>
       </section>
+      ) : null}
     </div>
   );
 }

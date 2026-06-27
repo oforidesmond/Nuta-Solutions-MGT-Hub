@@ -32,7 +32,7 @@ export async function fetchInventoryAdjustmentsPage(
       endDate: params.endDate,
       page: params.page,
       limit: params.limit,
-      staffId: params.staffId,
+      productId: params.productId,
       type: params.type || undefined,
     },
   });
