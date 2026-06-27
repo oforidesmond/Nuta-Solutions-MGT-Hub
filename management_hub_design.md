@@ -195,7 +195,7 @@ Badge colours tie to tone on **`/products`**, grids, rows, detail card.
 | `/inventory/temporary-items` | Temporary barcodes aggregation | Lifecycle **before** full product |
 
 **`ProductForm`** - `components/products/product-form.tsx`  
-Sections: Basic info (name *, sku, barcode, category, description), Pricing (cost *, sell * + margin hint), Inventory (starting/current stock, reorder, unit), optional **Batch & expiry on create only** (`trackBatch` → after save calls **`createBatch`** - §2.8).
+Sections: Basic info (name *, sku, barcode, category, description), Pricing (cost *, sell * + margin hint), Inventory (starting/current stock, reorder, unit), optional **Batch & expiry on create only** (`trackBatch` → `expiryDate` on **`POST /products`**, batch number via **`updateBatch`** - §2.8).
 
 ---
 
@@ -239,19 +239,30 @@ Per row/link: view detail, edit, duplicate (`duplicateProduct`), delete confirm.
 
 ### Creation from product wizard
 
-After **`createProduct`** succeeds, if user enabled **track batches**, form posts **`POST /batches`** via **`createBatch`** with payload:
+When **track batches** is enabled on create, the form sends **`currentStock`** and **`expiryDate`** on **`POST /products`** so the backend seeds branch inventory and creates one initial batch in a single transaction (no duplicate stock delta).
 
-```ts
-{
-  productId: saved.id,
-  batchNumber: trimmed,
-  quantity: parsed float from batch qty,
-  expiryDate: ISO from `<input type="date">`,
-  costPriceAtPurchase: costPrice from pricing card,
-}
-```
+If the user entered a **batch number**, after **`createProduct`** succeeds the form resolves the auto-created batch (from the create response or **`fetchBatches({ productId })`**) and **`PATCH /batches/:id`** via **`updateBatch`** with `{ batchNumber }` only — metadata, not a second receipt.
 
-Failure on batch keeps product saved - **toast error** only for batch step.
+**Do not** call **`POST /batches`** on product create; that endpoint increments stock via `applyDelta` and would double-count starting quantity.
+
+Failure on batch-number patch keeps the product saved — **toast error** only for that step.
+
+### Supplier delivery with batch (Adjust stock modal)
+
+When **Delivery from supplier** is chosen in **`StockAdjustmentModal`**, owners can optionally check **“This delivery has a lot number or expiry date”**:
+
+- **Toggle off (default):** **`POST /inventory/adjustments`** with `type: SUPPLIER_ADD` — plain stock add.
+- **Toggle on** (lot number and/or expiry entered): **`POST /batches`** only via **`createBatch`** — never also call the adjustment endpoint (would double-count).
+
+Batch receipt payload includes `productId`, `quantity` (min **0.001**), required **`costPriceAtPurchase`** (auto from product branch-effective cost — no UI field), optional `batchNumber`, `expiryDate`, `manufacturedDate`, `notes`.
+
+If the product has no resolvable cost price, batch receipt is blocked until cost is set on the product.
+
+### Batch edit (`/batches` and product detail)
+
+**`BatchEditDialog`** (ADMIN/MANAGER) PATCHes **`/batches/:id`** with metadata only: `batchNumber`, `expiryDate`, `manufacturedDate`, `notes`. **`remainingQuantity` is not editable** in the hub UI.
+
+Clearing expiry sends **`expiryDate: ""`** (empty string), not `undefined`.
 
 ### Global batches page `/batches`
 

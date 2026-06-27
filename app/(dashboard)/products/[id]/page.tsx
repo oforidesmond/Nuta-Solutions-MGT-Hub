@@ -39,7 +39,7 @@ import {
 } from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
 import { getApiErrorMessage } from "@/lib/api/error-codes";
-import { canManageInventoryConversions } from "@/lib/inventory-access";
+import { canManageInventoryConversions, canManageStockTakes } from "@/lib/inventory-access";
 import { canManageBranches } from "@/lib/branch-access";
 import type { ProductConversion } from "@/lib/types/conversions";
 import { formatCurrency, toNumericAmount } from "@/lib/format";
@@ -50,12 +50,13 @@ import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { HubProduct } from "@/lib/types/domain";
-import { useAuthStore } from "@/stores/auth-store";
-import { cn } from "@/lib/utils";
+import { BatchTraceDrawer } from "@/components/batches/batch-trace-drawer";
+import { BatchEditDialog } from "@/components/batches/batch-edit-dialog";
 import { ConvertProductModal } from "@/components/inventory/convert-product-modal";
 import { ProductActivityTab } from "@/components/products/product-activity-tab";
-import { BatchTraceDrawer } from "@/components/batches/batch-trace-drawer";
+import type { HubBatch, HubProduct } from "@/lib/types/domain";
+import { useAuthStore } from "@/stores/auth-store";
+import { cn } from "@/lib/utils";
 
 type Tab = "batches" | "activity";
 
@@ -74,6 +75,7 @@ export default function ProductDetailPage() {
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const role = useAuthStore((s) => s.user?.role);
   const canConv = canManageInventoryConversions(role);
+  const canStockTake = canManageStockTakes(role);
 
   const [product, setProduct] = useState<HubProduct | null>(null);
   const [tab, setTab] = useState<Tab>("batches");
@@ -95,6 +97,7 @@ export default function ProductDetailPage() {
     productName?: string;
     expiryDate?: string | null;
   } | null>(null);
+  const [editBatch, setEditBatch] = useState<HubBatch | null>(null);
 
   const conversionsQuery = useQuery({
     queryKey: withBranchKey(activeBranchId, "product-conversions", id),
@@ -354,6 +357,7 @@ export default function ProductDetailPage() {
                       <TableHead className="text-right">Qty</TableHead>
                       <TableHead>Expiry</TableHead>
                       <TableHead>Status</TableHead>
+                      {canStockTake ? <TableHead className="w-[88px]">Actions</TableHead> : null}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -396,6 +400,26 @@ export default function ProductDetailPage() {
                             <Badge variant="secondary">Active</Badge>
                           )}
                         </TableCell>
+                        {canStockTake ? (
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditBatch({
+                                  ...b,
+                                  productId: id,
+                                  productName: product.name,
+                                });
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          </TableCell>
+                        ) : null}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -669,6 +693,15 @@ export default function ProductDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BatchEditDialog
+        batch={editBatch}
+        open={!!editBatch}
+        onOpenChange={(open) => {
+          if (!open) setEditBatch(null);
+        }}
+        onSaved={load}
+      />
 
       <BatchTraceDrawer
         productId={traceBatch?.productId ?? id}

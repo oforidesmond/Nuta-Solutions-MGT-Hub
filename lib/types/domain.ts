@@ -86,6 +86,16 @@ export interface HubProduct {
   createdAt?: string | null;
   updatedAt?: string | null;
   batches?: HubBatch[];
+  /** Summary rows from GET /products/expiring-soon. */
+  expiringBatches?: HubExpiringBatch[];
+}
+
+export interface HubExpiringBatch {
+  id?: string;
+  batchNumber?: string | null;
+  remainingQuantity?: string | number | null;
+  expiryDate?: string | null;
+  daysUntilExpiry?: number | null;
 }
 
 /** GET /products/:id/price-context - everything the price-edit modal needs. */
@@ -116,6 +126,8 @@ export interface HubBatch {
   notes?: string | null;
   branchId?: string | null;
   branchName?: string | null;
+  /** Flat product name from list endpoints when `product` is not nested. */
+  productName?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   product?: Pick<HubProduct, "id" | "name" | "sku"> | null;

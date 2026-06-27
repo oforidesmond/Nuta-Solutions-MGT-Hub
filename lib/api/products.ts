@@ -1,7 +1,9 @@
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
+import { pickString } from "@/lib/api/normalize";
 import { unwrapList } from "@/lib/api/response";
 import type {
+  HubExpiringBatch,
   HubProduct,
   HubStockAdjustment,
   PageMeta,
@@ -9,6 +11,7 @@ import type {
   ProductPriceContext,
 } from "@/lib/types/domain";
 import type { HubInventoryEvent, HubTemporaryItem } from "@/lib/types/phase2";
+import { productNearestExpiryDate } from "@/lib/product-helpers";
 
 /** Backend validation cap for `GET /products` `limit` query param. */
 export const PRODUCTS_API_LIMIT_MAX = 100;
@@ -110,6 +113,8 @@ export type ProductWriteBody = {
   initialStock?: number;
   stockQuantity?: number;
   currentStock?: number;
+  /** Optional; when set with currentStock > 0, backend creates initial batch (no extra stock delta). */
+  expiryDate?: string;
   reorderLevel?: number;
   unit?: string;
   unitOfMeasure?: string;
@@ -172,9 +177,51 @@ export async function fetchLowStockProducts(): Promise<HubProduct[]> {
   return unwrapList<HubProduct>(res.data, 1, 200).items;
 }
 
+function normalizeExpiringBatch(raw: unknown): HubExpiringBatch {
+  if (!raw || typeof raw !== "object") return {};
+  const r = raw as Record<string, unknown>;
+  const daysRaw = r.daysUntilExpiry ?? r.days_until_expiry;
+  const daysUntilExpiry =
+    typeof daysRaw === "number" && Number.isFinite(daysRaw) ? daysRaw : null;
+  return {
+    id: r.id != null ? String(r.id) : undefined,
+    batchNumber: pickString(r, "batchNumber", "batch_number") ?? null,
+    remainingQuantity: (r.remainingQuantity ?? r.remaining_quantity ?? null) as
+      | string
+      | number
+      | null,
+    expiryDate: pickString(r, "expiryDate", "expiry_date") ?? null,
+    daysUntilExpiry,
+  };
+}
+
+function normalizeExpiringSoonProduct(raw: unknown): HubProduct {
+  const base = (raw && typeof raw === "object" ? raw : {}) as HubProduct & Record<string, unknown>;
+  const expiringRaw = base.expiringBatches ?? base.expiring_batches;
+  const expiringBatches = Array.isArray(expiringRaw)
+    ? expiringRaw.map(normalizeExpiringBatch)
+    : undefined;
+
+  const product: HubProduct = {
+    ...base,
+    expiringBatches,
+    nearestExpiryDate:
+      base.nearestExpiryDate ??
+      pickString(base as Record<string, unknown>, "nearestExpiryDate", "nearest_expiry_date") ??
+      null,
+  };
+
+  if (!product.nearestExpiryDate) {
+    product.nearestExpiryDate = productNearestExpiryDate(product);
+  }
+
+  return product;
+}
+
 export async function fetchExpiringSoonProducts(): Promise<HubProduct[]> {
   const res = await api.get(endpoints.productsExpiringSoon);
-  return unwrapList<HubProduct>(res.data, 1, 200).items;
+  const { items } = unwrapList<unknown>(res.data, 1, 200);
+  return items.map(normalizeExpiringSoonProduct);
 }
 
 /** @deprecated Use `fetchProductLifecyclePage` from `@/lib/api/product-lifecycle`. */

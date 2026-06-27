@@ -11,6 +11,11 @@ import { fetchExpiringSoonProducts, fetchProducts } from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { formatDateDMY } from "@/lib/format";
+import {
+  productDaysUntilExpiry,
+  productNearestExpiringBatch,
+  productNearestExpiryDate,
+} from "@/lib/product-helpers";
 import type { HubProduct } from "@/lib/types/domain";
 
 function daysUntil(iso: string): number {
@@ -40,8 +45,9 @@ export default function ExpiringSoonProductsPage() {
       const active = all.filter((p) => p.isActive !== false);
       setRows(
         active.filter((p) => {
-          if (!p.nearestExpiryDate) return false;
-          const days = daysUntil(p.nearestExpiryDate);
+          const nearest = productNearestExpiryDate(p);
+          if (!nearest) return false;
+          const days = daysUntil(nearest);
           return days >= 0 && days <= 90;
         }),
       );
@@ -81,7 +87,9 @@ export default function ExpiringSoonProductsPage() {
           ) : (
             <ul className="divide-y divide-border/40">
               {rows.map((p) => {
-                const days = p.nearestExpiryDate ? daysUntil(p.nearestExpiryDate) : null;
+                const nearestExpiry = productNearestExpiryDate(p);
+                const days = productDaysUntilExpiry(p);
+                const nearestBatch = productNearestExpiringBatch(p);
                 return (
                   <li key={p.id} className="flex flex-col gap-2 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -89,8 +97,16 @@ export default function ExpiringSoonProductsPage() {
                         {p.name}
                       </Link>
                       <p className="text-sm text-muted-foreground">
-                        Nearest expiry: {p.nearestExpiryDate ? formatDateDMY(p.nearestExpiryDate) : "-"}
+                        Nearest expiry: {nearestExpiry ? formatDateDMY(nearestExpiry) : "-"}
                       </p>
+                      {nearestBatch ? (
+                        <p className="text-xs text-muted-foreground">
+                          Batch {nearestBatch.batchNumber ?? "—"}
+                          {nearestBatch.remainingQuantity != null
+                            ? ` · ${nearestBatch.remainingQuantity} units left`
+                            : null}
+                        </p>
+                      ) : null}
                     </div>
                     {days != null && days >= 0 ? (
                       <Badge variant={days <= 30 ? "destructive" : "secondary"}>Expires in {days} days</Badge>

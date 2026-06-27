@@ -1,5 +1,6 @@
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
+import { pickString } from "@/lib/api/normalize";
 import { unwrapList } from "@/lib/api/response";
 import type { HubBatch, PageMeta } from "@/lib/types/domain";
 import type { BatchTrace } from "@/lib/types/batch-trace";
@@ -12,11 +13,96 @@ export type BatchListParams = {
   to?: string;
 };
 
+/** POST /batches — quantity @Min(0.001); costPriceAtPurchase required by backend. */
+export type CreateBatchBody = {
+  productId: string;
+  quantity: number;
+  costPriceAtPurchase: number;
+  batchNumber?: string;
+  expiryDate?: string;
+  manufacturedDate?: string;
+  notes?: string;
+};
+
+/** PATCH /batches/:id — expiryDate may be ISO string or "" to clear. */
+export type UpdateBatchBody = {
+  batchNumber?: string;
+  expiryDate?: string;
+  manufacturedDate?: string;
+  notes?: string;
+};
+
 function unwrapEntity<T>(data: unknown): T {
   if (data && typeof data === "object" && "data" in data) {
     return (data as { data: T }).data;
   }
   return data as T;
+}
+
+function str(v: unknown): string | null {
+  if (v == null) return null;
+  return String(v);
+}
+
+function normalizeHubBatch(raw: unknown): HubBatch {
+  if (!raw || typeof raw !== "object") return { id: "" };
+  const r = raw as Record<string, unknown>;
+  const nestedProduct =
+    r.product && typeof r.product === "object"
+      ? (r.product as Record<string, unknown>)
+      : null;
+
+  const productId =
+    pickString(r, "productId", "product_id") ??
+    (nestedProduct?.id != null ? String(nestedProduct.id) : undefined);
+  const productName =
+    pickString(r, "productName", "product_name") ??
+    (typeof nestedProduct?.name === "string" ? nestedProduct.name : undefined);
+
+  const product =
+    nestedProduct != null
+      ? {
+          id: String(nestedProduct.id ?? productId ?? ""),
+          name: String(nestedProduct.name ?? productName ?? ""),
+          sku:
+            typeof nestedProduct.sku === "string"
+              ? nestedProduct.sku
+              : nestedProduct.sku == null
+                ? null
+                : String(nestedProduct.sku),
+        }
+      : productId && productName
+        ? { id: productId, name: productName, sku: null as string | null }
+        : null;
+
+  return {
+    id: String(r.id ?? ""),
+    productId: productId || undefined,
+    productName: productName ?? null,
+    batchNumber: str(r.batchNumber ?? r.batch_number),
+    quantity: (r.quantity ?? r.initialQuantity ?? null) as string | number | null,
+    remainingQuantity: (r.remainingQuantity ?? r.remaining_quantity ?? null) as
+      | string
+      | number
+      | null,
+    expiryDate: str(r.expiryDate ?? r.expiry_date),
+    manufacturedDate: str(r.manufacturedDate ?? r.manufactured_date),
+    isExpired: r.isExpired === true || r.is_expired === true,
+    notes: str(r.notes),
+    branchId: str(r.branchId ?? r.branch_id),
+    branchName: str(r.branchName ?? r.branch_name),
+    createdAt: str(r.createdAt ?? r.created_at),
+    updatedAt: str(r.updatedAt ?? r.updated_at),
+    product,
+  };
+}
+
+function normalizeHubBatchList(raw: unknown, page: number, limit: number): {
+  items: HubBatch[];
+  meta: PageMeta;
+} {
+  const { items, meta } = unwrapList<unknown>(raw, page, limit);
+  return { items: items.map(normalizeHubBatch), meta };
 }
 
 export async function fetchBatches(params: BatchListParams = {}): Promise<{
@@ -34,35 +120,35 @@ export async function fetchBatches(params: BatchListParams = {}): Promise<{
       to: params.to,
     },
   });
-  return unwrapList<HubBatch>(res.data, page, limit);
+  return normalizeHubBatchList(res.data, page, limit);
 }
 
 export async function fetchBatch(id: string): Promise<HubBatch> {
   const res = await api.get(endpoints.batchById(id));
-  return unwrapEntity<HubBatch>(res.data);
+  return normalizeHubBatch(unwrapEntity<unknown>(res.data));
 }
 
 export async function fetchExpiringBatches(): Promise<HubBatch[]> {
   const res = await api.get(endpoints.batchesExpiring);
-  return unwrapList<HubBatch>(res.data, 1, 100).items;
+  return normalizeHubBatchList(res.data, 1, 100).items;
 }
 
 export async function fetchExpiredBatches(): Promise<HubBatch[]> {
   const res = await api.get(endpoints.batchesExpired);
-  return unwrapList<HubBatch>(res.data, 1, 100).items;
+  return normalizeHubBatchList(res.data, 1, 100).items;
 }
 
-export async function createBatch(body: Record<string, unknown>): Promise<HubBatch> {
+export async function createBatch(body: CreateBatchBody): Promise<HubBatch> {
   const res = await api.post(endpoints.batches, body);
-  return unwrapEntity<HubBatch>(res.data);
+  return normalizeHubBatch(unwrapEntity<unknown>(res.data));
 }
 
 export async function updateBatch(
   id: string,
-  body: Record<string, unknown>,
+  body: UpdateBatchBody,
 ): Promise<HubBatch> {
   const res = await api.patch(endpoints.batchById(id), body);
-  return unwrapEntity<HubBatch>(res.data);
+  return normalizeHubBatch(unwrapEntity<unknown>(res.data));
 }
 
 export async function deleteBatch(id: string): Promise<void> {
@@ -71,12 +157,7 @@ export async function deleteBatch(id: string): Promise<void> {
 
 export async function removeExpiredBatch(id: string): Promise<HubBatch> {
   const res = await api.post(endpoints.batchRemoveExpired(id), {});
-  return unwrapEntity<HubBatch>(res.data);
-}
-
-function str(v: unknown): string | null {
-  if (v == null) return null;
-  return String(v);
+  return normalizeHubBatch(unwrapEntity<unknown>(res.data));
 }
 
 function normalizeFinancials(

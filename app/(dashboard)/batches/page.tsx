@@ -15,7 +15,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { BatchTraceDrawer } from "@/components/batches/batch-trace-drawer";
+import { BatchEditDialog } from "@/components/batches/batch-edit-dialog";
 import {
   fetchBatches,
   fetchExpiredBatches,
@@ -23,9 +32,11 @@ import {
   removeExpiredBatch,
 } from "@/lib/api/batches";
 import { handleApiError } from "@/lib/api/errors";
+import { canManageStockTakes } from "@/lib/inventory-access";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { formatDateDMY } from "@/lib/format";
 import type { HubBatch } from "@/lib/types/domain";
+import { useAuthStore } from "@/stores/auth-store";
 
 type TraceTarget = {
   productId: string;
@@ -38,22 +49,27 @@ type TraceTarget = {
 function openTrace(b: HubBatch): TraceTarget | null {
   const productId = b.productId ?? b.product?.id;
   if (!productId) return null;
+  const productName = b.product?.name ?? b.productName ?? undefined;
   return {
     productId,
     id: b.id,
     label: b.batchNumber ?? b.id.slice(0, 8),
-    productName: b.product?.name,
+    productName,
     expiryDate: b.expiryDate,
   };
 }
 
 export default function BatchesPage() {
   const activeBranchId = useActiveBranchId();
+  const role = useAuthStore((s) => s.user?.role);
+  const canEdit = canManageStockTakes(role);
   const [rows, setRows] = useState<HubBatch[]>([]);
   const [expiring, setExpiring] = useState<HubBatch[]>([]);
   const [expired, setExpired] = useState<HubBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<HubBatch | null>(null);
+  const [editTarget, setEditTarget] = useState<HubBatch | null>(null);
   const [traceBatch, setTraceBatch] = useState<TraceTarget | null>(null);
 
   const showTrace = useCallback((b: HubBatch) => {
@@ -88,11 +104,14 @@ export default function BatchesPage() {
     void load();
   }, [load]);
 
-  async function onRemoveExpired(id: string) {
+  async function confirmRemoveExpired() {
+    if (!removeTarget) return;
+    const id = removeTarget.id;
     setWorkingId(id);
     try {
       await removeExpiredBatch(id);
       toast.success("Batch marked and stock updated");
+      setRemoveTarget(null);
       await load();
     } catch (err) {
       toast.error(handleApiError(err));
@@ -122,12 +141,23 @@ export default function BatchesPage() {
                 expired.map((b) => (
                   <div key={b.id} className="flex flex-col gap-2 rounded-lg border border-destructive/20 bg-background/80 p-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="font-medium">{b.product?.name ?? "Product"}</p>
+                      <p className="font-medium">{b.product?.name ?? b.productName ?? "Product"}</p>
                       <p className="text-xs text-muted-foreground">
                         Batch {b.batchNumber ?? b.id.slice(0, 8)} · expired {b.expiryDate ? formatDateDMY(b.expiryDate) : "-"}
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap gap-2">
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="min-h-9"
+                          onClick={() => setEditTarget(b)}
+                        >
+                          Edit
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
                         size="sm"
@@ -143,7 +173,7 @@ export default function BatchesPage() {
                         variant="destructive"
                         className="min-h-9"
                         disabled={workingId === b.id}
-                        onClick={() => void onRemoveExpired(b.id)}
+                        onClick={() => setRemoveTarget(b)}
                       >
                         {workingId === b.id ? "Working…" : "Remove from stock"}
                       </Button>
@@ -164,11 +194,22 @@ export default function BatchesPage() {
               ) : (
                 expiring.map((b) => (
                   <div key={b.id} className="rounded-lg border border-amber-500/20 bg-background/80 p-3">
-                    <p className="font-medium">{b.product?.name ?? "Product"}</p>
+                    <p className="font-medium">{b.product?.name ?? b.productName ?? "Product"}</p>
                     <p className="text-xs text-muted-foreground">
                       Batch {b.batchNumber ?? "-"} · expires {b.expiryDate ? formatDateDMY(b.expiryDate) : "-"}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-3">
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-0 text-xs text-primary"
+                          onClick={() => setEditTarget(b)}
+                        >
+                          Edit
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
                         variant="ghost"
@@ -180,6 +221,10 @@ export default function BatchesPage() {
                       </Button>
                       {b.product?.id ? (
                         <Link className="inline-block text-xs font-medium text-primary underline-offset-2 hover:underline" href={`/products/${b.product.id}`}>
+                          View product
+                        </Link>
+                      ) : b.productId ? (
+                        <Link className="inline-block text-xs font-medium text-primary underline-offset-2 hover:underline" href={`/products/${b.productId}`}>
                           View product
                         </Link>
                       ) : null}
@@ -216,6 +261,7 @@ export default function BatchesPage() {
                   <TableHead className="text-right">Quantity</TableHead>
                   <TableHead>Expiry</TableHead>
                   <TableHead>Status</TableHead>
+                  {canEdit ? <TableHead className="w-[88px]">Actions</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -235,17 +281,23 @@ export default function BatchesPage() {
                     }}
                   >
                     <TableCell className="font-medium">
-                      {b.product?.id ? (
-                        <Link
-                          className="text-primary underline-offset-2 hover:underline"
-                          href={`/products/${b.product.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {b.product.name}
-                        </Link>
-                      ) : (
-                        "-"
-                      )}
+                      {(() => {
+                        const productId = b.productId ?? b.product?.id;
+                        const productName = b.product?.name ?? b.productName;
+                        if (productId && productName) {
+                          return (
+                            <Link
+                              className="text-primary underline-offset-2 hover:underline"
+                              href={`/products/${productId}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {productName}
+                            </Link>
+                          );
+                        }
+                        if (productName) return productName;
+                        return "-";
+                      })()}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{b.branchName ?? "-"}</TableCell>
                     <TableCell className="font-mono text-xs">{b.batchNumber ?? "-"}</TableCell>
@@ -254,6 +306,22 @@ export default function BatchesPage() {
                     <TableCell>
                       {b.isExpired ? <Badge variant="destructive">Expired</Badge> : <Badge variant="secondary">OK</Badge>}
                     </TableCell>
+                    {canEdit ? (
+                      <TableCell>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditTarget(b);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>
@@ -261,6 +329,53 @@ export default function BatchesPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(removeTarget)} onOpenChange={(open) => !open && setRemoveTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove expired batch from stock?</DialogTitle>
+            <DialogDescription>
+              This permanently writes off the remaining quantity for this batch. Stock levels will drop and this
+              cannot be undone from the hub. Only confirm after you have physically disposed of the goods.
+            </DialogDescription>
+          </DialogHeader>
+          {removeTarget ? (
+            <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm">
+              <p className="font-medium text-foreground">
+                {removeTarget.product?.name ?? removeTarget.productName ?? "Product"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Batch {removeTarget.batchNumber ?? removeTarget.id.slice(0, 8)}
+                {" · "}
+                {String(removeTarget.remainingQuantity ?? removeTarget.quantity ?? "?")} units
+                {removeTarget.expiryDate ? ` · expired ${formatDateDMY(removeTarget.expiryDate)}` : ""}
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRemoveTarget(null)} disabled={workingId !== null}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={workingId !== null}
+              onClick={() => void confirmRemoveExpired()}
+            >
+              {workingId ? "Removing…" : "Remove from stock"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <BatchEditDialog
+        batch={editTarget}
+        open={!!editTarget}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+        onSaved={load}
+      />
 
       <BatchTraceDrawer
         productId={traceBatch?.productId ?? null}

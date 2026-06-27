@@ -23,7 +23,7 @@ import {
   type CatalogAssistFieldHandle,
 } from "@/components/products/catalog-assist-field";
 import { PriceScopeModal } from "@/components/products/price-scope-modal";
-import { createBatch } from "@/lib/api/batches";
+import { fetchBatches, updateBatch } from "@/lib/api/batches";
 import { fetchCategories } from "@/lib/api/categories";
 import {
   createProductConversion,
@@ -94,7 +94,6 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
 
   const [trackBatch, setTrackBatch] = useState(false);
   const [batchNumber, setBatchNumber] = useState("");
-  const [batchQty, setBatchQty] = useState("");
   const [batchExpiry, setBatchExpiry] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -418,9 +417,14 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       if (mode === "create") {
         body.costPrice = cost;
         body.sellingPrice = sell;
-        if (initialStock !== "") {
-          const q = parseFloat(initialStock);
-          if (Number.isFinite(q)) body.currentStock = q;
+        const stockQty = parseFloat(initialStock);
+        const hasStartingStock =
+          initialStock !== "" && Number.isFinite(stockQty) && stockQty > 0;
+        if (hasStartingStock) {
+          body.currentStock = stockQty;
+        }
+        if (trackBatch && batchExpiry && hasStartingStock) {
+          body.expiryDate = new Date(batchExpiry).toISOString();
         }
       }
       let saved: HubProduct;
@@ -443,19 +447,18 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       if (
         mode === "create" &&
         trackBatch &&
-        batchNumber.trim() &&
         batchExpiry &&
-        parseFloat(batchQty) > 0
+        batchNumber.trim()
       ) {
         try {
-          await createBatch({
-            productId: saved.id,
-            batchNumber: batchNumber.trim(),
-            quantity: parseFloat(batchQty),
-            expiryDate: new Date(batchExpiry).toISOString(),
-            costPriceAtPurchase: cost,
-          });
-          toast.success("First batch saved");
+          const initialBatch =
+            saved.batches?.[0] ??
+            (await fetchBatches({ productId: saved.id, limit: 1 })).items[0];
+          if (initialBatch?.id) {
+            await updateBatch(initialBatch.id, {
+              batchNumber: batchNumber.trim(),
+            });
+          }
         } catch (be) {
           toast.error(handleApiError(be));
         }
@@ -814,7 +817,17 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="pf-bq">Quantity in batch</Label>
-                  <Input id="pf-bq" className="min-h-11" inputMode="decimal" value={batchQty} onChange={(e) => setBatchQty(e.target.value)} />
+                  <Input
+                    id="pf-bq"
+                    className="min-h-11 bg-muted/50 text-muted-foreground"
+                    inputMode="decimal"
+                    value={initialStock}
+                    readOnly
+                    tabIndex={-1}
+                    aria-readonly
+                    placeholder="Set starting stock above"
+                  />
+                  <p className="text-xs text-muted-foreground">Uses your starting stock quantity.</p>
                 </div>
               </div>
             ) : null}

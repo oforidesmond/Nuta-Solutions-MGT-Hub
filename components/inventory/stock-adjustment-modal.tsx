@@ -24,8 +24,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createInventoryAdjustment } from "@/lib/api/inventory-adjustments";
+import { createBatch } from "@/lib/api/batches";
 import { handleApiError } from "@/lib/api/errors";
+import {
+  MIN_BATCH_QUANTITY,
+  parseDecimalQtyInput,
+  resolveCostPriceAtPurchase,
+} from "@/lib/batch-helpers";
 import { productQuantity } from "@/lib/stock-status";
+import { formatDateDMY } from "@/lib/format";
 import type { HubProduct } from "@/lib/types/domain";
 import {
   ADJUSTMENT_TYPE_LABELS,
@@ -130,6 +137,10 @@ function isCorrectionType(type: InventoryAdjustmentType): boolean {
   return type === "CORRECT_ENTRY_ERROR";
 }
 
+function isSupplierAddType(type: InventoryAdjustmentType): boolean {
+  return type === "SUPPLIER_ADD";
+}
+
 export function StockAdjustmentModal(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -143,9 +154,21 @@ export function StockAdjustmentModal(props: {
   const [correctionDirection, setCorrectionDirection] = useState<CorrectionDirection>("increase");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [trackBatchDelivery, setTrackBatchDelivery] = useState(false);
+  const [batchNumber, setBatchNumber] = useState("");
+  const [batchExpiry, setBatchExpiry] = useState("");
+  const [batchManufactured, setBatchManufactured] = useState("");
 
   const systemStock = product ? productQuantity(product) : NaN;
   const selectedOption = optionForType(adjustmentType);
+  const usesBatchQtyMin =
+    adjustmentType === "SUPPLIER_ADD" && trackBatchDelivery;
+  const useBatchReceipt =
+    adjustmentType === "SUPPLIER_ADD" &&
+    trackBatchDelivery &&
+    (batchNumber.trim() !== "" || batchExpiry !== "");
+  const resolvedCost =
+    product && useBatchReceipt ? resolveCostPriceAtPurchase(product) : null;
 
   useEffect(() => {
     if (!open) {
@@ -154,6 +177,10 @@ export function StockAdjustmentModal(props: {
       setQtyInput("1");
       setCorrectionDirection("increase");
       setNotes("");
+      setTrackBatchDelivery(false);
+      setBatchNumber("");
+      setBatchExpiry("");
+      setBatchManufactured("");
       setSubmitting(false);
     }
   }, [open]);
@@ -166,8 +193,11 @@ export function StockAdjustmentModal(props: {
       if (t.startsWith("+")) return parseSignedQtyInput(qtyInput);
       return parseQtyInput(qtyInput);
     }
+    if (usesBatchQtyMin) {
+      return parseDecimalQtyInput(qtyInput, MIN_BATCH_QUANTITY);
+    }
     return parseQtyInput(qtyInput);
-  }, [adjustmentType, qtyInput]);
+  }, [adjustmentType, qtyInput, usesBatchQtyMin]);
 
   const effectiveDirection = useMemo((): CorrectionDirection => {
     if (!adjustmentType || !isCorrectionType(adjustmentType)) return correctionDirection;
@@ -198,18 +228,29 @@ export function StockAdjustmentModal(props: {
   const notesTrimmed = notes.trim();
   const notesValid = !selectedOption?.notesRequired || notesTrimmed.length > 0;
 
+  const minMagnitude = usesBatchQtyMin ? MIN_BATCH_QUANTITY : 1;
+  const supplierBatchMetaValid =
+    !trackBatchDelivery || batchNumber.trim() !== "" || batchExpiry !== "";
+  const supplierBatchCostValid = !useBatchReceipt || resolvedCost != null;
+
   const formValid =
     !!product &&
     !!adjustmentType &&
     parsedQty.ok &&
     magnitude != null &&
-    magnitude >= 1 &&
+    magnitude >= minMagnitude &&
     !overRemoval &&
     notesValid &&
     signedDelta != null &&
-    signedDelta !== 0;
+    signedDelta !== 0 &&
+    supplierBatchMetaValid &&
+    supplierBatchCostValid;
 
-  const canDecrement = parsedQty.ok && parsedQty.magnitude > 1;
+  const canDecrement =
+    parsedQty.ok &&
+    (usesBatchQtyMin
+      ? parsedQty.magnitude > MIN_BATCH_QUANTITY
+      : parsedQty.magnitude > 1);
 
   function handleQtyChange(raw: string) {
     setQtyInput(raw);
@@ -239,7 +280,9 @@ export function StockAdjustmentModal(props: {
         }
       }
     } else {
-      const parsed = parseQtyInput(qtyInput);
+      const parsed = usesBatchQtyMin
+        ? parseDecimalQtyInput(qtyInput, MIN_BATCH_QUANTITY)
+        : parseQtyInput(qtyInput);
       if (parsed.ok) {
         setQtyInput(String(parsed.magnitude));
         return;
@@ -273,8 +316,9 @@ export function StockAdjustmentModal(props: {
 
   function decrementQty() {
     if (!canDecrement) return;
-    const current = parsedQty.ok ? parsedQty.magnitude : 1;
-    setQtyInput(String(Math.max(1, current - 1)));
+    const current = parsedQty.ok ? parsedQty.magnitude : usesBatchQtyMin ? MIN_BATCH_QUANTITY : 1;
+    const floor = usesBatchQtyMin ? MIN_BATCH_QUANTITY : 1;
+    setQtyInput(String(Math.max(floor, current - 1)));
   }
 
   function selectType(type: InventoryAdjustmentType) {
@@ -282,25 +326,53 @@ export function StockAdjustmentModal(props: {
     setQtyInput("1");
     setCorrectionDirection("increase");
     setNotes("");
+    setTrackBatchDelivery(false);
+    setBatchNumber("");
+    setBatchExpiry("");
+    setBatchManufactured("");
     setStep("form");
   }
 
   async function handleConfirm() {
-    if (!product || !adjustmentType || signedDelta == null || !formValid) return;
+    if (!product || !adjustmentType || signedDelta == null || !formValid || magnitude == null) return;
     setSubmitting(true);
     try {
-      const row = await createInventoryAdjustment({
-        productId: product.id,
-        type: adjustmentType,
-        quantityChange: signedDelta,
-        notes: notesTrimmed || undefined,
-      });
-      const afterQty = Number(row.quantityAfter ?? newStock ?? systemStock);
-      const change = Number(row.quantityChange ?? signedDelta);
-      const label = ADJUSTMENT_TYPE_LABELS[adjustmentType];
-      toast.success(`Stock updated - ${afterQty} units of ${product.name} remaining`, {
-        description: `${label} · ${formatSignedChange(change)} units`,
-      });
+      if (useBatchReceipt) {
+        if (magnitude < MIN_BATCH_QUANTITY) return;
+        const costPriceAtPurchase = resolveCostPriceAtPurchase(product);
+        if (costPriceAtPurchase == null) {
+          toast.error("Set a cost price on this product before recording a batch delivery.");
+          return;
+        }
+        await createBatch({
+          productId: product.id,
+          quantity: magnitude,
+          costPriceAtPurchase,
+          batchNumber: batchNumber.trim() || undefined,
+          expiryDate: batchExpiry ? new Date(batchExpiry).toISOString() : undefined,
+          manufacturedDate: batchManufactured
+            ? new Date(batchManufactured).toISOString()
+            : undefined,
+          notes: notesTrimmed || undefined,
+        });
+        const afterQty = newStock ?? systemStock + magnitude;
+        toast.success(`Stock updated - ${afterQty} units of ${product.name} remaining`, {
+          description: `Delivery from supplier · +${magnitude} units`,
+        });
+      } else {
+        const row = await createInventoryAdjustment({
+          productId: product.id,
+          type: adjustmentType,
+          quantityChange: signedDelta,
+          notes: notesTrimmed || undefined,
+        });
+        const afterQty = Number(row.quantityAfter ?? newStock ?? systemStock);
+        const change = Number(row.quantityChange ?? signedDelta);
+        const label = ADJUSTMENT_TYPE_LABELS[adjustmentType];
+        toast.success(`Stock updated - ${afterQty} units of ${product.name} remaining`, {
+          description: `${label} · ${formatSignedChange(change)} units`,
+        });
+      }
       onOpenChange(false);
       await onAdjusted();
     } catch (err) {
@@ -428,7 +500,7 @@ export function StockAdjustmentModal(props: {
                 </Button>
                 <Input
                   id="adj-qty"
-                  inputMode="numeric"
+                  inputMode={usesBatchQtyMin ? "decimal" : "numeric"}
                   autoComplete="off"
                   className="h-12 text-center text-lg font-medium tabular-nums"
                   value={qtyInput}
@@ -452,9 +524,82 @@ export function StockAdjustmentModal(props: {
                   Cannot remove more than current stock ({systemStock}).
                 </p>
               ) : qtyInput.trim() !== "" && !parsedQty.ok ? (
-                <p className="text-xs text-destructive">Enter a valid quantity of at least 1.</p>
+                <p className="text-xs text-destructive">
+                  {usesBatchQtyMin
+                    ? "Enter a quantity of at least 0.001."
+                    : "Enter a valid quantity of at least 1."}
+                </p>
               ) : null}
             </div>
+
+            {isSupplierAddType(adjustmentType!) ? (
+              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+                <label className="flex interactive-cursor items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={trackBatchDelivery}
+                    onChange={(e) => setTrackBatchDelivery(e.target.checked)}
+                    className="mt-0.5 size-4 rounded border-input"
+                  />
+                  <span>
+                    <span className="font-medium text-foreground">
+                      This delivery has a lot number or expiry date
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Leave off if you do not track batches for this delivery.
+                    </span>
+                  </span>
+                </label>
+                {trackBatchDelivery ? (
+                  <div className="grid gap-3 border-t border-border/40 pt-3 sm:grid-cols-2">
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="adj-batch-number">Lot / batch number</Label>
+                      <Input
+                        id="adj-batch-number"
+                        className="min-h-11"
+                        value={batchNumber}
+                        onChange={(e) => setBatchNumber(e.target.value)}
+                        placeholder="e.g. LOT-2024-A"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="adj-batch-expiry">Expiry date</Label>
+                      <Input
+                        id="adj-batch-expiry"
+                        type="date"
+                        className="min-h-11"
+                        value={batchExpiry}
+                        onChange={(e) => setBatchExpiry(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="adj-batch-made">Made on (optional)</Label>
+                      <Input
+                        id="adj-batch-made"
+                        type="date"
+                        className="min-h-11"
+                        value={batchManufactured}
+                        onChange={(e) => setBatchManufactured(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:col-span-2">
+                      Uses the quantity above for this batch. Enter a lot number or expiry date.
+                    </p>
+                    {trackBatchDelivery && !supplierBatchMetaValid ? (
+                      <p className="text-xs text-destructive sm:col-span-2">
+                        Enter a lot number or expiry date, or turn off batch tracking.
+                      </p>
+                    ) : null}
+                    {useBatchReceipt && !supplierBatchCostValid ? (
+                      <p className="text-xs text-destructive sm:col-span-2">
+                        This product needs a cost price before you can record a batch delivery. Set
+                        it on the product first.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm">
               <span className="text-muted-foreground">After adjustment: </span>
@@ -521,6 +666,32 @@ export function StockAdjustmentModal(props: {
                     <dt className="text-xs text-muted-foreground">Notes</dt>
                     <dd className="text-foreground">{notesTrimmed}</dd>
                   </div>
+                ) : null}
+                {useBatchReceipt ? (
+                  <>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Batch tracking</dt>
+                      <dd className="font-medium text-foreground">Yes — new batch record</dd>
+                    </div>
+                    {batchNumber.trim() ? (
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Lot / batch number</dt>
+                        <dd className="font-mono text-foreground">{batchNumber.trim()}</dd>
+                      </div>
+                    ) : null}
+                    {batchExpiry ? (
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Expiry date</dt>
+                        <dd className="text-foreground">{formatDateDMY(batchExpiry)}</dd>
+                      </div>
+                    ) : null}
+                    {batchManufactured ? (
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Made on</dt>
+                        <dd className="text-foreground">{formatDateDMY(batchManufactured)}</dd>
+                      </div>
+                    ) : null}
+                  </>
                 ) : null}
               </dl>
             </div>
