@@ -30,13 +30,16 @@ import {
 } from "@/components/ui/table";
 import { resolveOrgTopProductsQuery, resolveStaffPeriod, rangeFromPreset } from "@/lib/analytics-period";
 import { fetchOrgTopProducts } from "@/lib/api/analytics-org";
+import { fetchStaffList } from "@/lib/api/staff";
 import {
+  enrichStaffPerformanceRows,
   fetchReportRevenueTrends,
   fetchReportSalesSummary,
   fetchReportStaffPerformance,
   normalizeBranchLedgerSummary,
   normalizeRevenueTrendPoints,
   normalizeStaffPerformanceRows,
+  financialBlockHas,
 } from "@/lib/api/reports";
 import { formatCurrency, toNumericAmount } from "@/lib/format";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
@@ -71,6 +74,7 @@ export function ReportsBusinessSection() {
   const currency = organization?.currency ?? "GHS";
   const orgName = organization?.name ?? "org";
   const role = useAuthStore((s) => s.user?.role);
+  const authUser = useAuthStore((s) => s.user);
   const showOrgLink = canViewOrgAnalytics(role);
 
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
@@ -99,6 +103,12 @@ export function ReportsBusinessSection() {
     queryFn: () => fetchReportSalesSummary({ startDate: range.startDate, endDate: range.endDate }),
     enabled: Boolean(range.startDate && range.endDate),
     staleTime: 60_000,
+  });
+
+  const staffListQuery = useQuery({
+    queryKey: ["staff", "list"],
+    queryFn: fetchStaffList,
+    staleTime: 120_000,
   });
 
   const staffPerfQuery = useQuery({
@@ -148,10 +158,10 @@ export function ReportsBusinessSection() {
     });
   }, [salesSummaryQuery.data, range.startDate, range.endDate]);
 
-  const staffRows = useMemo(
-    () => normalizeStaffPerformanceRows(staffPerfQuery.data?.reportData ?? {}),
-    [staffPerfQuery.data],
-  );
+  const staffRows = useMemo(() => {
+    const rows = normalizeStaffPerformanceRows(staffPerfQuery.data?.reportData ?? {});
+    return enrichStaffPerformanceRows(rows, staffListQuery.data ?? [], authUser ?? undefined);
+  }, [staffPerfQuery.data, staffListQuery.data, authUser]);
 
   const chartData = useMemo(
     () => normalizeRevenueTrendPoints(revenueTrendsQuery.data?.reportData ?? {}),
@@ -167,13 +177,33 @@ export function ReportsBusinessSection() {
     null;
 
   const soldAmount = pickBlockAmount(ledgerSummary?.sales, "revenue");
-  const profitAmount = pickBlockAmount(ledgerSummary?.sales, "grossProfit");
-  const cogsAmount = pickBlockAmount(ledgerSummary?.cogs, "cogs") || pickBlockAmount(ledgerSummary?.sales, "cogs");
+  const profitAmount =
+    pickBlockAmount(ledgerSummary?.sales, "grossProfit") ||
+    pickBlockAmount(ledgerSummary?.netPosition, "grossProfit", "profit");
+  const cogsAmount =
+    pickBlockAmount(ledgerSummary?.cogs, "cogs", "totalCOGS") ||
+    pickBlockAmount(ledgerSummary?.sales, "cogs");
   const stockLost = pickBlockAmount(ledgerSummary?.shrinkage, "loss", "lossAmount");
   const returnCount =
     typeof ledgerSummary?.returns?.count === "number"
       ? ledgerSummary.returns.count
       : pickBlockAmount(ledgerSummary?.returns, "quantity");
+
+  const hasProfitData =
+    ledgerSummary?.hasLedgerFinancials &&
+    (financialBlockHas(ledgerSummary.sales, "grossProfit") ||
+      financialBlockHas(ledgerSummary.netPosition, "grossProfit", "profit"));
+  const hasCogsData =
+    ledgerSummary?.hasLedgerFinancials &&
+    (financialBlockHas(ledgerSummary.cogs, "cogs", "totalCOGS") ||
+      financialBlockHas(ledgerSummary.sales, "cogs"));
+  const hasShrinkageData =
+    ledgerSummary?.hasLedgerFinancials &&
+    financialBlockHas(ledgerSummary.shrinkage, "loss", "lossAmount");
+  const ledgerUnavailableNote =
+    ledgerSummary && !ledgerSummary.hasLedgerFinancials
+      ? "Not included in this report yet"
+      : undefined;
 
   const exportRange = { from: range.startDate, to: range.endDate };
   const summaryFilename = buildExportFilename({
@@ -226,9 +256,18 @@ export function ReportsBusinessSection() {
           getRows={async () => ({
             rows: [
               { metric: "Sold", value: formatCurrency(soldAmount, currency) },
-              { metric: "Profit on sales", value: formatCurrency(profitAmount, currency) },
-              { metric: "What it cost you", value: formatCurrency(cogsAmount, currency) },
-              { metric: "Stock lost", value: formatCurrency(stockLost, currency) },
+              {
+                metric: "Profit on sales",
+                value: hasProfitData ? formatCurrency(profitAmount, currency) : "—",
+              },
+              {
+                metric: "What it cost you",
+                value: hasCogsData ? formatCurrency(cogsAmount, currency) : "—",
+              },
+              {
+                metric: "Stock lost",
+                value: hasShrinkageData ? formatCurrency(stockLost, currency) : "—",
+              },
               { metric: "Returns", value: String(returnCount) },
               { metric: "Branch", value: branchLabel ?? "" },
               { metric: "Period from", value: range.startDate },
@@ -268,12 +307,21 @@ export function ReportsBusinessSection() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <MetricTile label="Sold" value={formatCurrency(soldAmount, currency)} />
-              <MetricTile label="Profit on sales" value={formatCurrency(profitAmount, currency)} />
-              <MetricTile label="What it cost you" value={formatCurrency(cogsAmount, currency)} />
+              <MetricTile
+                label="Profit on sales"
+                value={hasProfitData ? formatCurrency(profitAmount, currency) : "—"}
+                sub={!hasProfitData ? ledgerUnavailableNote : undefined}
+              />
+              <MetricTile
+                label="What it cost you"
+                value={hasCogsData ? formatCurrency(cogsAmount, currency) : "—"}
+                sub={!hasCogsData ? ledgerUnavailableNote : undefined}
+              />
               <MetricTile
                 label="Stock lost"
-                value={formatCurrency(stockLost, currency)}
-                highlight={stockLost > 0}
+                value={hasShrinkageData ? formatCurrency(stockLost, currency) : "—"}
+                sub={!hasShrinkageData ? ledgerUnavailableNote : undefined}
+                highlight={hasShrinkageData && stockLost > 0}
               />
               <MetricTile label="Returns" value={String(returnCount)} />
             </div>

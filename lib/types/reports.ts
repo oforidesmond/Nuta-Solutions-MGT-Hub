@@ -32,6 +32,8 @@ export interface BranchLedgerSummary {
   shrinkage: ProductLifecycleFinancialBlock;
   netPosition: ProductLifecycleFinancialBlock;
   cogs: ProductLifecycleFinancialBlock;
+  /** False when API only returns legacy totals (totalRevenue) without ledger P&L fields. */
+  hasLedgerFinancials: boolean;
 }
 
 export interface StaffReportRow {
