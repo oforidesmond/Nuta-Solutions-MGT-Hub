@@ -16,12 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip as UiTooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { HoverOrTapHint } from "@/components/ui/hover-or-tap-hint";
 import { DateRangePresetToolbar } from "@/components/filters/date-range-preset-toolbar";
 import { PaginationBar } from "@/components/pagination/pagination-bar";
 import {
@@ -77,20 +72,22 @@ function LinkedAdjustmentCell({ row }: { row: HubStockAdjustment }) {
   if (!linked) return <span className="text-muted-foreground">-</span>;
 
   return (
-    <UiTooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex cursor-default items-center gap-1 text-muted-foreground">
+    <HoverOrTapHint
+      trigger={
+        <button
+          type="button"
+          className="inline-flex max-w-full cursor-default items-center gap-1 text-left text-muted-foreground"
+        >
           <Link2 className="size-3.5 shrink-0" aria-hidden />
           <span className="truncate">{linked.product?.name ?? "Linked"}</span>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-xs">
-        <p className="text-xs">
-          Paired leg: {linked.quantityChange ?? "-"} on{" "}
-          {linked.product?.name ?? "product"}
-        </p>
-      </TooltipContent>
-    </UiTooltip>
+        </button>
+      }
+      contentClassName="max-w-xs"
+    >
+      <p className="text-xs">
+        Paired leg: {linked.quantityChange ?? "-"} on {linked.product?.name ?? "product"}
+      </p>
+    </HoverOrTapHint>
   );
 }
 
@@ -238,8 +235,7 @@ export default function InventoryAdjustmentsPage() {
           ) : (listQuery.data?.data ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground">No adjustments in this range.</p>
           ) : (
-            <TooltipProvider>
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-10" />
@@ -387,7 +383,6 @@ export default function InventoryAdjustmentsPage() {
                   })}
                 </TableBody>
               </Table>
-            </TooltipProvider>
           )}
           {listQuery.isFetching && listQuery.data ? (
             <p className="flex items-center gap-2 text-xs text-muted-foreground">

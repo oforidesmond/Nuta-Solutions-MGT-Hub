@@ -95,6 +95,18 @@ function actorCanMutateTarget(actor: UserRole | undefined, target: HubStaffMembe
   return true;
 }
 
+function resolveOrgDefaultBranchId(
+  branches: HubBranchOption[],
+  orgDefaultBranchId: string | null,
+): string {
+  return (
+    branches.find((b) => b.isDefault)?.id ??
+    branches[0]?.id ??
+    orgDefaultBranchId ??
+    ""
+  );
+}
+
 function roleBadgeClass(role: string) {
   if (role === "ADMIN") return "border-primary/40 bg-primary/10 text-primary";
   if (role === "MANAGER") return "border-violet-500/40 bg-violet-500/10 text-violet-900 dark:text-violet-100";
@@ -181,6 +193,7 @@ export default function StaffPage() {
   const activeBranchId = useActiveBranchId();
   const me = useAuthStore((s) => s.user);
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const orgDefaultBranchId = useAuthStore((s) => s.defaultBranchId);
   const orgMaxDiscountPercent = useAuthStore((s) => s.organization?.maxStaffDiscountPercent);
   const members = useStaffStore((s) => s.members);
   const loading = useStaffStore((s) => s.loading);
@@ -194,6 +207,10 @@ export default function StaffPage() {
   const loadPerformance = useStaffStore((s) => s.loadPerformance);
 
   const [branches, setBranches] = useState<HubBranchOption[]>([]);
+  const defaultBranchId = useMemo(
+    () => resolveOrgDefaultBranchId(branches, orgDefaultBranchId),
+    [branches, orgDefaultBranchId],
+  );
 
   const [addOpen, setAddOpen] = useState(false);
   const [addFullName, setAddFullName] = useState("");
@@ -274,6 +291,16 @@ export default function StaffPage() {
     if (performanceError) toast.error(performanceError);
   }, [performanceError]);
 
+  useEffect(() => {
+    if (!defaultBranchId) return;
+    setAddBranchId((prev) => prev || defaultBranchId);
+  }, [defaultBranchId]);
+
+  useEffect(() => {
+    if (!editTarget || !defaultBranchId) return;
+    setEditBranchId((prev) => prev || defaultBranchId);
+  }, [editTarget, defaultBranchId]);
+
   const roleSelectOptions = useMemo(() => {
     if (!roleTarget) return ["STAFF", "MANAGER"];
     const base: string[] = ["STAFF", "MANAGER"];
@@ -284,12 +311,17 @@ export default function StaffPage() {
     return Array.from(set).filter((x) => x !== "SUPER_ADMIN");
   }, [roleTarget, me?.role]);
 
+  const openAddStaff = () => {
+    setAddBranchId(defaultBranchId);
+    setAddOpen(true);
+  };
+
   const openEdit = (m: HubStaffMember) => {
     setEditTarget(m);
     setEditFullName(staffDisplayName(m));
     setEditPhone(m.phoneNumber ?? "");
     setEditJobTitle(m.jobTitle ?? "");
-    setEditBranchId(m.branchId ?? "");
+    setEditBranchId(m.branchId ?? defaultBranchId);
     if (m.customDiscountLimit == null) {
       setEditDiscountMode("default");
       setEditDiscountPercent("");
@@ -351,6 +383,10 @@ export default function StaffPage() {
       toast.error("Please enter a full name.");
       return;
     }
+    if (!addBranchId) {
+      toast.error("Select a branch for this staff member.");
+      return;
+    }
     setSaving(true);
     try {
       const res = await createStaff({
@@ -360,7 +396,7 @@ export default function StaffPage() {
         phoneNumber: addPhone.trim(),
         role: addRole,
         jobTitle: addJobTitle.trim() || undefined,
-        branchId: addBranchId || null,
+        branchId: addBranchId,
       });
       toast.success("Staff member created");
       setAddOpen(false);
@@ -369,7 +405,7 @@ export default function StaffPage() {
       setAddPhone("");
       setAddRole("STAFF");
       setAddJobTitle("");
-      setAddBranchId("");
+      setAddBranchId(defaultBranchId);
       setCreds(res);
       await refresh();
       if (res.member) patchMember(res.member.id, res.member);
@@ -394,6 +430,10 @@ export default function StaffPage() {
     const { firstName, lastName } = splitFullName(editFullName);
     if (!firstName) {
       toast.error("Please enter a name.");
+      return;
+    }
+    if (!editBranchId) {
+      toast.error("Select a branch for this staff member.");
       return;
     }
     setEditSaving(true);
@@ -421,7 +461,7 @@ export default function StaffPage() {
         lastName,
         phoneNumber: editPhone.trim() || undefined,
         jobTitle: editJobTitle.trim() || null,
-        branchId: editBranchId || null,
+        branchId: editBranchId,
         customDiscountLimit,
       });
       patchMember(editTarget.id, updated);
@@ -527,7 +567,7 @@ export default function StaffPage() {
               Send notification
             </Button>
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
-            <Button type="button" className="shrink-0" onClick={() => setAddOpen(true)}>
+            <Button type="button" className="shrink-0" onClick={openAddStaff}>
               Add staff
             </Button>
             <DialogContent className="border-border/40 bg-card/95 backdrop-blur-md sm:max-w-md">
@@ -594,17 +634,18 @@ export default function StaffPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="add-branch">Branch (optional)</Label>
+                    <Label htmlFor="add-branch">Branch</Label>
                     <select
                       id="add-branch"
                       className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 interactive-cursor"
                       value={addBranchId}
                       onChange={(e) => setAddBranchId(e.target.value)}
+                      required
                     >
-                      <option value="">No branch</option>
                       {branches.map((b) => (
                         <option key={b.id} value={b.id}>
                           {b.name}
+                          {b.isDefault ? " (Default)" : ""}
                         </option>
                       ))}
                     </select>
@@ -614,7 +655,7 @@ export default function StaffPage() {
                   <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={saving}>
+                  <Button type="submit" disabled={saving || !addBranchId}>
                     {saving ? "Saving…" : "Create staff"}
                   </Button>
                 </DialogFooter>
@@ -655,7 +696,7 @@ export default function StaffPage() {
                 description="Add people who work at your shop so they can sign in to the sales app with a staff ID and one-time code."
                 action={
                   canManageStaff(me?.role)
-                    ? { label: "Add staff", onClick: () => setAddOpen(true) }
+                    ? { label: "Add staff", onClick: openAddStaff }
                     : undefined
                 }
               />
@@ -935,11 +976,12 @@ export default function StaffPage() {
                   className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 interactive-cursor"
                   value={editBranchId}
                   onChange={(e) => setEditBranchId(e.target.value)}
+                  required
                 >
-                  <option value="">No branch</option>
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
+                      {b.isDefault ? " (Default)" : ""}
                     </option>
                   ))}
                 </select>
@@ -980,7 +1022,7 @@ export default function StaffPage() {
               <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={editSaving}>
+              <Button type="submit" disabled={editSaving || !editBranchId}>
                 {editSaving ? "Saving…" : "Save changes"}
               </Button>
             </DialogFooter>

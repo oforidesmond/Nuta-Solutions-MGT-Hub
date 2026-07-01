@@ -1,12 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Tooltip as UiTooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TruncatedHint } from "@/components/ui/truncated-hint";
 import { safeJsonPretty } from "@/lib/audit-display";
 import { auditEventProductId, type AuditEventRow } from "@/lib/types/audit";
 
@@ -33,26 +28,7 @@ export function AuditEventDetailsCell({ row }: { row: AuditEventRow }) {
 
   return (
     <div className="flex max-w-[14rem] flex-col gap-1">
-      {payloadText ? (
-        <TooltipProvider>
-          <UiTooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="interactive-cursor max-w-full truncate text-left font-mono text-xs text-muted-foreground"
-              >
-                {payloadText.slice(0, 48)}
-                {payloadText.length > 48 ? "…" : ""}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <pre className="max-h-64 max-w-md overflow-auto whitespace-pre-wrap break-all font-mono text-[11px]">
-                {payloadText}
-              </pre>
-            </TooltipContent>
-          </UiTooltip>
-        </TooltipProvider>
-      ) : null}
+      {payloadText ? <TruncatedHint text={payloadText} maxLength={48} /> : null}
       <div className="flex flex-wrap gap-x-2 gap-y-0.5">
         {productId ? (
           <Link

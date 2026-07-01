@@ -27,11 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { HoverOrTapHint } from "@/components/ui/hover-or-tap-hint";
 import { DateRangePresetToolbar } from "@/components/filters/date-range-preset-toolbar";
 import { PaginationBar } from "@/components/pagination/pagination-bar";
 import { fetchStockTakesPage } from "@/lib/api/stock-takes";
@@ -525,14 +521,19 @@ export default function StockTakePage() {
                       </TableCell>
                       <TableCell className="max-w-[14rem]">
                         {notes ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="line-clamp-2 cursor-default text-sm">{notes}</span>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-sm">
-                              <p className="whitespace-pre-wrap text-xs">{notes}</p>
-                            </TooltipContent>
-                          </Tooltip>
+                          <HoverOrTapHint
+                            trigger={
+                              <button
+                                type="button"
+                                className="line-clamp-2 max-w-full text-left text-sm"
+                              >
+                                {notes}
+                              </button>
+                            }
+                            contentClassName="max-w-sm"
+                          >
+                            <p className="whitespace-pre-wrap text-xs">{notes}</p>
+                          </HoverOrTapHint>
                         ) : (
                           <span className="text-sm text-muted-foreground">-</span>
                         )}

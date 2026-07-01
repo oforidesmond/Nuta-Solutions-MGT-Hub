@@ -5,12 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip as UiTooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { HoverOrTapHint } from "@/components/ui/hover-or-tap-hint";
 import {
   Table,
   TableBody,
@@ -214,8 +209,7 @@ export default function ReturnsPage() {
           ) : rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No returns in this range.</p>
           ) : (
-            <TooltipProvider>
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     {keys.map((k) => (
@@ -233,18 +227,17 @@ export default function ReturnsPage() {
                         return (
                           <TableCell key={k} className={`${widthClass} truncate`} title={full ? undefined : display}>
                             {full ? (
-                              <UiTooltip>
-                                <TooltipTrigger asChild>
+                              <HoverOrTapHint
+                                trigger={
                                   <button type="button" className="interactive-cursor w-full truncate text-left">
                                     {display}
                                   </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px]">
-                                    {full}
-                                  </pre>
-                                </TooltipContent>
-                              </UiTooltip>
+                                }
+                              >
+                                <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px]">
+                                  {full}
+                                </pre>
+                              </HoverOrTapHint>
                             ) : (
                               display
                             )}
@@ -255,7 +248,6 @@ export default function ReturnsPage() {
                   ))}
                 </TableBody>
               </Table>
-            </TooltipProvider>
           )}
           {listQuery.data ? (
             <PaginationBar

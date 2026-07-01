@@ -12,12 +12,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip as UiTooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { HoverOrTapHint } from "@/components/ui/hover-or-tap-hint";
 import {
   fetchAnalyticsCrashesPage,
   fetchAnalyticsPerformancePage,
@@ -192,30 +187,33 @@ export function DevicePerformanceSection() {
                     <TableCell>{row.deviceModel ?? "-"}</TableCell>
                     <TableCell className="max-w-md truncate font-mono text-xs">
                       {row.error && row.error.length > 60 ? (
-                        <TooltipProvider>
-                          <UiTooltip>
-                            <TooltipTrigger asChild>
-                              <button type="button" className="interactive-cursor max-w-md truncate text-left">
-                                {row.error}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>{row.error}</TooltipContent>
-                          </UiTooltip>
-                        </TooltipProvider>
+                        <HoverOrTapHint
+                          trigger={
+                            <button type="button" className="interactive-cursor max-w-md truncate text-left">
+                              {row.error}
+                            </button>
+                          }
+                        >
+                          <p className="max-h-64 overflow-auto whitespace-pre-wrap break-all font-mono text-xs">
+                            {row.error}
+                          </p>
+                        </HoverOrTapHint>
                       ) : (
                         row.error ?? "-"
                       )}
                       {row.id ? (
-                        <TooltipProvider>
-                          <UiTooltip>
-                            <TooltipTrigger asChild>
-                              <button type="button" className="interactive-cursor ml-2 align-middle font-mono text-[10px] text-muted-foreground">
-                                {truncateMiddle(row.id)}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>{row.id}</TooltipContent>
-                          </UiTooltip>
-                        </TooltipProvider>
+                        <HoverOrTapHint
+                          trigger={
+                            <button
+                              type="button"
+                              className="interactive-cursor ml-2 align-middle font-mono text-[10px] text-muted-foreground"
+                            >
+                              {truncateMiddle(row.id)}
+                            </button>
+                          }
+                        >
+                          <p className="font-mono text-xs">{row.id}</p>
+                        </HoverOrTapHint>
                       ) : null}
                     </TableCell>
                   </TableRow>
