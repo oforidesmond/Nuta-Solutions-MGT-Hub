@@ -21,3 +21,10 @@ export function getHubBaseUrl(): string {
 export function getMarketingSiteUrl(): string {
   return process.env.NEXT_PUBLIC_MARKETING_URL ?? "http://localhost:4321";
 }
+
+/** Per-org public link for sharing the staff APK installer. */
+export function getStaffAppShareUrl(orgId: string, orgName: string): string {
+  const base = getHubBaseUrl().replace(/\/+$/, "");
+  const label = encodeURIComponent(orgName.trim() || "your shop");
+  return `${base}/get-staff-app/${encodeURIComponent(orgId)}?label=${label}`;
+}

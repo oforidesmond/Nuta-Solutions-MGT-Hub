@@ -23,6 +23,8 @@ Copy `.env.local.example` to `.env.local`:
 
 - `NEXT_PUBLIC_API_URL` - Nest base URL (e.g. `http://localhost:3000`).
 - `NEXT_PUBLIC_HUB_URL` - Hub public URL (e.g. `http://localhost:5174`) for documentation and deep links.
+- `BLOB_READ_WRITE_TOKEN` - Server-only Vercel Blob token (staff APK storage).
+- `STAFF_APP_BLOB_URL` - Full public blob URL of the uploaded staff APK (e.g. `https://….public.blob.vercel-storage.com/staff-app/nutapos-staff.apk`).
 
 ## Nest endpoints the Hub calls
 

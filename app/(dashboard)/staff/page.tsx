@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import axios from "axios";
-import { Bell, MoreHorizontal } from "lucide-react";
+import { Bell, MoreHorizontal, Smartphone } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -560,8 +561,13 @@ export default function StaffPage() {
             Manage your team, roles, and permissions.
           </p>
         </div>
-        {canManageStaff(me?.role) ? (
-          <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button type="button" variant="outline" className="shrink-0" render={<Link href="/staff/app" />}>
+            <Smartphone className="size-4" aria-hidden />
+            Get staff app
+          </Button>
+          {canManageStaff(me?.role) ? (
+            <>
             <Button type="button" variant="outline" onClick={() => setNotifyOpen(true)}>
               <Bell className="size-4" aria-hidden />
               Send notification
@@ -663,8 +669,9 @@ export default function StaffPage() {
             </DialogContent>
           </Dialog>
             <SendStaffNotificationModal open={notifyOpen} onOpenChange={setNotifyOpen} />
-          </div>
-        ) : null}
+            </>
+          ) : null}
+        </div>
       </div>
 
       <Card className="border-border/40 bg-card/80 shadow-sm backdrop-blur-sm">
