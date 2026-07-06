@@ -41,6 +41,7 @@ import {
   createStaff,
   deactivateStaff,
   fetchStaffActivityLog,
+  fetchStaffList,
   resetStaffPassword,
   setStaffPermissions,
   updateStaff,
@@ -63,6 +64,11 @@ import { SendStaffNotificationModal } from "@/components/notifications/send-staf
 import { useAuthStore } from "@/stores/auth-store";
 import { useStaffStore } from "@/stores/staff-store";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { parsePhoneInput } from "@/lib/phone";
+import {
+  findStaffContactConflict,
+  formatStaffDuplicateError,
+} from "@/lib/staff-contact";
 import { cn } from "@/lib/utils";
 
 /** Example keys from StaffProfile.permissions in schema.prisma. */
@@ -388,13 +394,39 @@ export default function StaffPage() {
       toast.error("Select a branch for this staff member.");
       return;
     }
+
+    const phoneResult = parsePhoneInput(addPhone);
+    if (!phoneResult.ok) {
+      toast.error(phoneResult.message);
+      return;
+    }
+
+    const trimmedEmail = addEmail.trim();
+    if (trimmedEmail) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(trimmedEmail)) {
+        toast.error("Enter a valid email address or leave the field blank.");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
+      const allStaff = await fetchStaffList({ includeInactive: true });
+      const conflict = findStaffContactConflict(allStaff, {
+        phone: phoneResult.value,
+        email: trimmedEmail || undefined,
+      });
+      if (conflict) {
+        toast.error(conflict);
+        return;
+      }
+
       const res = await createStaff({
         firstName,
         lastName,
-        email: addEmail.trim(),
-        phoneNumber: addPhone.trim(),
+        ...(trimmedEmail ? { email: trimmedEmail } : {}),
+        phoneNumber: phoneResult.value,
         role: addRole,
         jobTitle: addJobTitle.trim() || undefined,
         branchId: addBranchId,
@@ -411,7 +443,7 @@ export default function StaffPage() {
       await refresh();
       if (res.member) patchMember(res.member.id, res.member);
     } catch (e) {
-      const msg = handleApiError(e);
+      const msg = formatStaffDuplicateError(e);
       if (axios.isAxiosError(e) && e.response?.status === 400) {
         const m = String(e.response?.data?.message ?? msg).toLowerCase();
         if (m.includes("otp") && m.includes("expir")) {
@@ -457,10 +489,33 @@ export default function StaffPage() {
         customDiscountLimit = parsed.value;
       }
 
+      let normalizedPhone: string | undefined;
+      const trimmedPhone = editPhone.trim();
+      if (trimmedPhone) {
+        const phoneResult = parsePhoneInput(trimmedPhone);
+        if (!phoneResult.ok) {
+          toast.error(phoneResult.message);
+          setEditSaving(false);
+          return;
+        }
+        normalizedPhone = phoneResult.value;
+
+        const allStaff = await fetchStaffList({ includeInactive: true });
+        const conflict = findStaffContactConflict(allStaff, {
+          phone: normalizedPhone,
+          excludeId: editTarget.id,
+        });
+        if (conflict) {
+          toast.error(conflict);
+          setEditSaving(false);
+          return;
+        }
+      }
+
       const updated = await updateStaff(editTarget.id, {
         firstName,
         lastName,
-        phoneNumber: editPhone.trim() || undefined,
+        phoneNumber: normalizedPhone,
         jobTitle: editJobTitle.trim() || null,
         branchId: editBranchId,
         customDiscountLimit,
@@ -469,7 +524,7 @@ export default function StaffPage() {
       toast.success("Staff updated");
       setEditTarget(null);
     } catch (e) {
-      toast.error(handleApiError(e));
+      toast.error(formatStaffDuplicateError(e));
     } finally {
       setEditSaving(false);
     }
@@ -597,14 +652,14 @@ export default function StaffPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="add-email">Email</Label>
+                    <Label htmlFor="add-email">Email (optional)</Label>
                     <Input
                       id="add-email"
                       type="email"
                       className="min-h-11"
                       value={addEmail}
                       onChange={(e) => setAddEmail(e.target.value)}
-                      required
+                      placeholder="Leave blank if not needed"
                     />
                   </div>
                   <div className="space-y-2">
@@ -614,6 +669,7 @@ export default function StaffPage() {
                       className="min-h-11"
                       value={addPhone}
                       onChange={(e) => setAddPhone(e.target.value)}
+                      placeholder="e.g. 024 324 8781"
                       required
                     />
                   </div>
@@ -970,7 +1026,13 @@ export default function StaffPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ed-phone">Phone</Label>
-                <Input id="ed-phone" className="min-h-11" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+                <Input
+                  id="ed-phone"
+                  className="min-h-11"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  placeholder="e.g. 024 324 8781"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ed-job">Job title</Label>

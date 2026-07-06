@@ -1,6 +1,7 @@
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { toNumericAmount } from "@/lib/format";
+import { normalizePhoneNumber } from "@/lib/phone";
 import type {
   HubStaffMember,
   StaffActivityPage,
@@ -152,7 +153,7 @@ export function parseResetPasswordResponse(data: unknown): StaffCredentialsPaylo
 export interface CreateStaffBody {
   firstName: string;
   lastName?: string;
-  email: string;
+  email?: string;
   phoneNumber: string;
   role: "STAFF" | "MANAGER";
   jobTitle?: string;
@@ -168,8 +169,29 @@ export interface UpdateStaffBody {
   customDiscountLimit?: number | null;
 }
 
-export async function fetchStaffList(): Promise<HubStaffMember[]> {
-  const res = await api.get(endpoints.staff.list);
+function buildStaffPayload<T extends { phoneNumber?: string; email?: string }>(
+  body: T,
+): T {
+  const next = { ...body };
+  if (typeof next.phoneNumber === "string") {
+    const normalized = normalizePhoneNumber(next.phoneNumber);
+    if (normalized) next.phoneNumber = normalized;
+    else next.phoneNumber = next.phoneNumber.trim();
+  }
+  if (typeof next.email === "string") {
+    const trimmed = next.email.trim();
+    if (trimmed) next.email = trimmed;
+    else delete next.email;
+  }
+  return next;
+}
+
+export async function fetchStaffList(options?: {
+  includeInactive?: boolean;
+}): Promise<HubStaffMember[]> {
+  const res = await api.get(endpoints.staff.list, {
+    params: options?.includeInactive ? { includeInactive: true } : undefined,
+  });
   return unwrapArray<Record<string, unknown>>(res.data).map((row) =>
     parseStaffMember(row),
   );
@@ -187,7 +209,7 @@ export async function fetchStaffById(id: string): Promise<HubStaffMember> {
 export async function createStaff(
   body: CreateStaffBody,
 ): Promise<StaffCredentialsPayload> {
-  const res = await api.post(endpoints.staff.list, body);
+  const res = await api.post(endpoints.staff.list, buildStaffPayload(body));
   return parseCreateStaffResponse(res.data);
 }
 
@@ -195,7 +217,7 @@ export async function updateStaff(
   id: string,
   body: UpdateStaffBody,
 ): Promise<HubStaffMember> {
-  const res = await api.patch(endpoints.staff.byId(id), body);
+  const res = await api.patch(endpoints.staff.byId(id), buildStaffPayload(body));
   const o = asRecord(res.data);
   if (!o) return parseStaffMember({ id });
   if (o.user || o.staffProfile) return parseStaffMember(o);
