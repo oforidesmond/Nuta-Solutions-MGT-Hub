@@ -41,7 +41,7 @@ import {
   createStaff,
   deactivateStaff,
   fetchStaffActivityLog,
-  fetchStaffList,
+  fetchStaffListIncludingInactive,
   resetStaffPassword,
   setStaffPermissions,
   updateStaff,
@@ -412,7 +412,7 @@ export default function StaffPage() {
 
     setSaving(true);
     try {
-      const allStaff = await fetchStaffList({ includeInactive: true });
+      const allStaff = await fetchStaffListIncludingInactive();
       const conflict = findStaffContactConflict(allStaff, {
         phone: phoneResult.value,
         email: trimmedEmail || undefined,
@@ -500,7 +500,7 @@ export default function StaffPage() {
         }
         normalizedPhone = phoneResult.value;
 
-        const allStaff = await fetchStaffList({ includeInactive: true });
+        const allStaff = await fetchStaffListIncludingInactive();
         const conflict = findStaffContactConflict(allStaff, {
           phone: normalizedPhone,
           excludeId: editTarget.id,

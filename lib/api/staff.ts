@@ -186,11 +186,17 @@ function buildStaffPayload<T extends { phoneNumber?: string; email?: string }>(
   return next;
 }
 
-export async function fetchStaffList(options?: {
-  includeInactive?: boolean;
-}): Promise<HubStaffMember[]> {
+export async function fetchStaffList(): Promise<HubStaffMember[]> {
+  const res = await api.get(endpoints.staff.list);
+  return unwrapArray<Record<string, unknown>>(res.data).map((row) =>
+    parseStaffMember(row),
+  );
+}
+
+/** Includes deactivated staff — for duplicate phone/email checks only. */
+export async function fetchStaffListIncludingInactive(): Promise<HubStaffMember[]> {
   const res = await api.get(endpoints.staff.list, {
-    params: options?.includeInactive ? { includeInactive: true } : undefined,
+    params: { includeInactive: true },
   });
   return unwrapArray<Record<string, unknown>>(res.data).map((row) =>
     parseStaffMember(row),
