@@ -95,3 +95,4 @@ The following single-column **global** unique constraints exist. Review each: an
 ## 5. Notes for the Hub side
 - The Hub already normalizes phone numbers to E.164 and pre-checks the current org's staff (including inactive) for duplicate phone/email. It cannot detect cross-org internal-ID collisions — those must be prevented server-side.
 - `User.phoneNumber` is **not** unique in the DB, so phone duplicates are only a soft/product-level check, not a DB constraint.
+...
