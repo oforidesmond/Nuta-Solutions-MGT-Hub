@@ -8,6 +8,16 @@ function staffDisplayName(m: HubStaffMember): string {
   return name || m.email || m.staffId || "this staff member";
 }
 
+/** System-generated placeholder emails used when no real email is provided. */
+export function isPlaceholderEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const lower = email.trim().toLowerCase();
+  return (
+    lower.endsWith("@temp.nutasolutions.com") ||
+    lower.endsWith("@placeholder.nutasolutions.com")
+  );
+}
+
 export function findStaffContactConflict(
   members: HubStaffMember[],
   opts: {

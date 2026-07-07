@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   title: "NutaPOS - Management Hub",
   description: "Business owner dashboard for NutaPOS",
   icons: {
-    icon: [{ url: "/favicon-light.png", type: "image/png" }],
-    apple: [{ url: "/favicon-light.png", type: "image/png" }],
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    apple: [{ url: "/favicon.png", type: "image/png" }],
   },
 };
 

@@ -163,6 +163,7 @@ export interface CreateStaffBody {
 export interface UpdateStaffBody {
   firstName?: string;
   lastName?: string;
+  email?: string;
   phoneNumber?: string;
   jobTitle?: string | null;
   branchId?: string | null;

@@ -68,7 +68,9 @@ import { parsePhoneInput } from "@/lib/phone";
 import {
   findStaffContactConflict,
   formatStaffDuplicateError,
+  isPlaceholderEmail,
 } from "@/lib/staff-contact";
+import { TruncatedHint } from "@/components/ui/truncated-hint";
 import { cn } from "@/lib/utils";
 
 /** Example keys from StaffProfile.permissions in schema.prisma. */
@@ -233,6 +235,7 @@ export default function StaffPage() {
   const [detail, setDetail] = useState<HubStaffMember | null>(null);
   const [editTarget, setEditTarget] = useState<HubStaffMember | null>(null);
   const [editFullName, setEditFullName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editJobTitle, setEditJobTitle] = useState("");
   const [editBranchId, setEditBranchId] = useState("");
@@ -326,6 +329,7 @@ export default function StaffPage() {
   const openEdit = (m: HubStaffMember) => {
     setEditTarget(m);
     setEditFullName(staffDisplayName(m));
+    setEditEmail(isPlaceholderEmail(m.email) ? "" : m.email ?? "");
     setEditPhone(m.phoneNumber ?? "");
     setEditJobTitle(m.jobTitle ?? "");
     setEditBranchId(m.branchId ?? defaultBranchId);
@@ -499,10 +503,23 @@ export default function StaffPage() {
           return;
         }
         normalizedPhone = phoneResult.value;
+      }
 
+      const trimmedEmail = editEmail.trim();
+      if (trimmedEmail) {
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(trimmedEmail)) {
+          toast.error("Enter a valid email address or leave the field blank.");
+          setEditSaving(false);
+          return;
+        }
+      }
+
+      if (normalizedPhone || trimmedEmail) {
         const allStaff = await fetchStaffListIncludingInactive();
         const conflict = findStaffContactConflict(allStaff, {
           phone: normalizedPhone,
+          email: trimmedEmail || undefined,
           excludeId: editTarget.id,
         });
         if (conflict) {
@@ -515,6 +532,7 @@ export default function StaffPage() {
       const updated = await updateStaff(editTarget.id, {
         firstName,
         lastName,
+        ...(trimmedEmail ? { email: trimmedEmail } : {}),
         phoneNumber: normalizedPhone,
         jobTitle: editJobTitle.trim() || null,
         branchId: editBranchId,
@@ -793,7 +811,13 @@ export default function StaffPage() {
                     >
                       <TableCell className="font-medium">{staffDisplayName(m)}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{m.staffId}</TableCell>
-                      <TableCell className="text-muted-foreground">{m.email}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {m.email && !isPlaceholderEmail(m.email) ? (
+                          <TruncatedHint text={m.email} maxLength={24} monospace={false} />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={cn("text-xs capitalize", roleBadgeClass(String(m.role)))}>
                           {String(m.role).toLowerCase().replace("_", " ")}
@@ -972,7 +996,11 @@ export default function StaffPage() {
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Email</dt>
-                <dd>{detail.email}</dd>
+                <dd className="break-all">
+                  {detail.email && !isPlaceholderEmail(detail.email)
+                    ? detail.email
+                    : "—"}
+                </dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Phone</dt>
@@ -1010,7 +1038,7 @@ export default function StaffPage() {
             <DialogHeader>
               <DialogTitle>Edit staff</DialogTitle>
               <DialogDescription>
-                Updates name, phone, job title, branch assignment, and discount limit override.
+                Updates name, email, phone, job title, branch assignment, and discount limit override.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -1022,6 +1050,17 @@ export default function StaffPage() {
                   value={editFullName}
                   onChange={(e) => setEditFullName(e.target.value)}
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ed-email">Email (optional)</Label>
+                <Input
+                  id="ed-email"
+                  type="email"
+                  className="min-h-11"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="Leave blank if not needed"
                 />
               </div>
               <div className="space-y-2">
