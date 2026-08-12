@@ -148,8 +148,11 @@ export function CategoryPicker({
         <span className="truncate text-left">{triggerLabel}</span>
         <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent className="w-[min(100vw-2rem,22rem)] p-0" align="start">
-        <div className="border-b border-border/40 p-2">
+      <PopoverContent
+        className="w-[min(100vw-2rem,22rem)] max-h-[min(24rem,var(--available-height))] overflow-hidden p-0"
+        align="start"
+      >
+        <div className="shrink-0 border-b border-border/40 p-2">
           <Input
             className="h-9"
             placeholder="Search or add category…"
@@ -160,7 +163,7 @@ export function CategoryPicker({
         </div>
 
         {strongMatch && topMatch ? (
-          <div className="space-y-2 border-b border-border/40 bg-muted/30 p-3">
+          <div className="shrink-0 space-y-2 border-b border-border/40 bg-muted/30 p-3">
             <p className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">{topMatch.category.name}</span> already
               exists.
@@ -176,7 +179,7 @@ export function CategoryPicker({
             </Button>
           </div>
         ) : weakMatch && topMatch ? (
-          <div className="border-b border-border/40 px-3 py-2">
+          <div className="shrink-0 border-b border-border/40 px-3 py-2">
             <p className="text-sm text-muted-foreground">
               Similar:{" "}
               <button
@@ -190,7 +193,7 @@ export function CategoryPicker({
           </div>
         ) : null}
 
-        <ScrollArea className="max-h-64">
+        <ScrollArea className="h-64 min-h-0">
           <div className="p-1">
             {filtered.length === 0 && !showCreate ? (
               <p className="px-2 py-6 text-center text-sm text-muted-foreground">
@@ -222,7 +225,7 @@ export function CategoryPicker({
         </ScrollArea>
 
         {showCreate ? (
-          <div className="border-t border-border/40 p-2">
+          <div className="shrink-0 border-t border-border/40 p-2">
             <button
               type="button"
               disabled={creating}
@@ -242,7 +245,7 @@ export function CategoryPicker({
         ) : null}
 
         {value ? (
-          <div className="border-t border-border/40 p-2">
+          <div className="shrink-0 border-t border-border/40 p-2">
             <Button
               type="button"
               variant="ghost"
