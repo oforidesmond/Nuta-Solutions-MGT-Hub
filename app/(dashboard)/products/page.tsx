@@ -552,16 +552,16 @@ export default function ProductsPage() {
       ) : view === "table" ? (
         <Card className="border-border/40 bg-card/80 shadow-sm">
           <CardContent className="p-0">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[1%] max-w-56">Product</TableHead>
-                  <TableHead className="w-[1%] max-w-32">SKU</TableHead>
-                  <TableHead className="w-[1%] max-w-36">Category</TableHead>
-                  <TableHead className="w-[1%] text-right">Stock</TableHead>
-                  <TableHead className="w-[1%] text-right">Cost</TableHead>
-                  <TableHead className="w-[1%] text-right">Price</TableHead>
-                  <TableHead className="w-px text-right">
+                  <TableHead>Product</TableHead>
+                  <TableHead className="w-32">SKU</TableHead>
+                  <TableHead className="w-36">Category</TableHead>
+                  <TableHead className="w-20 text-right">Stock</TableHead>
+                  <TableHead className="w-32 text-right">Cost</TableHead>
+                  <TableHead className="w-32 text-right">Price</TableHead>
+                  <TableHead className="w-24 text-right">
                     <span className="sr-only">Actions</span>
                   </TableHead>
                 </TableRow>
@@ -574,27 +574,27 @@ export default function ProductsPage() {
                   const price = Number(p.sellingPrice ?? 0);
                   return (
                     <TableRow key={p.id} className="hover:bg-muted/40">
-                      <TableCell className="w-[1%] max-w-56 min-w-0 font-medium">
+                      <TableCell className="min-w-0 overflow-hidden font-medium">
                         <ProductNameLink id={p.id} name={p.name} />
                       </TableCell>
-                      <TableCell className="w-[1%] max-w-32 min-w-0">
+                      <TableCell className="min-w-0 overflow-hidden">
                         <TruncatedHint text={p.sku ?? "-"} maxLength={16} />
                       </TableCell>
-                      <TableCell className="w-[1%] max-w-36 min-w-0">
+                      <TableCell className="min-w-0 overflow-hidden">
                         <TruncatedHint text={productCategoryLabel(p)} maxLength={20} monospace={false} />
                       </TableCell>
-                      <TableCell className="w-[1%] whitespace-nowrap text-right">
+                      <TableCell className="text-right">
                         <Badge variant="outline" className={cn("tabular-nums", stockBadgeClass(tone))} title={tone === "low" ? "Below reorder level" : undefined}>
                           {Number.isFinite(q) ? q : "-"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="w-[1%] whitespace-nowrap text-right tabular-nums text-muted-foreground">
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
                         {formatCurrency(Number.isFinite(cost) ? cost : 0, currency)}
                       </TableCell>
-                      <TableCell className="w-[1%] whitespace-nowrap text-right font-medium tabular-nums">
+                      <TableCell className="text-right font-medium tabular-nums">
                         {formatCurrency(Number.isFinite(price) ? price : 0, currency)}
                       </TableCell>
-                      <TableCell className="w-px whitespace-nowrap text-right">
+                      <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-0.5">
                           {canStockTake ? (
                             <Tooltip>
