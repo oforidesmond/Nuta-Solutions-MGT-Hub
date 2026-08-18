@@ -87,7 +87,7 @@ function ProductNameLink({ id, name }: { id: string; name: string }) {
   const link = (
     <Link
       href={`/products/${id}`}
-      className="block truncate text-primary underline-offset-2 hover:underline"
+      className="text-primary underline-offset-2 hover:underline lg:block lg:truncate"
     >
       {name}
     </Link>
@@ -552,10 +552,10 @@ export default function ProductsPage() {
       ) : view === "table" ? (
         <Card className="border-border/40 bg-card/80 shadow-sm">
           <CardContent className="p-0">
-            <Table className="table-fixed">
+            <Table className="min-w-3xl lg:min-w-0 lg:table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
+                  <TableHead className="min-w-40 lg:min-w-0">Product</TableHead>
                   <TableHead className="w-32">SKU</TableHead>
                   <TableHead className="w-36">Category</TableHead>
                   <TableHead className="w-20 text-right">Stock</TableHead>
