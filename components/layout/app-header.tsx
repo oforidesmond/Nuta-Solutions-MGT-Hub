@@ -40,7 +40,7 @@ export function AppHeader() {
             type="button"
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="xl:hidden"
             aria-label="Open menu"
             onClick={() => setNavOpen(true)}
           >

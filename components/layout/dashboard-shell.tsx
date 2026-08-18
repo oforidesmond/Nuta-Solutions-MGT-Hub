@@ -11,7 +11,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <NotificationsRealtimeProvider>
       <NotificationDetailProvider>
         <div className="flex min-h-screen bg-zinc-50/90">
-          <div className="hidden md:flex">
+          <div className="hidden xl:flex">
             <AppSidebar />
           </div>
           <div className="flex min-w-0 flex-1 flex-col">

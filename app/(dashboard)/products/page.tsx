@@ -47,6 +47,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { HoverOrTapHint } from "@/components/ui/hover-or-tap-hint";
+import { TruncatedHint } from "@/components/ui/truncated-hint";
 import { fetchCategories } from "@/lib/api/categories";
 import {
   deleteProduct,
@@ -79,6 +81,26 @@ type StockFilter = "all" | "in_stock" | "low" | "out";
 type ViewMode = "table" | "grid";
 
 const LIMIT_OPTIONS = [20, 50, 100] as const;
+const PRODUCT_NAME_HINT_MAX = 32;
+
+function ProductNameLink({ id, name }: { id: string; name: string }) {
+  const link = (
+    <Link
+      href={`/products/${id}`}
+      className="block truncate text-primary underline-offset-2 hover:underline"
+    >
+      {name}
+    </Link>
+  );
+  if (name.length <= PRODUCT_NAME_HINT_MAX) return link;
+  return (
+    <HoverOrTapHint contentClassName="max-w-md" trigger={link}>
+      <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px]">
+        {name}
+      </pre>
+    </HoverOrTapHint>
+  );
+}
 
 function stockBadgeClass(tone: ReturnType<typeof getStockStatus>) {
   if (tone === "out") return "bg-destructive/15 text-destructive border-destructive/30";
@@ -533,13 +555,13 @@ export default function ProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Stock</TableHead>
-                  <TableHead className="text-right">Cost</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="w-12 text-right">
+                  <TableHead className="w-[1%] max-w-56">Product</TableHead>
+                  <TableHead className="w-[1%] max-w-32">SKU</TableHead>
+                  <TableHead className="w-[1%] max-w-36">Category</TableHead>
+                  <TableHead className="w-[1%] text-right">Stock</TableHead>
+                  <TableHead className="w-[1%] text-right">Cost</TableHead>
+                  <TableHead className="w-[1%] text-right">Price</TableHead>
+                  <TableHead className="w-px text-right">
                     <span className="sr-only">Actions</span>
                   </TableHead>
                 </TableRow>
@@ -552,25 +574,27 @@ export default function ProductsPage() {
                   const price = Number(p.sellingPrice ?? 0);
                   return (
                     <TableRow key={p.id} className="hover:bg-muted/40">
-                      <TableCell className="font-medium">
-                        <Link href={`/products/${p.id}`} className="text-primary underline-offset-2 hover:underline">
-                          {p.name}
-                        </Link>
+                      <TableCell className="w-[1%] max-w-56 min-w-0 font-medium">
+                        <ProductNameLink id={p.id} name={p.name} />
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{p.sku ?? "-"}</TableCell>
-                      <TableCell className="text-sm">{productCategoryLabel(p)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="w-[1%] max-w-32 min-w-0">
+                        <TruncatedHint text={p.sku ?? "-"} maxLength={16} />
+                      </TableCell>
+                      <TableCell className="w-[1%] max-w-36 min-w-0">
+                        <TruncatedHint text={productCategoryLabel(p)} maxLength={20} monospace={false} />
+                      </TableCell>
+                      <TableCell className="w-[1%] whitespace-nowrap text-right">
                         <Badge variant="outline" className={cn("tabular-nums", stockBadgeClass(tone))} title={tone === "low" ? "Below reorder level" : undefined}>
                           {Number.isFinite(q) ? q : "-"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell className="w-[1%] whitespace-nowrap text-right tabular-nums text-muted-foreground">
                         {formatCurrency(Number.isFinite(cost) ? cost : 0, currency)}
                       </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
+                      <TableCell className="w-[1%] whitespace-nowrap text-right font-medium tabular-nums">
                         {formatCurrency(Number.isFinite(price) ? price : 0, currency)}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="w-px whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-0.5">
                           {canStockTake ? (
                             <Tooltip>
