@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
@@ -18,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { softDeleteOrganization } from "@/lib/api/platform/organizations";
 import { handleApiError } from "@/lib/api/errors";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import type { PlatformOrganization } from "@/lib/types/platform";
 
 interface DeleteOrganizationModalProps {
@@ -51,7 +51,7 @@ function DeleteForm({
   org: PlatformOrganization;
   onClose: () => void;
 }) {
-  const router = useRouter();
+  const { navigate } = useAppNavigate();
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -66,7 +66,7 @@ function DeleteForm({
       toast.success(`${org.name} has been deleted.`);
       queryClient.invalidateQueries({ queryKey: ["platform"] });
       onClose();
-      router.push("/platform/organizations");
+      navigate("/platform/organizations");
     },
     onError: (err) => toast.error(handleApiError(err)),
   });

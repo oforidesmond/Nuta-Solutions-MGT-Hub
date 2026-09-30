@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NavigationLoadingProvider } from "@/components/loading/navigation-loading-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { HubTooltipProvider } from "@/components/providers/tooltip-provider";
@@ -38,10 +39,12 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <QueryProvider>
           <AuthProvider>
-            <HubTooltipProvider>
-              {children}
-              <Toaster richColors position="top-center" />
-            </HubTooltipProvider>
+            <NavigationLoadingProvider>
+              <HubTooltipProvider>
+                {children}
+                <Toaster richColors position="top-center" />
+              </HubTooltipProvider>
+            </NavigationLoadingProvider>
           </AuthProvider>
         </QueryProvider>
       </body>

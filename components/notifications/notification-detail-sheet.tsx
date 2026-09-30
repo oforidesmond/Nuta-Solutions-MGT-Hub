@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowUpRight, Check } from "lucide-react";
 import { PlatformSupportSenderLabel } from "@/components/notifications/platform-support-sender-label";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +15,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { formatDate } from "@/lib/format";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { isNotificationUnread, useMarkNotificationRead } from "@/lib/hooks/use-notifications";
 import { isCriticalNotificationType } from "@/lib/notifications/critical-notification";
 import {
@@ -41,7 +41,7 @@ export function NotificationDetailSheet({
   onOpenChange,
   onAfterNavigate,
 }: NotificationDetailSheetProps) {
-  const router = useRouter();
+  const { navigate } = useAppNavigate();
   const { mutate: markRead } = useMarkNotificationRead();
   const markedOnOpenRef = useRef<string | null>(null);
   const n = notification;
@@ -73,7 +73,7 @@ export function NotificationDetailSheet({
     if (!action) return;
     onOpenChange(false);
     onAfterNavigate?.();
-    router.push(action.href);
+    navigate(action.href);
   }
 
   return (

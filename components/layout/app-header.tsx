@@ -15,12 +15,12 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { NotificationsErrorBoundary } from "@/components/layout/notifications-error-boundary";
 import { NotificationsMenu } from "@/components/layout/notifications-menu";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { useAuthStore } from "@/stores/auth-store";
-import { useRouter } from "next/navigation";
 
 export function AppHeader() {
   const [navOpen, setNavOpen] = useState(false);
-  const router = useRouter();
+  const { replace } = useAppNavigate();
   const org = useAuthStore((s) => s.organization);
   const user = useAuthStore((s) => s.user);
   const clearSession = useAuthStore((s) => s.clearSession);
@@ -80,7 +80,7 @@ export function AppHeader() {
             <DropdownMenuItem
               onClick={() => {
                 clearSession();
-                router.replace("/login");
+                replace("/login");
               }}
             >
               <LogOut className="mr-2 size-4" />

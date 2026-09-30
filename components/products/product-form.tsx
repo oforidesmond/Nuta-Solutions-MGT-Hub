@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -35,6 +34,7 @@ import { createProduct, fetchProduct, updateProduct, type ProductWriteBody } fro
 import { handleApiError } from "@/lib/api/errors";
 import { getProductNameInvalidError } from "@/lib/api/product-name-errors";
 import { validateProductName } from "@/lib/product-naming";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { canManageInventoryConversions } from "@/lib/inventory-access";
@@ -65,7 +65,7 @@ function withoutField(
 }
 
 export function ProductForm({ mode, productId }: ProductFormProps) {
-  const router = useRouter();
+  const { navigate } = useAppNavigate();
   const queryClient = useQueryClient();
   const activeBranchId = useActiveBranchId();
   const role = useAuthStore((s) => s.user?.role);
@@ -173,7 +173,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         applyProduct(p);
       } catch (e) {
         toast.error(handleApiError(e));
-        router.push("/products");
+        navigate("/products");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -181,7 +181,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
     return () => {
       cancelled = true;
     };
-  }, [mode, productId, router, applyProduct]);
+  }, [mode, productId, navigate, applyProduct]);
 
   useEffect(() => {
     if (mode === "create") {
@@ -431,7 +431,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
       if (mode === "create") {
         saved = await createProduct(body);
         toast.success("Product added", {
-          action: { label: "View product", onClick: () => router.push(`/products/${saved.id}`) },
+          action: { label: "View product", onClick: () => navigate(`/products/${saved.id}`) },
         });
       } else if (productId) {
         saved = await updateProduct(productId, body);
@@ -473,7 +473,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         return;
       }
 
-      router.push(`/products/${saved.id}`);
+      navigate(`/products/${saved.id}`);
     } catch (err) {
       const nameInvalid = getProductNameInvalidError(err);
       if (nameInvalid) {
@@ -839,7 +839,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         <Button type="submit" disabled={saving} className="min-h-11">
           {saving ? "Saving…" : mode === "create" ? "Save product" : "Save changes"}
         </Button>
-        <Button type="button" variant="outline" className="min-h-11" onClick={() => router.back()}>
+        <Button type="button" variant="outline" className="min-h-11" onClick={() => navigate("/products")}>
           Cancel
         </Button>
       </div>
@@ -854,7 +854,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           proposedCostPrice={priceModal?.cost}
           proposedSellingPrice={priceModal?.sell}
           currency={currency}
-          onApplied={() => router.push(`/products/${productId}`)}
+          onApplied={() => navigate(`/products/${productId}`)}
         />
       ) : null}
     </form>

@@ -2,13 +2,14 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { consumeHandoffRequest } from "@/lib/api/auth-requests";
 import { fetchOrganizationMe } from "@/lib/api/users";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { useAuthStore } from "@/stores/auth-store";
 import { postLoginRedirect } from "@/lib/platform-access";
 
@@ -34,7 +35,7 @@ function MissingCodeCard() {
 }
 
 function CallbackContent() {
-  const router = useRouter();
+  const { replace } = useAppNavigate();
   const params = useSearchParams();
   const code = params.get("code");
   const setSession = useAuthStore((s) => s.setSession);
@@ -64,7 +65,7 @@ function CallbackContent() {
             /* keep org from handoff payload */
           }
         }
-        router.replace(postLoginRedirect(user));
+        replace(postLoginRedirect(user));
       } catch {
         if (cancelled) return;
         setError("This link is invalid or has expired. Sign in instead.");
@@ -74,7 +75,7 @@ function CallbackContent() {
     return () => {
       cancelled = true;
     };
-  }, [code, router, setSession]);
+  }, [code, replace, setSession]);
 
   if (!code) {
     return <MissingCodeCard />;

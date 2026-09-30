@@ -1,25 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { isPlatformAdmin } from "@/lib/platform-access";
 
 export function DashboardAuthGate({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+  const { replace } = useAppNavigate();
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login");
+      replace("/login");
       return;
     }
     if (status === "authenticated" && isPlatformAdmin(user)) {
-      router.replace("/platform");
+      replace("/platform");
     }
-  }, [router, status, user]);
+  }, [replace, status, user]);
 
   if (status === "hydrating" || status === "idle") {
     return (

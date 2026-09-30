@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeftRight, Copy, Link2, Pencil, Trash2 } from "lucide-react";
@@ -47,6 +47,7 @@ import { formatDateDMY } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
 import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,7 +69,7 @@ function stockBadgeClass(tone: ReturnType<typeof getStockStatus>) {
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const { navigate } = useAppNavigate();
   const queryClient = useQueryClient();
   const id = params.id as string;
   const activeBranchId = useActiveBranchId();
@@ -113,11 +114,11 @@ export default function ProductDetailPage() {
       setProduct(p);
     } catch (e) {
       toast.error(handleApiError(e));
-      router.push("/products");
+      navigate("/products");
     } finally {
       setLoading(false);
     }
-  }, [id, router, activeBranchId]);
+  }, [id, navigate, activeBranchId]);
 
   useEffect(() => {
     void load();
@@ -127,7 +128,7 @@ export default function ProductDetailPage() {
     try {
       const p = await duplicateProduct(id);
       toast.success("Copy created");
-      router.push(`/products/${p.id}`);
+      navigate(`/products/${p.id}`);
     } catch (e) {
       toast.error(handleApiError(e));
     }
@@ -138,7 +139,7 @@ export default function ProductDetailPage() {
     try {
       await deleteProduct(id);
       toast.success("Product removed");
-      router.push("/products");
+      navigate("/products");
     } catch (e) {
       toast.error(handleApiError(e));
     } finally {

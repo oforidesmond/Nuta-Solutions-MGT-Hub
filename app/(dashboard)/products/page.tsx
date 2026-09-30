@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -70,6 +69,7 @@ import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stoc
 import { canManageInventoryConversions, canManageStockTakes } from "@/lib/inventory-access";
 import { canTransferStock } from "@/lib/branch-access";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
 import { fetchProductConversions } from "@/lib/api/product-conversions";
 import { fetchBranchesList } from "@/lib/api/branches";
@@ -141,7 +141,7 @@ function applyClientFilters(
 }
 
 export default function ProductsPage() {
-  const router = useRouter();
+  const { navigate } = useAppNavigate();
   const activeBranchId = useActiveBranchId();
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
   const orgName = useAuthStore((s) => s.organization?.name) ?? "export";
@@ -325,7 +325,7 @@ export default function ProductsPage() {
       toast.success("Product duplicated", {
         action: {
           label: "View",
-          onClick: () => router.push(`/products/${p.id}`),
+          onClick: () => navigate(`/products/${p.id}`),
         },
       });
       await loadProducts();
@@ -547,7 +547,7 @@ export default function ProductsPage() {
               ? "Try changing your search or filters."
               : "Add your first product to start selling it from the till."
           }
-          action={{ label: "Add product", onClick: () => router.push("/products/new") }}
+          action={{ label: "Add product", onClick: () => navigate("/products/new") }}
         />
       ) : view === "table" ? (
         <Card className="border-border/40 bg-card/80 shadow-sm">

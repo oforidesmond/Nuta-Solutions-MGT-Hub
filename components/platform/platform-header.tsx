@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { LogOut, Menu, Shield } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,11 +12,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { PlatformSidebar } from "@/components/platform/platform-sidebar";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function PlatformHeader() {
   const [navOpen, setNavOpen] = useState(false);
-  const router = useRouter();
+  const { replace } = useAppNavigate();
   const user = useAuthStore((s) => s.user);
   const clearSession = useAuthStore((s) => s.clearSession);
   const accountLabel =
@@ -77,7 +77,7 @@ export function PlatformHeader() {
             <DropdownMenuItem
               onClick={() => {
                 clearSession();
-                router.replace("/login");
+                replace("/login");
               }}
             >
               <LogOut className="mr-2 size-4" />

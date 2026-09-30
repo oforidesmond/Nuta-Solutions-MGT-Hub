@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import axios from "axios";
 import { Bell, MoreHorizontal, Smartphone } from "lucide-react";
@@ -64,6 +63,7 @@ import { SendStaffNotificationModal } from "@/components/notifications/send-staf
 import { useAuthStore } from "@/stores/auth-store";
 import { useStaffStore } from "@/stores/staff-store";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { parsePhoneInput } from "@/lib/phone";
 import {
   findStaffContactConflict,
@@ -198,7 +198,7 @@ function CredentialsDialog({
 }
 
 export default function StaffPage() {
-  const router = useRouter();
+  const { navigate } = useAppNavigate();
   const activeBranchId = useActiveBranchId();
   const me = useAuthStore((s) => s.user);
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
@@ -854,7 +854,7 @@ export default function StaffPage() {
                               <MoreHorizontal className="size-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="min-w-48">
-                              <DropdownMenuItem onClick={() => router.push(`/staff/${m.id}`)}>
+                              <DropdownMenuItem onClick={() => navigate(`/staff/${m.id}`)}>
                                 Profile page
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setDetail(m)}>View details</DropdownMenuItem>

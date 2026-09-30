@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { LoginBrand } from "@/components/auth/login-brand";
@@ -14,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getMarketingSiteUrl } from "@/lib/constants";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { useAuthStore } from "@/stores/auth-store";
 import { postLoginRedirect } from "@/lib/platform-access";
 
@@ -21,7 +21,7 @@ const fieldClassName =
   "h-11 rounded-xl border-input/80 bg-background/90 px-3.5 text-base md:text-sm";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const { replace } = useAppNavigate();
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const setSession = useAuthStore((s) => s.setSession);
@@ -31,9 +31,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace(postLoginRedirect(user));
+      replace(postLoginRedirect(user));
     }
-  }, [router, status, user]);
+  }, [replace, status, user]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +58,7 @@ export default function LoginPage() {
         }
       }
       toast.success("Signed in");
-      router.replace(postLoginRedirect(user));
+      replace(postLoginRedirect(user));
     } catch {
       toast.error("Invalid email or password.");
     } finally {

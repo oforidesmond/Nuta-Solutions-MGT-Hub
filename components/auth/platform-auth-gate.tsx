@@ -1,27 +1,27 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuthStore } from "@/stores/auth-store";
+import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { isPlatformAdmin } from "@/lib/platform-access";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function PlatformAuthGate({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+  const { replace } = useAppNavigate();
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login");
+      replace("/login");
       return;
     }
     if (status === "authenticated" && !isPlatformAdmin(user)) {
       toast.error("Tenant accounts cannot access the platform console.");
-      router.replace("/");
+      replace("/");
     }
-  }, [router, status, user]);
+  }, [replace, status, user]);
 
   if (status === "hydrating" || status === "idle") {
     return (
