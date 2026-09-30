@@ -2,6 +2,7 @@
 
 import { use, useMemo, useState } from "react";
 import { Download, Smartphone } from "lucide-react";
+import { toast } from "sonner";
 import { LoginBrand } from "@/components/auth/login-brand";
 import { LoginShell } from "@/components/auth/login-shell";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { staffAppDownloadPath } from "@/lib/staff-app";
+import { useStaffAppUpdate } from "@/lib/hooks/use-staff-app-update";
 
 type PageProps = {
   params: Promise<{ orgId: string }>;
@@ -32,10 +33,11 @@ const troubleSteps = [
 ] as const;
 
 export default function GetStaffAppPage({ params, searchParams }: PageProps) {
-  const { orgId } = use(params);
+  use(params);
   const { label: labelParam } = use(searchParams);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const { downloadAvailable, downloadUrl, loading } = useStaffAppUpdate();
 
   const orgLabel = useMemo(() => {
     const raw = labelParam?.trim();
@@ -50,8 +52,13 @@ export default function GetStaffAppPage({ params, searchParams }: PageProps) {
   const androidDevice = isLikelyAndroid();
 
   function onConfirmDownload() {
+    if (!downloadAvailable) {
+      toast.error("Staff app download is not available yet.");
+      setConfirmOpen(false);
+      return;
+    }
     setConfirmOpen(false);
-    window.location.href = staffAppDownloadPath(orgId);
+    window.location.href = downloadUrl;
   }
 
   return (
@@ -76,10 +83,21 @@ export default function GetStaffAppPage({ params, searchParams }: PageProps) {
           </p>
         ) : null}
 
-        <Button type="button" className="h-11 w-full" onClick={() => setConfirmOpen(true)}>
+        <Button
+          type="button"
+          className="h-11 w-full"
+          disabled={loading || !downloadAvailable}
+          onClick={() => setConfirmOpen(true)}
+        >
           <Download className="size-4" aria-hidden />
           Download app
         </Button>
+
+        {!loading && !downloadAvailable ? (
+          <p className="text-center text-xs text-muted-foreground">
+            Download is not available yet. Check back soon or ask your manager.
+          </p>
+        ) : null}
 
         <div className="text-center">
           <button

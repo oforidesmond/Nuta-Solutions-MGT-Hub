@@ -18,11 +18,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SectionCard } from "@/components/analytics/section-card";
 import { StaffAppDownloadActions } from "@/components/staff-app/staff-app-download-actions";
 import { cn } from "@/lib/utils";
+import { useStaffAppUpdate } from "@/lib/hooks/use-staff-app-update";
 
 type StaffAppGuideProps = {
   orgId: string;
   orgName: string;
-  downloadAvailable: boolean;
 };
 
 const benefits = [
@@ -108,7 +108,10 @@ function requirementBadgeClass(level: "Required" | "Recommended" | "Optional") {
   return "border-border/60 bg-muted/40 text-muted-foreground";
 }
 
-export function StaffAppGuide({ orgId, orgName, downloadAvailable }: StaffAppGuideProps) {
+export function StaffAppGuide({ orgId, orgName }: StaffAppGuideProps) {
+  const { downloadAvailable, loading } = useStaffAppUpdate();
+  const showDownloadActions = loading || downloadAvailable;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -124,17 +127,16 @@ export function StaffAppGuide({ orgId, orgName, downloadAvailable }: StaffAppGui
             </p>
           </div>
         </div>
-        {downloadAvailable ? (
+        {showDownloadActions ? (
           <StaffAppDownloadActions
             orgId={orgId}
             orgName={orgName}
-            downloadAvailable={downloadAvailable}
             className="flex shrink-0 flex-wrap gap-2"
           />
         ) : null}
       </div>
 
-      {!downloadAvailable ? (
+      {!loading && !downloadAvailable ? (
         <EmptyState
           icon={<Smartphone className="mx-auto size-10 text-muted-foreground" aria-hidden />}
           title="Download not ready yet"
@@ -227,12 +229,11 @@ export function StaffAppGuide({ orgId, orgName, downloadAvailable }: StaffAppGui
         </CardContent>
       </Card>
 
-      {downloadAvailable ? (
+      {showDownloadActions ? (
         <div className="flex flex-wrap gap-2 border-t border-border/40 pt-6">
           <StaffAppDownloadActions
             orgId={orgId}
             orgName={orgName}
-            downloadAvailable={downloadAvailable}
             className="flex flex-wrap gap-2"
           />
         </div>

@@ -155,5 +155,8 @@ export const endpoints = {
     auditEvents: "/platform/audit/events",
     notifications: "/platform/notifications",
     notificationsBroadcast: "/platform/notifications/broadcast",
+    staffAppReleases: "/platform/staff-app/releases",
+    staffAppReleaseCurrent: "/platform/staff-app/releases/current",
+    staffAppReleaseRegister: "/platform/staff-app/releases/register",
   },
 } as const;

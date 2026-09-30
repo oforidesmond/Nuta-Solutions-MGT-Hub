@@ -6,6 +6,7 @@ import {
   FileText,
   LayoutDashboard,
   MoreHorizontal,
+  Package,
   Smartphone,
   TrendingUp,
   Users,
@@ -47,6 +48,7 @@ export const platformNavSections: PlatformNavSection[] = [
   {
     title: "Operations",
     items: [
+      { href: "/platform/staff-app", label: "Staff app", icon: Package },
       { href: "/platform/audit", label: "Audit log", icon: FileText },
       { href: "/platform/notifications", label: "Notifications", icon: Bell },
     ],

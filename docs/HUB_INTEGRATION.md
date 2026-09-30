@@ -21,10 +21,10 @@ This document describes how the Next.js Management Hub (`npm run dev` on port **
 
 Copy `.env.local.example` to `.env.local`:
 
-- `NEXT_PUBLIC_API_URL` - Nest base URL (e.g. `http://localhost:3000`).
+- `NEXT_PUBLIC_API_URL` - Nest base URL including `/api/v1` (e.g. `http://localhost:3000/api/v1`).
 - `NEXT_PUBLIC_HUB_URL` - Hub public URL (e.g. `http://localhost:5174`) for documentation and deep links.
-- `BLOB_READ_WRITE_TOKEN` - Server-only Vercel Blob token (staff APK storage).
-- `STAFF_APP_BLOB_URL` - Full public blob URL of the uploaded staff APK (e.g. `https://….public.blob.vercel-storage.com/staff-app/nutapos-staff.apk`).
+
+Staff APK storage and Blob credentials live on **Nest only**. Do not set `BLOB_READ_WRITE_TOKEN` or `STAFF_APP_BLOB_URL` on the Hub.
 
 ## Nest endpoints the Hub calls
 
@@ -46,6 +46,12 @@ Copy `.env.local.example` to `.env.local`:
 | POST | `/users/staff` | MVP “add staff”; adjust path/DTO to match Nest. |
 | PATCH | `/organizations/:id` | Settings save (business, tax, expiry, discount limits when supported). |
 | GET | `/dashboard/summary` | Optional; Hub falls back to aggregating products + sales if **404**. |
+| GET | `/staff-app/update` | Public; current Staff APK version + `downloadUrl`. **404** = no release; **503** = Nest public base misconfigured. |
+| GET | `/staff-app/download` | Public; Nest 302 to Blob for current APK. Hub may 302 here via `/api/staff-app/download`. |
+| GET | `/platform/staff-app/releases` | SUPER_ADMIN; list releases. |
+| GET | `/platform/staff-app/releases/current` | SUPER_ADMIN; current release (404 if none). |
+| POST | `/platform/staff-app/releases` | SUPER_ADMIN; multipart publish (`versionName`, `versionCode`, file). |
+| POST | `/platform/staff-app/releases/register` | SUPER_ADMIN; register existing Blob URL. |
 
 ### Hub routes (Next.js app)
 

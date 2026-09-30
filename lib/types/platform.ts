@@ -689,3 +689,26 @@ export interface BroadcastNotificationResponse {
   notificationsSent: number;
   recipientCount: number;
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Staff app releases (SUPER_ADMIN)
+ * ──────────────────────────────────────────────────────────────────── */
+
+export interface PlatformStaffAppRelease {
+  id?: string;
+  versionName: string;
+  versionCode: number;
+  apkFilename: string;
+  isCurrent: boolean;
+  publishedAt: string;
+  publishedBy?: string | { id?: string; email?: string; name?: string } | null;
+  /** Present on ops/current responses only — never a Blob token. */
+  blobUrl?: string | null;
+}
+
+export interface RegisterStaffAppReleaseDto {
+  versionName: string;
+  versionCode: number;
+  blobUrl: string;
+  apkFilename?: string;
+}

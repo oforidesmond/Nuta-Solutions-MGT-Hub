@@ -5,12 +5,11 @@ import { Download, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getStaffAppShareUrl } from "@/lib/constants";
-import { staffAppDownloadPath } from "@/lib/staff-app";
+import { useStaffAppUpdate } from "@/lib/hooks/use-staff-app-update";
 
 type StaffAppDownloadActionsProps = {
   orgId: string;
   orgName: string;
-  downloadAvailable: boolean;
   className?: string;
   size?: "default" | "sm" | "lg";
 };
@@ -18,17 +17,18 @@ type StaffAppDownloadActionsProps = {
 export function StaffAppDownloadActions({
   orgId,
   orgName,
-  downloadAvailable,
   className,
   size = "default",
 }: StaffAppDownloadActionsProps) {
+  const { downloadAvailable, downloadUrl, loading } = useStaffAppUpdate();
+
   const onDownload = useCallback(() => {
     if (!downloadAvailable) {
       toast.error("Staff app download is not available yet.");
       return;
     }
-    window.location.href = staffAppDownloadPath(orgId);
-  }, [downloadAvailable, orgId]);
+    window.location.href = downloadUrl;
+  }, [downloadAvailable, downloadUrl]);
 
   const onShare = useCallback(async () => {
     const url = getStaffAppShareUrl(orgId, orgName);
@@ -55,9 +55,11 @@ export function StaffAppDownloadActions({
     }
   }, [orgId, orgName]);
 
+  const downloadDisabled = loading || !downloadAvailable;
+
   return (
     <div className={className}>
-      <Button type="button" size={size} disabled={!downloadAvailable} onClick={onDownload}>
+      <Button type="button" size={size} disabled={downloadDisabled} onClick={onDownload}>
         <Download className="size-4" aria-hidden />
         Download APK
       </Button>
