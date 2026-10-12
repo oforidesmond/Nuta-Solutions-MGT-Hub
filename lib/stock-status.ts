@@ -1,8 +1,9 @@
 /**
  * When API omits reorderLevel, treat stock 1..DEFAULT_LOW_MAX as "running low"
  * (matches previous dashboard heuristic; document for backend alignment).
+ * Explicit reorderLevel of 0 is respected (no fallback).
  */
-export const DEFAULT_LOW_STOCK_MAX = 5;
+export const DEFAULT_LOW_STOCK_MAX = 2;
 
 export type StockStatusTone = "ok" | "low" | "out";
 
@@ -12,7 +13,7 @@ export function getStockStatus(
 ): StockStatusTone {
   if (!Number.isFinite(quantity) || quantity <= 0) return "out";
   const threshold =
-    reorderLevel != null && Number.isFinite(reorderLevel) && reorderLevel > 0
+    reorderLevel != null && Number.isFinite(reorderLevel) && reorderLevel >= 0
       ? reorderLevel
       : DEFAULT_LOW_STOCK_MAX;
   if (quantity <= threshold) return "low";
@@ -34,5 +35,5 @@ export function productReorderLevel(p: {
   const raw = p.reorderLevel;
   if (raw == null || raw === "") return null;
   const n = typeof raw === "string" ? parseFloat(raw) : raw;
-  return Number.isFinite(n) && n > 0 ? n : null;
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }

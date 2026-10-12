@@ -17,14 +17,19 @@ import {
 } from "@/components/ui/table";
 import { fetchLowStockProducts, fetchProducts } from "@/lib/api/products";
 import { handleApiError } from "@/lib/api/errors";
-import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
+import {
+  DEFAULT_LOW_STOCK_MAX,
+  getStockStatus,
+  productQuantity,
+  productReorderLevel,
+} from "@/lib/stock-status";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import type { HubProduct } from "@/lib/types/domain";
 
 function shortfall(p: HubProduct): number {
   const q = productQuantity(p);
   const r = productReorderLevel(p);
-  if (r == null) return Math.max(0, 5 - q);
+  if (r == null) return Math.max(0, DEFAULT_LOW_STOCK_MAX - q);
   return Math.max(0, r - q);
 }
 
@@ -103,7 +108,7 @@ export default function LowStockAlertsPage() {
                 {rows.map((p) => {
                   const q = productQuantity(p);
                   const r = productReorderLevel(p);
-                  const reorderDisplay = r ?? 5;
+                  const reorderDisplay = r ?? DEFAULT_LOW_STOCK_MAX;
                   const sh = shortfall(p);
                   return (
                     <TableRow key={p.id}>
