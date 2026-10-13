@@ -521,7 +521,7 @@ export default function ProductDetailPage() {
                               onClick={() => {
                                 setEditConv(conv);
                                 setEditRatio(conv.conversionRatio);
-                                setEditAutoConvert(conv.autoConvertOnSale);
+                                setEditAutoConvert(conv.autoConvertOnSale === true);
                               }}
                             >
                               Edit link
@@ -577,7 +577,7 @@ export default function ProductDetailPage() {
                               onClick={() => {
                                 setEditConv(conv);
                                 setEditRatio(conv.conversionRatio);
-                                setEditAutoConvert(conv.autoConvertOnSale);
+                                setEditAutoConvert(conv.autoConvertOnSale === true);
                               }}
                             >
                               Edit link
@@ -648,7 +648,7 @@ export default function ProductDetailPage() {
             <div className="flex items-start gap-2 rounded-lg border border-border/40 p-3">
               <Checkbox
                 id="detail-auto-convert"
-                checked={editAutoConvert}
+                checked={editAutoConvert === true}
                 onCheckedChange={(v) => setEditAutoConvert(v === true)}
                 className="mt-0.5"
               />

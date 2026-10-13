@@ -214,13 +214,13 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         name: activeParent.childProduct.name,
       });
       setConversionRatioStr(activeParent.conversionRatio);
-      setAutoConvertOnSale(activeParent.autoConvertOnSale);
+      setAutoConvertOnSale(activeParent.autoConvertOnSale === true);
       setConvSnapshot({
         id: activeParent.id,
         parentProductId: productId,
         childProductId: activeParent.childProduct.id,
         ratioStr: activeParent.conversionRatio,
-        autoConvertOnSale: activeParent.autoConvertOnSale,
+        autoConvertOnSale: activeParent.autoConvertOnSale === true,
       });
     } else if (activeChild?.parentProduct && productId) {
       setHasConversion(true);
@@ -230,13 +230,13 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         name: activeChild.parentProduct.name,
       });
       setConversionRatioStr(activeChild.conversionRatio);
-      setAutoConvertOnSale(activeChild.autoConvertOnSale);
+      setAutoConvertOnSale(activeChild.autoConvertOnSale === true);
       setConvSnapshot({
         id: activeChild.id,
         parentProductId: activeChild.parentProduct.id,
         childProductId: productId,
         ratioStr: activeChild.conversionRatio,
-        autoConvertOnSale: activeChild.autoConvertOnSale,
+        autoConvertOnSale: activeChild.autoConvertOnSale === true,
       });
     } else {
       setHasConversion(false);
@@ -336,9 +336,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
         parentProductId: pair.parentId,
         childProductId: pair.childId,
         ratioStr: String(ratio),
-        autoConvertOnSale: created.autoConvertOnSale,
+        autoConvertOnSale: created.autoConvertOnSale === true,
       });
-      setAutoConvertOnSale(created.autoConvertOnSale);
+      setAutoConvertOnSale(created.autoConvertOnSale === true);
       void queryClient.invalidateQueries({
         queryKey: withBranchKey(activeBranchId, "product-conversions", savedId),
       });
@@ -360,9 +360,9 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
             setConvSnapshot({
               ...convSnapshot,
               ratioStr: conversionRatioStr.trim(),
-              autoConvertOnSale: updated.autoConvertOnSale,
+              autoConvertOnSale: updated.autoConvertOnSale === true,
             });
-            setAutoConvertOnSale(updated.autoConvertOnSale);
+            setAutoConvertOnSale(updated.autoConvertOnSale === true);
             void queryClient.invalidateQueries({
               queryKey: withBranchKey(activeBranchId, "product-conversions", savedId),
             });
@@ -392,15 +392,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
           onClick: () => {
             void (async () => {
               try {
-                await createProductConversion({
-                  parentProductId: pair.parentId,
-                  childProductId: pair.childId,
-                  conversionRatio: ratio,
-                  autoConvertOnSale,
-                });
-                void queryClient.invalidateQueries({
-                  queryKey: withBranchKey(activeBranchId, "product-conversions", savedId),
-                });
+                await runCreate();
                 toast.success("Packaging saved");
               } catch (err2) {
                 toast.error(handleApiError(err2));
@@ -820,7 +812,7 @@ export function ProductForm({ mode, productId }: ProductFormProps) {
                       <div className="flex flex-wrap items-start gap-2">
                         <Checkbox
                           id="pf-auto-convert"
-                          checked={autoConvertOnSale}
+                          checked={autoConvertOnSale === true}
                           onCheckedChange={(v) => setAutoConvertOnSale(v === true)}
                           className="mt-0.5"
                         />
