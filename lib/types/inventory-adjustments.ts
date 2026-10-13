@@ -24,6 +24,8 @@ export const ADJUSTMENT_DISPLAY_LABELS: Record<string, string> = {
   BULK_TO_SINGLES: "Bulk conversion",
   STOCK_TRANSFER_OUT: "Transfer out",
   STOCK_TRANSFER_IN: "Transfer in",
+  SALE_AUTO_CONVERSION: "Auto-convert on sale",
+  SALE_VOID_AUTO_CONVERSION: "Void auto-convert",
 };
 
 export const ADJUSTMENT_FILTER_OPTIONS = Object.entries(ADJUSTMENT_DISPLAY_LABELS).map(

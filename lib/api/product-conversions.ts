@@ -52,6 +52,7 @@ function parseProductConversion(raw: unknown): ProductConversion | null {
     id: o.id,
     conversionRatio: String(ratio),
     isActive,
+    autoConvertOnSale: o.autoConvertOnSale === true,
     createdAt: typeof o.createdAt === "string" ? o.createdAt : undefined,
     updatedAt: typeof o.updatedAt === "string" ? o.updatedAt : undefined,
     childProduct: child,

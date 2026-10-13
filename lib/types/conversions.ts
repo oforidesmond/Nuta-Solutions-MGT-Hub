@@ -11,6 +11,8 @@ export interface ProductConversion {
   id: string;
   conversionRatio: string;
   isActive: boolean;
+  /** When true, selling the child with short stock auto-breaks parent packs. Default false. */
+  autoConvertOnSale: boolean;
   createdAt?: string;
   updatedAt?: string;
   /** When this product is the parent (pack) */
@@ -30,11 +32,13 @@ export interface CreateProductConversionBody {
   parentProductId: string;
   childProductId: string;
   conversionRatio: number;
+  autoConvertOnSale?: boolean;
 }
 
 export interface UpdateProductConversionBody {
   conversionRatio?: number;
   isActive?: boolean;
+  autoConvertOnSale?: boolean;
 }
 
 export interface ExecuteBulkConversionBody {

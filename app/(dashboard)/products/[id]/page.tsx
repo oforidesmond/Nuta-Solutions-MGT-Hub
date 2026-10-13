@@ -49,6 +49,7 @@ import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stoc
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BatchTraceDrawer } from "@/components/batches/batch-trace-drawer";
@@ -85,6 +86,7 @@ export default function ProductDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [editConv, setEditConv] = useState<ProductConversion | null>(null);
   const [editRatio, setEditRatio] = useState("");
+  const [editAutoConvert, setEditAutoConvert] = useState(false);
   const [savingRatio, setSavingRatio] = useState(false);
   const [deleteConvId, setDeleteConvId] = useState<string | null>(null);
   const [deletingConv, setDeletingConv] = useState(false);
@@ -148,7 +150,7 @@ export default function ProductDetailPage() {
     }
   }
 
-  async function onSaveRatio() {
+  async function onSaveConversion() {
     if (!editConv) return;
     const n = parseFloat(editRatio);
     if (!Number.isFinite(n) || n < 0.001) {
@@ -157,8 +159,11 @@ export default function ProductDetailPage() {
     }
     setSavingRatio(true);
     try {
-      await updateProductConversion(editConv.id, { conversionRatio: n });
-      toast.success("Conversion ratio updated");
+      await updateProductConversion(editConv.id, {
+        conversionRatio: n,
+        autoConvertOnSale: editAutoConvert,
+      });
+      toast.success("Packaging link updated");
       setEditConv(null);
       void queryClient.invalidateQueries({
         queryKey: withBranchKey(activeBranchId, "product-conversions", id),
@@ -500,6 +505,11 @@ export default function ProductDetailPage() {
                             {conv.childProduct!.sku ? `SKU: ${conv.childProduct!.sku} · ` : null}
                             1 pack = {conv.conversionRatio} singles
                           </p>
+                          {conv.autoConvertOnSale ? (
+                            <Badge variant="secondary" className="mt-1.5 font-normal">
+                              Auto-convert on sale
+                            </Badge>
+                          ) : null}
                         </div>
                         {canConv ? (
                           <div className="flex shrink-0 flex-wrap gap-2">
@@ -511,9 +521,10 @@ export default function ProductDetailPage() {
                               onClick={() => {
                                 setEditConv(conv);
                                 setEditRatio(conv.conversionRatio);
+                                setEditAutoConvert(conv.autoConvertOnSale);
                               }}
                             >
-                              Edit ratio
+                              Edit link
                             </Button>
                             <Button
                               type="button"
@@ -550,6 +561,11 @@ export default function ProductDetailPage() {
                             {conv.parentProduct!.sku ? `SKU: ${conv.parentProduct!.sku} · ` : null}
                             1 pack = {conv.conversionRatio} singles
                           </p>
+                          {conv.autoConvertOnSale ? (
+                            <Badge variant="secondary" className="mt-1.5 font-normal">
+                              Auto-convert on sale
+                            </Badge>
+                          ) : null}
                         </div>
                         {canConv ? (
                           <div className="flex shrink-0 flex-wrap gap-2">
@@ -561,9 +577,10 @@ export default function ProductDetailPage() {
                               onClick={() => {
                                 setEditConv(conv);
                                 setEditRatio(conv.conversionRatio);
+                                setEditAutoConvert(conv.autoConvertOnSale);
                               }}
                             >
-                              Edit ratio
+                              Edit link
                             </Button>
                             <Button
                               type="button"
@@ -605,7 +622,7 @@ export default function ProductDetailPage() {
       <Dialog open={!!editConv} onOpenChange={(o) => !o && setEditConv(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit conversion ratio</DialogTitle>
+            <DialogTitle>Edit packaging link</DialogTitle>
             <DialogDescription>
               {product.name}
               {editConv?.childProduct
@@ -628,6 +645,23 @@ export default function ProductDetailPage() {
                 onChange={(e) => setEditRatio(e.target.value)}
               />
             </div>
+            <div className="flex items-start gap-2 rounded-lg border border-border/40 p-3">
+              <Checkbox
+                id="detail-auto-convert"
+                checked={editAutoConvert}
+                onCheckedChange={(v) => setEditAutoConvert(v === true)}
+                className="mt-0.5"
+              />
+              <div className="min-w-0 flex-1 space-y-1">
+                <Label htmlFor="detail-auto-convert" className="text-sm font-medium">
+                  Auto-convert on sale
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  When enabled, selling the unit/portion with low stock automatically converts from
+                  the linked pack if pack stock allows.
+                </p>
+              </div>
+            </div>
             <div className="flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:text-amber-100">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
               <p>This affects future conversions only, not past stock movements.</p>
@@ -637,8 +671,8 @@ export default function ProductDetailPage() {
             <Button type="button" variant="outline" onClick={() => setEditConv(null)}>
               Cancel
             </Button>
-            <Button type="button" disabled={savingRatio} onClick={() => void onSaveRatio()}>
-              {savingRatio ? "Saving…" : "Update ratio"}
+            <Button type="button" disabled={savingRatio} onClick={() => void onSaveConversion()}>
+              {savingRatio ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
