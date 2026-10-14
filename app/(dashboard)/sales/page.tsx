@@ -23,6 +23,14 @@ import {
   fetchSalesWithVariancesPage,
 } from "@/lib/api/sales";
 import { fetchOrgUsers } from "@/lib/api/users";
+import { SALES_PDF_SALE_CAP } from "@/lib/exports/constants";
+import {
+  buildSalesReportPdf,
+  downloadBlob,
+  fetchSalesForPdfExport,
+  salesReportPdfFilename,
+  varianceReasonFilterLabel,
+} from "@/lib/exports/sales-pdf-export";
 import type { DateRangePreset } from "@/lib/date-range-presets";
 import { rangeForPreset, toYyyyMmDd } from "@/lib/date-range-presets";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
@@ -63,6 +71,7 @@ function salesVarianceQueryKey(branchId: string | null, args: Record<string, unk
 
 export default function SalesPage() {
   const currency = useAuthStore((s) => s.organization?.currency) ?? "GHS";
+  const orgName = useAuthStore((s) => s.organization?.name) ?? "Sales";
   const isAdmin = useAuthStore((s) => s.user?.role) === "ADMIN";
   const activeBranchId = useActiveBranchId();
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
@@ -157,6 +166,90 @@ export default function SalesPage() {
     },
   });
 
+  const pdfExportMutation = useMutation({
+    mutationFn: async () => {
+      const { sales, truncated } = await fetchSalesForPdfExport({
+        varianceOnly,
+        listFilters: {
+          startDate: range.startDate,
+          endDate: range.endDate,
+          staffId: staffId || undefined,
+          paymentMethod: paymentMethod || undefined,
+        },
+        varianceFilters: {
+          startDate: range.startDate,
+          endDate: range.endDate,
+          productId: productId.trim() || undefined,
+          varianceReason: varianceReason || undefined,
+        },
+      });
+      if (sales.length === 0) {
+        throw new Error("Nothing to export for the current filters.");
+      }
+
+      const staffUser = (usersQuery.data ?? []).find((u) => u.id === staffId);
+      const staffLabel = staffId
+        ? staffUser
+          ? [staffUser.firstName, staffUser.lastName].filter(Boolean).join(" ") ||
+            staffUser.email
+          : staffId
+        : undefined;
+      const paymentOpt = PAYMENT_OPTIONS.find((o) => o.value === paymentMethod);
+      const distinctBranches = [
+        ...new Set(
+          sales
+            .map((s) => s.branchName?.trim())
+            .filter((n): n is string => Boolean(n)),
+        ),
+      ];
+      const branchName = distinctBranches.length === 1 ? distinctBranches[0] : null;
+
+      const blob = buildSalesReportPdf({
+        orgName,
+        branchName,
+        startDate: range.startDate,
+        endDate: range.endDate,
+        currency,
+        filters: {
+          staffLabel: staffLabel || undefined,
+          paymentLabel:
+            paymentMethod && paymentOpt ? paymentOpt.label : undefined,
+          forcedSalesOnly: varianceOnly || undefined,
+          varianceReasonLabel: varianceReasonFilterLabel(varianceReason),
+          productId: productId.trim() || undefined,
+        },
+        sales,
+        truncated,
+      });
+      downloadBlob(
+        blob,
+        salesReportPdfFilename({
+          orgName,
+          startDate: range.startDate,
+          endDate: range.endDate,
+        }),
+      );
+      return { truncated, count: sales.length };
+    },
+    onSuccess: ({ truncated, count }) => {
+      toast.success("PDF download started.");
+      if (truncated) {
+        toast.warning(
+          `Report capped at ${SALES_PDF_SALE_CAP.toLocaleString()} sales (${count.toLocaleString()} exported). Narrow your filters for a full export.`,
+        );
+      }
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : "PDF export failed.";
+      toast.error(msg);
+    },
+  });
+
+  const exportDisabled =
+    (preset === "custom" && (!customStart || !customEnd)) ||
+    exportMutation.isPending ||
+    pdfExportMutation.isPending;
+
   const onPresetChange = useCallback((p: DateRangePreset) => {
     setPreset(p);
     setPage(1);
@@ -178,7 +271,9 @@ export default function SalesPage() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Sales</h1>
-          <p className="text-sm text-muted-foreground">Sales transactions, filters, and export.</p>
+          <p className="text-sm text-muted-foreground">
+            Sales transactions, filters, CSV export, and PDF report with line items.
+          </p>
           {activeQuery.dataUpdatedAt ? (
             <p className="text-xs text-muted-foreground">Updated {formatRelativeUpdated(activeQuery.dataUpdatedAt)}</p>
           ) : null}
@@ -190,10 +285,7 @@ export default function SalesPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={
-                    exportMutation.isPending ||
-                    (preset === "custom" && (!customStart || !customEnd))
-                  }
+                  disabled={exportDisabled}
                   onClick={() => exportMutation.mutate()}
                   className="min-h-10"
                 >
@@ -207,6 +299,31 @@ export default function SalesPage() {
               </span>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">{FORCED_SALES_UI.exportTooltip}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={exportDisabled}
+                  onClick={() => pdfExportMutation.mutate()}
+                  className="min-h-10"
+                >
+                  {pdfExportMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Download className="size-4" aria-hidden />
+                  )}
+                  <span className="ml-2">Download PDF</span>
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              Formatted report with shop name, date range, each receipt, and sold line
+              items. Matches table filters (including forced sales). Cap:{" "}
+              {SALES_PDF_SALE_CAP.toLocaleString()} sales.
+            </TooltipContent>
           </Tooltip>
         </div>
       </div>
