@@ -1,3 +1,4 @@
+import { userNeedsPasswordChange } from "@/lib/auth/password-change";
 import type { HubUser } from "@/lib/types/domain";
 
 /**
@@ -13,12 +14,13 @@ export function isPlatformAdmin(user: HubUser | null | undefined): boolean {
 }
 
 /**
- * Where a freshly authenticated user should land. SUPER_ADMINs go to the
- * platform console, tenant users (ADMIN / MANAGER / STAFF / SALES_AGENT) go
- * to the management hub home.
+ * Where a freshly authenticated user should land.
+ * Temporary-password users must set a permanent password first.
+ * SUPER_ADMINs go to the platform console; tenant users go to the hub home.
  */
 export function postLoginRedirect(
   user: HubUser | null | undefined,
-): "/platform" | "/" {
+): "/change-password" | "/platform" | "/" {
+  if (userNeedsPasswordChange(user)) return "/change-password";
   return isPlatformAdmin(user) ? "/platform" : "/";
 }

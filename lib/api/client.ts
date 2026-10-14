@@ -106,6 +106,7 @@ api.interceptors.response.use(
       if (
         typeof window !== "undefined" &&
         !window.location.pathname.startsWith("/login") &&
+        !window.location.pathname.startsWith("/change-password") &&
         !window.location.pathname.startsWith("/auth/callback")
       ) {
         window.location.assign("/login");

@@ -15,6 +15,10 @@ export interface HubUser {
   role: UserRole;
   organizationId?: string | null;
   organization?: HubOrganization | null;
+  /** True after platform/staff reset until the user sets a permanent password. */
+  isTemporaryPassword?: boolean;
+  /** True when the user must change password before using the hub. */
+  needsPasswordChange?: boolean;
 }
 
 export interface HubOrganization {

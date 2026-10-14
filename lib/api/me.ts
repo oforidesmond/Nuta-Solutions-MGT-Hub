@@ -1,3 +1,4 @@
+import { withPasswordChangeFlags } from "@/lib/auth/password-change";
 import { pickString } from "@/lib/api/normalize";
 import type { HubOrganization, HubUser } from "@/lib/types/domain";
 
@@ -29,14 +30,19 @@ export function parseMePayload(data: unknown): MeResponse {
   const o = data as Record<string, unknown>;
   const defaultBranchId = parseDefaultBranchId(o);
   if ("user" in o && o.user && typeof o.user === "object") {
-    const user = o.user as HubUser;
+    const userRaw = o.user as Record<string, unknown>;
+    const user = withPasswordChangeFlags(
+      withPasswordChangeFlags(userRaw as unknown as HubUser, userRaw),
+      o,
+    );
     const organization =
       (o.organization as HubOrganization | undefined) ??
       user.organization ??
       null;
     return { user, organization, defaultBranchId };
   }
-  const user = data as HubUser;
+  const userRaw = o;
+  const user = withPasswordChangeFlags(data as HubUser, userRaw);
   return {
     user,
     organization: user.organization ?? null,

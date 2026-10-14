@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getMarketingSiteUrl } from "@/lib/constants";
 import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { useAuthStore } from "@/stores/auth-store";
+import { userNeedsPasswordChange } from "@/lib/auth/password-change";
 import { postLoginRedirect } from "@/lib/platform-access";
 
 const fieldClassName =
@@ -57,7 +58,11 @@ export default function LoginPage() {
           /* keep org from login payload */
         }
       }
-      toast.success("Signed in");
+      toast.success(
+        userNeedsPasswordChange(user)
+          ? "Signed in — choose a new password to continue."
+          : "Signed in",
+      );
       replace(postLoginRedirect(user));
     } catch {
       toast.error("Invalid email or password.");

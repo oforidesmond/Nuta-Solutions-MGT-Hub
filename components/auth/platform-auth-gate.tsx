@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/stores/auth-store";
+import { userNeedsPasswordChange } from "@/lib/auth/password-change";
 import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { isPlatformAdmin } from "@/lib/platform-access";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +16,10 @@ export function PlatformAuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (status === "unauthenticated") {
       replace("/login");
+      return;
+    }
+    if (status === "authenticated" && userNeedsPasswordChange(user)) {
+      replace("/change-password");
       return;
     }
     if (status === "authenticated" && !isPlatformAdmin(user)) {
@@ -41,7 +46,7 @@ export function PlatformAuthGate({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  if (!isPlatformAdmin(user)) {
+  if (userNeedsPasswordChange(user) || !isPlatformAdmin(user)) {
     return null;
   }
 

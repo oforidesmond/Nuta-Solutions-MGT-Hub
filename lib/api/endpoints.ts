@@ -5,6 +5,8 @@ export const endpoints = {
     refresh: "/auth/refresh",
     handoff: "/auth/handoff",
     handoffConsume: "/auth/handoff/consume",
+    /** Clears temporary password / needsPasswordChange after platform or staff reset. */
+    changePassword: "/auth/staff/change-password",
   },
   users: {
     me: "/users/me",

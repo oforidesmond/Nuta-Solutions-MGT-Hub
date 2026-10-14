@@ -40,6 +40,8 @@ interface AuthState {
   }) => void;
   setOrganization: (organization: HubOrganization | null) => void;
   setActiveBranch: (branchId: string) => void;
+  /** Shallow-merge fields onto the current user (e.g. clear password-change flags). */
+  patchUser: (patch: Partial<HubUser>) => void;
   clearSession: () => void;
   bootstrap: () => Promise<void>;
 }
@@ -79,6 +81,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setActiveBranch: (branchId) => {
     setActiveBranchId(branchId);
     set({ activeBranchId: branchId });
+  },
+
+  patchUser: (patch) => {
+    const current = get().user;
+    if (!current) return;
+    set({ user: { ...current, ...patch } });
   },
 
   clearSession: () => {
