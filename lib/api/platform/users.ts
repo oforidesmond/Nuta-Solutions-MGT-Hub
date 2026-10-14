@@ -42,12 +42,34 @@ export async function deactivatePlatformUser(
   );
 }
 
+function parseResetUserPasswordResponse(raw: unknown): ResetUserPasswordResponse {
+  const root =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
+  const nested =
+    root.data && typeof root.data === "object" && !Array.isArray(root.data)
+      ? (root.data as Record<string, unknown>)
+      : root;
+  const temp =
+    nested.temporaryPassword ??
+    nested.temporary_password ??
+    root.temporaryPassword ??
+    root.temporary_password;
+  return {
+    success: true,
+    temporaryPassword:
+      typeof temp === "string" && temp.trim() ? temp.trim() : undefined,
+  };
+}
+
 export async function resetPlatformUserPassword(
   id: string,
   dto: ResetUserPasswordDto,
 ): Promise<ResetUserPasswordResponse> {
-  return platformPost<ResetUserPasswordResponse>(
+  const raw = await platformPost<unknown>(
     endpoints.platform.userResetPassword(id),
     dto,
   );
+  return parseResetUserPasswordResponse(raw);
 }

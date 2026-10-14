@@ -31,7 +31,7 @@ interface ResetPasswordUserModalProps {
 export function ResetPasswordUserModal({ user, open, onOpenChange }: ResetPasswordUserModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="border-border/40 bg-card/95 backdrop-blur-md sm:max-w-lg">
         <ResetPasswordForm key={String(open)} user={user} onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
@@ -47,7 +47,8 @@ function ResetPasswordForm({
 }) {
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
-  const [notifyUser, setNotifyUser] = useState(true);
+  /** Default off so the operator always gets a copyable temporary password (API only returns it when false). */
+  const [notifyUser, setNotifyUser] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
 
@@ -58,17 +59,18 @@ function ResetPasswordForm({
         notifyUser,
       }),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["platform"] });
+      if (data.temporaryPassword) {
+        setTempPassword(data.temporaryPassword);
+        toast.success("Password reset · copy the temporary password below.");
+        return;
+      }
       toast.success(
         notifyUser
           ? "Password reset · user notified in-app."
-          : "Password reset · copy the temporary password below.",
+          : "Password reset completed · no temporary password was returned.",
       );
-      queryClient.invalidateQueries({ queryKey: ["platform"] });
-      if (!notifyUser && data.temporaryPassword) {
-        setTempPassword(data.temporaryPassword);
-      } else {
-        onClose();
-      }
+      onClose();
     },
     onError: (err) => toast.error(handleApiError(err)),
   });
@@ -81,20 +83,31 @@ function ResetPasswordForm({
         <DialogHeader>
           <DialogTitle>Temporary password</DialogTitle>
           <DialogDescription>
-            Share this value through a verified channel · it is shown once.
+            Share this with {user.displayName} through a verified channel. It is shown once.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-2">
-          <code className="block rounded-lg border bg-muted px-3 py-2 font-mono text-sm break-all">
-            {tempPassword}
-          </code>
+        <div className="grid gap-4 py-2">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">User</p>
+            <p className="font-medium tracking-tight">{user.displayName}</p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Temporary password</p>
+            <div className="rounded-xl border-2 border-primary/50 bg-primary/5 px-4 py-4 text-center font-mono text-2xl font-bold tracking-wide text-primary break-all">
+              {tempPassword}
+            </div>
+          </div>
           <Button
             type="button"
             variant="secondary"
             className="w-full"
             onClick={async () => {
-              await navigator.clipboard.writeText(tempPassword);
-              toast.success("Copied");
+              try {
+                await navigator.clipboard.writeText(tempPassword);
+                toast.success("Copied to clipboard");
+              } catch {
+                toast.error("Could not copy · select the password manually.");
+              }
             }}
           >
             Copy to clipboard
@@ -127,7 +140,7 @@ function ResetPasswordForm({
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
           <p className="font-semibold text-amber-900 dark:text-amber-200">Effects</p>
           <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-amber-900/90 dark:text-amber-100/90">
-            <li>Bcrypt-hashed temporary password stored server-side</li>
+            <li>Temporary password generated for you to copy and send</li>
             <li>User must change password on next login</li>
             <li>All refresh tokens for this user revoked immediately</li>
           </ul>
@@ -147,21 +160,21 @@ function ResetPasswordForm({
           />
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-start gap-2 text-sm">
           <input
             type="checkbox"
             checked={notifyUser}
             onChange={(e) => setNotifyUser(e.target.checked)}
-            className="size-4 rounded"
+            className="mt-0.5 size-4 rounded"
           />
-          <span>Notify user via in-app system alert</span>
+          <span className="leading-snug">
+            Also notify user via in-app system alert
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              Leave unchecked to receive the temporary password here so you can copy and send it.
+              The API only returns the password when this is off.
+            </span>
+          </span>
         </label>
-
-        {!notifyUser ? (
-          <p className="text-xs text-muted-foreground">
-            When unchecked, you will receive the temporary password once to relay out-of-band.
-          </p>
-        ) : null}
 
         <label className="flex items-start gap-2 text-sm">
           <input
