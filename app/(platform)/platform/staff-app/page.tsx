@@ -13,6 +13,7 @@ import {
 } from "@/lib/api/platform/staff-app";
 import { handleApiError } from "@/lib/api/errors";
 import { formatDate } from "@/lib/format";
+import { StaffPosWebAppLink } from "@/components/staff-app/staff-app-download-actions";
 import { staffAppNestDownloadUrl } from "@/lib/staff-app";
 import { cn } from "@/lib/utils";
 import type { PlatformStaffAppRelease } from "@/lib/types/platform";
@@ -155,7 +156,8 @@ export default function PlatformStaffAppPage() {
             Staff app releases
           </h1>
           <p className="text-sm text-muted-foreground">
-            Publish the Android Staff APK Nest serves to tenants and OTA clients.
+            Publish the Android Staff APK Nest serves to tenants and OTA clients. The installable
+            web app is the cross-platform selling client; this page still publishes the Android APK.
           </p>
         </div>
         <Button
@@ -182,18 +184,21 @@ export default function PlatformStaffAppPage() {
               what Download APK installs.
             </p>
           </div>
-          {current ? (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                window.location.href = staffAppNestDownloadUrl();
-              }}
-            >
-              <Download className="size-4" aria-hidden />
-              Download current
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {current ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  window.location.href = staffAppNestDownloadUrl();
+                }}
+              >
+                <Download className="size-4" aria-hidden />
+                Download current
+              </Button>
+            ) : null}
+            <StaffPosWebAppLink size="sm" />
+          </div>
         </div>
 
         {currentQuery.isPending ? (

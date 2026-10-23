@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback } from "react";
-import { Download, Share2 } from "lucide-react";
+import { Download, ExternalLink, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getStaffAppShareUrl } from "@/lib/constants";
 import { useStaffAppUpdate } from "@/lib/hooks/use-staff-app-update";
+import { STAFF_POS_PWA_URL } from "@/lib/staff-app";
 
 type StaffAppDownloadActionsProps = {
   orgId: string;
@@ -13,6 +14,29 @@ type StaffAppDownloadActionsProps = {
   className?: string;
   size?: "default" | "sm" | "lg";
 };
+
+export function StaffPosWebAppLink({
+  size = "default",
+  className,
+}: {
+  size?: "default" | "sm" | "lg";
+  className?: string;
+}) {
+  return (
+    <Button
+      variant="outline"
+      size={size}
+      className={className}
+      nativeButton={false}
+      render={
+        <a href={STAFF_POS_PWA_URL} target="_blank" rel="noopener noreferrer" />
+      }
+    >
+      <ExternalLink className="size-4" aria-hidden />
+      Open web app
+    </Button>
+  );
+}
 
 export function StaffAppDownloadActions({
   orgId,
@@ -55,18 +79,24 @@ export function StaffAppDownloadActions({
     }
   }, [orgId, orgName]);
 
+  const showApkActions = loading || downloadAvailable;
   const downloadDisabled = loading || !downloadAvailable;
 
   return (
     <div className={className}>
-      <Button type="button" size={size} disabled={downloadDisabled} onClick={onDownload}>
-        <Download className="size-4" aria-hidden />
-        Download APK
-      </Button>
-      <Button type="button" size={size} variant="outline" onClick={() => void onShare()}>
-        <Share2 className="size-4" aria-hidden />
-        Share link
-      </Button>
+      {showApkActions ? (
+        <Button type="button" size={size} disabled={downloadDisabled} onClick={onDownload}>
+          <Download className="size-4" aria-hidden />
+          Download APK
+        </Button>
+      ) : null}
+      <StaffPosWebAppLink size={size} />
+      {showApkActions ? (
+        <Button type="button" size={size} variant="outline" onClick={() => void onShare()}>
+          <Share2 className="size-4" aria-hidden />
+          Share link
+        </Button>
+      ) : null}
     </div>
   );
 }

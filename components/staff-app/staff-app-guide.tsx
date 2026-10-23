@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   Camera,
   Cpu,
+  Globe,
   HardDrive,
   Printer,
   ScanBarcode,
@@ -81,6 +82,47 @@ const requirements = [
   },
 ] as const;
 
+const androidWebInstallSteps = [
+  {
+    title: "Open the web app",
+    description: "Tap Open web app on this page. Use Chrome.",
+  },
+  {
+    title: "Install the app",
+    description:
+      "Tap the browser menu, or the install prompt, and choose Install app or Add to Home screen.",
+  },
+  {
+    title: "Confirm",
+    description: "Confirm the install when Chrome asks.",
+  },
+  {
+    title: "Sign in",
+    description:
+      "Open the home-screen icon and sign in with the Staff ID and one-time login code from this hub. Internet is required to sign in.",
+  },
+] as const;
+
+const iosWebInstallSteps = [
+  {
+    title: "Open the web app in Safari",
+    description: "Tap Open web app on this page so it opens in Safari.",
+  },
+  {
+    title: "Tap Share",
+    description: "Tap the Share button in Safari.",
+  },
+  {
+    title: "Add to Home Screen",
+    description: "Choose Add to Home Screen, then tap Add.",
+  },
+  {
+    title: "Sign in",
+    description:
+      "Open the home-screen icon and sign in with the Staff ID and one-time login code from this hub. Internet is required to sign in.",
+  },
+] as const;
+
 const installSteps = [
   {
     title: "Download the APK",
@@ -102,6 +144,26 @@ const installSteps = [
   },
 ] as const;
 
+function InstallStepList({
+  steps,
+}: {
+  steps: readonly { title: string; description: string }[];
+}) {
+  return (
+    <ul className="space-y-4 border-l-2 border-border/60 pl-4">
+      {steps.map((step, index) => (
+        <li key={step.title} className="relative text-sm">
+          <span className="absolute -left-[calc(0.5rem+2px)] top-1.5 flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+            {index + 1}
+          </span>
+          <p className="font-medium">{step.title}</p>
+          <p className="mt-0.5 text-muted-foreground">{step.description}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function requirementBadgeClass(level: "Required" | "Recommended" | "Optional") {
   if (level === "Required") return "border-primary/40 bg-primary/10 text-primary";
   if (level === "Recommended") return "border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100";
@@ -110,7 +172,6 @@ function requirementBadgeClass(level: "Required" | "Recommended" | "Optional") {
 
 export function StaffAppGuide({ orgId, orgName }: StaffAppGuideProps) {
   const { downloadAvailable, loading } = useStaffAppUpdate();
-  const showDownloadActions = loading || downloadAvailable;
 
   return (
     <div className="space-y-8">
@@ -120,20 +181,18 @@ export function StaffAppGuide({ orgId, orgName }: StaffAppGuideProps) {
             <Smartphone className="size-6" aria-hidden />
           </div>
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Staff mobile app</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Staff selling apps</h1>
             <p className="max-w-xl text-sm text-muted-foreground">
-              The sales staff app lets your team check out customers, scan products, and print
-              receipts from an Android device.
+              Staff can install the Android app, or install the web app on phones, tablets, and
+              computers when they do not want the APK. A team can use either or both.
             </p>
           </div>
         </div>
-        {showDownloadActions ? (
-          <StaffAppDownloadActions
-            orgId={orgId}
-            orgName={orgName}
-            className="flex shrink-0 flex-wrap gap-2"
-          />
-        ) : null}
+        <StaffAppDownloadActions
+          orgId={orgId}
+          orgName={orgName}
+          className="flex shrink-0 flex-wrap gap-2"
+        />
       </div>
 
       {!loading && !downloadAvailable ? (
@@ -167,8 +226,46 @@ export function StaffAppGuide({ orgId, orgName }: StaffAppGuideProps) {
       </SectionCard>
 
       <SectionCard
-        title="Device requirements"
-        description="Most modern Android phones work well. Optional hardware improves speed, not access."
+        title="Web app"
+        description="Install it like an app when you do not want the Android APK. Tap Open web app on this page, then follow the steps for the device."
+        icon={Globe}
+      >
+        <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+          <li>Same checkout, scanning, and receipt flow as the Android app.</li>
+          <li>
+            Sales and other floor work are offline-first, the same as the mobile app. They continue
+            without a connection and sync when the device is back online.
+          </li>
+          <li>
+            Internet is still required to sign in and for live network operations, including login,
+            sync, and anything that talks to the hub.
+          </li>
+        </ul>
+        <div className="mt-6 space-y-3">
+          <div>
+            <p className="text-sm font-medium">Android (Chrome)</p>
+            <p className="text-xs text-muted-foreground">Install from Chrome on the phone or tablet.</p>
+          </div>
+          <InstallStepList steps={androidWebInstallSteps} />
+        </div>
+        <div className="mt-6 space-y-3">
+          <div>
+            <p className="text-sm font-medium">iPhone and iPad (Safari)</p>
+            <p className="text-xs text-muted-foreground">
+              Safari is the browser that can install it on iOS.
+            </p>
+          </div>
+          <InstallStepList steps={iosWebInstallSteps} />
+        </div>
+        <p className="mt-6 text-sm text-muted-foreground">
+          On a computer, open the app with Open web app, then use the install icon in the Chrome or
+          Edge address bar.
+        </p>
+      </SectionCard>
+
+      <SectionCard
+        title="Android app requirements"
+        description="Most modern Android phones work well for the installed app. Optional hardware improves speed, not access. The web app does not need an Android device."
         icon={ShieldCheck}
       >
         <div className="grid gap-3 sm:grid-cols-2">
@@ -195,21 +292,11 @@ export function StaffAppGuide({ orgId, orgName }: StaffAppGuideProps) {
       </SectionCard>
 
       <SectionCard
-        title="Install in four steps"
-        description="Follow these on each Android device you set up."
+        title="Install the Android app"
+        description="Follow these on each Android device you set up. The web app does not use these steps."
         icon={Smartphone}
       >
-        <ul className="space-y-4 border-l-2 border-border/60 pl-4">
-          {installSteps.map((step, index) => (
-            <li key={step.title} className="relative text-sm">
-              <span className="absolute -left-[calc(0.5rem+2px)] top-1.5 flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
-                {index + 1}
-              </span>
-              <p className="font-medium">{step.title}</p>
-              <p className="mt-0.5 text-muted-foreground">{step.description}</p>
-            </li>
-          ))}
-        </ul>
+        <InstallStepList steps={installSteps} />
       </SectionCard>
 
       <Card className="border-dashed border-border/60 bg-muted/10 shadow-none">
@@ -229,15 +316,13 @@ export function StaffAppGuide({ orgId, orgName }: StaffAppGuideProps) {
         </CardContent>
       </Card>
 
-      {showDownloadActions ? (
-        <div className="flex flex-wrap gap-2 border-t border-border/40 pt-6">
-          <StaffAppDownloadActions
-            orgId={orgId}
-            orgName={orgName}
-            className="flex flex-wrap gap-2"
-          />
-        </div>
-      ) : null}
+      <div className="flex flex-wrap gap-2 border-t border-border/40 pt-6">
+        <StaffAppDownloadActions
+          orgId={orgId}
+          orgName={orgName}
+          className="flex flex-wrap gap-2"
+        />
+      </div>
     </div>
   );
 }

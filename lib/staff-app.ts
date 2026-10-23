@@ -6,6 +6,9 @@ export const STAFF_APP_UPDATE_PATH = "/staff-app/update";
 /** Nest public download path (relative to `NEXT_PUBLIC_API_URL` / `/api/v1`). */
 export const STAFF_APP_DOWNLOAD_PATH = "/staff-app/download";
 
+/** Staff selling web app (PWA). Works alongside the Android APK. */
+export const STAFF_POS_PWA_URL = "https://pos.nutasolutions.com";
+
 export type StaffAppUpdateInfo = {
   versionName: string;
   versionCode: number;
