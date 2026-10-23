@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PaginationBar } from "@/components/pagination/pagination-bar";
+import { DeviceActionsMenu } from "@/components/platform/devices/device-actions-menu";
 import { handleApiError } from "@/lib/api/errors";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -84,6 +85,7 @@ export default function OrganizationDevicesPage() {
               <TableHead>Owner</TableHead>
               <TableHead>Last seen</TableHead>
               <TableHead>Registered</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -120,6 +122,9 @@ export default function OrganizationDevicesPage() {
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {d.registeredAt ? formatDate(d.registeredAt) : formatDate(d.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DeviceActionsMenu device={d} />
                   </TableCell>
                 </TableRow>
               );

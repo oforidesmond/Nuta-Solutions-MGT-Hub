@@ -13,6 +13,7 @@ import type {
   PlatformDeviceActivity,
   PlatformDeviceDetails,
   PlatformUserOrgSlim,
+  ReleaseDeviceDto,
   RevokeDeviceDto,
   SuspendDeviceDto,
   UnsuspendDeviceDto,
@@ -167,4 +168,11 @@ export async function unsuspendPlatformDevice(
     endpoints.platform.deviceUnsuspend(id),
     dto,
   );
+}
+
+/** Removes the phone's device row so the next NutaPOS setup can bind it. */
+export async function releasePlatformDevice(
+  dto: ReleaseDeviceDto,
+): Promise<{ success: true }> {
+  return platformPost<{ success: true }>(endpoints.platform.devicesRelease, dto);
 }

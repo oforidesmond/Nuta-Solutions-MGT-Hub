@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -38,6 +38,7 @@ const STATUS_LABEL: Record<DeviceStatus, string> = {
 };
 
 export default function PlatformDeviceDetailPage() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = typeof params?.id === "string" ? params.id : "";
 
@@ -111,7 +112,11 @@ export default function PlatformDeviceDetailPage() {
               {device.lastSeenAt ? ` · Last seen ${formatDate(device.lastSeenAt)}` : ""}
             </p>
           </div>
-          <DeviceActionsMenu device={device} variant="header" />
+          <DeviceActionsMenu
+            device={device}
+            variant="header"
+            onReleased={() => router.push("/platform/devices")}
+          />
         </div>
       </div>
 

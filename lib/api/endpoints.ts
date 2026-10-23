@@ -146,6 +146,7 @@ export const endpoints = {
     deviceSuspend: (id: string) => `/platform/devices/${id}/suspend` as const,
     deviceUnsuspend: (id: string) =>
       `/platform/devices/${id}/unsuspend` as const,
+    devicesRelease: "/platform/devices/release",
     analyticsGrowth: "/platform/analytics/growth",
     analyticsPlans: "/platform/analytics/plans",
     telemetryCrashes: "/platform/telemetry/crashes",

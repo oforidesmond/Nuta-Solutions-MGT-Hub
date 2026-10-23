@@ -329,6 +329,12 @@ export interface UnsuspendDeviceDto {
   reason: string;
 }
 
+/** Deletes the device row by phone id (`deviceUuid`), not the internal row id. */
+export interface ReleaseDeviceDto {
+  deviceUuid: string;
+  reason: string;
+}
+
 /* ──────────────────────────────────────────────────────────────────────
  * Dashboard
  * ──────────────────────────────────────────────────────────────────── */
