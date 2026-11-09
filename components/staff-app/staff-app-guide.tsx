@@ -227,7 +227,7 @@ export function StaffAppGuide({ orgId, orgName }: StaffAppGuideProps) {
 
       <SectionCard
         title="Web app"
-        description="Install it like an app when you do not want the Android APK. Tap Open web app on this page, then follow the steps for the device."
+        description="Install it like an app. Tap Open web app on this page, then follow the steps for the device."
         icon={Globe}
       >
         <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
