@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Tooltip,
@@ -79,6 +80,8 @@ export default function SalesPage() {
   const [customEnd, setCustomEnd] = useState(() => toYyyyMmDd(new Date()));
   const [staffId, setStaffId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [varianceOnly, setVarianceOnly] = useState(false);
   const [varianceReason, setVarianceReason] = useState<VarianceReason | "">("");
   const [productId, setProductId] = useState("");
@@ -86,6 +89,15 @@ export default function SalesPage() {
   const [limit] = useState(20);
   const [sortBy] = useState("soldAt");
   const [sortOrder] = useState<"asc" | "desc">("desc");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   const range = useMemo(
     () => rangeForPreset(preset, customStart, customEnd),
@@ -102,8 +114,19 @@ export default function SalesPage() {
       sortOrder,
       staffId: staffId || undefined,
       paymentMethod: paymentMethod || undefined,
+      search: debouncedSearch || undefined,
     }),
-    [range.startDate, range.endDate, page, limit, sortBy, sortOrder, staffId, paymentMethod],
+    [
+      range.startDate,
+      range.endDate,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      staffId,
+      paymentMethod,
+      debouncedSearch,
+    ],
   );
 
   const varianceParams = useMemo(
@@ -114,8 +137,17 @@ export default function SalesPage() {
       limit,
       productId: productId.trim() || undefined,
       varianceReason: varianceReason || undefined,
+      search: debouncedSearch || undefined,
     }),
-    [range.startDate, range.endDate, page, limit, productId, varianceReason],
+    [
+      range.startDate,
+      range.endDate,
+      page,
+      limit,
+      productId,
+      varianceReason,
+      debouncedSearch,
+    ],
   );
 
   const listQuery = useQuery({
@@ -149,6 +181,7 @@ export default function SalesPage() {
         endDate: range.endDate,
         staffId: staffId || undefined,
         paymentMethod: paymentMethod || undefined,
+        search: debouncedSearch || undefined,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -175,12 +208,14 @@ export default function SalesPage() {
           endDate: range.endDate,
           staffId: staffId || undefined,
           paymentMethod: paymentMethod || undefined,
+          search: debouncedSearch || undefined,
         },
         varianceFilters: {
           startDate: range.startDate,
           endDate: range.endDate,
           productId: productId.trim() || undefined,
           varianceReason: varianceReason || undefined,
+          search: debouncedSearch || undefined,
         },
       });
       if (sales.length === 0) {
@@ -217,6 +252,7 @@ export default function SalesPage() {
           forcedSalesOnly: varianceOnly || undefined,
           varianceReasonLabel: varianceReasonFilterLabel(varianceReason),
           productId: productId.trim() || undefined,
+          search: debouncedSearch || undefined,
         },
         sales,
         truncated,
@@ -369,6 +405,25 @@ export default function SalesPage() {
               setPage(1);
             }}
           />
+          <div className="space-y-1.5">
+            <Label htmlFor="sales-search">Search</Label>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                id="sales-search"
+                className="h-10 min-h-10 pl-9"
+                placeholder="Receipt number, product name, or staff…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                maxLength={100}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="staff-filter">Staff</Label>
@@ -468,7 +523,16 @@ export default function SalesPage() {
           {activeQuery.isPending && !data ? (
             <SalesTableSkeleton />
           ) : (
-            <SalesTable rows={data?.data ?? []} currency={currency} showBranch={isAdmin} />
+            <SalesTable
+              rows={data?.data ?? []}
+              currency={currency}
+              showBranch={isAdmin}
+              emptyMessage={
+                debouncedSearch
+                  ? "No matching sales. Try another term or widen the date range."
+                  : "No sales yet."
+              }
+            />
           )}
           {data ? (
             <PaginationBar

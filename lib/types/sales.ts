@@ -9,6 +9,8 @@ export interface SalesListParams {
   sortOrder?: "asc" | "desc";
   staffId?: string;
   paymentMethod?: string;
+  /** Receipt #, product name, or staff name/email. */
+  search?: string;
 }
 
 export interface SalesVarianceListParams {
@@ -18,11 +20,13 @@ export interface SalesVarianceListParams {
   limit?: number;
   productId?: string;
   varianceReason?: VarianceReason;
+  /** Receipt #, product name, or staff name/email. */
+  search?: string;
 }
 
 export type SalesExportParams = Pick<
   SalesListParams,
-  "startDate" | "endDate" | "staffId" | "paymentMethod"
+  "startDate" | "endDate" | "staffId" | "paymentMethod" | "search"
 >;
 
 export interface PaginatedSalesResponse {

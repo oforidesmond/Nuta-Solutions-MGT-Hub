@@ -159,6 +159,7 @@ export async function fetchSalesPage(params: SalesListParams = {}): Promise<Pagi
       sortOrder: params.sortOrder,
       staffId: params.staffId,
       paymentMethod: params.paymentMethod,
+      search: params.search || undefined,
     },
   });
   const { rows, meta } = unwrapSalesRows(res.data);
@@ -188,6 +189,7 @@ export async function fetchSalesWithVariancesPage(
       limit,
       productId: params.productId,
       varianceReason: params.varianceReason,
+      search: params.search || undefined,
     },
   });
   const { rows, meta } = unwrapSalesRowsWithMeta(res.data);
@@ -252,6 +254,7 @@ export async function downloadSalesExportBlob(params: SalesExportParams): Promis
       endDate: params.endDate,
       staffId: params.staffId,
       paymentMethod: params.paymentMethod,
+      search: params.search || undefined,
     },
     responseType: "blob",
   });

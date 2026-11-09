@@ -26,5 +26,5 @@ export const FORCED_SALES_UI = {
   tooltipWithLines: (lineCount: number) =>
     `Forced sale · ${lineCount} ${lineCount === 1 ? "line" : "lines"}`,
   exportTooltip:
-    "Uses the same date, staff, branch, and payment filters as the table. Server cap: 50,000 rows. No paging or sort on export. Forced sale columns are not included in the server CSV today; the forced sales toggle filters the table only.",
+    "Uses the same date, search, staff, branch, and payment filters as the table. Server cap: 50,000 rows. No paging or sort on export. Forced sale columns are not included in the server CSV today; the forced sales toggle filters the table only.",
 } as const;

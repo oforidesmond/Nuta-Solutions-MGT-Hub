@@ -38,11 +38,13 @@ export function SalesTable({
   rows,
   currency,
   showBranch = false,
+  emptyMessage = "No sales yet.",
 }: {
   rows: HubSale[];
   currency: string;
   /** Show which branch each sale occurred at (admin / org-wide views). */
   showBranch?: boolean;
+  emptyMessage?: string;
 }) {
   const colSpan = showBranch ? 7 : 6;
   return (
@@ -62,7 +64,7 @@ export function SalesTable({
         {rows.length === 0 ? (
           <TableRow>
             <TableCell colSpan={colSpan} className="text-muted-foreground">
-              No sales yet.
+              {emptyMessage}
             </TableCell>
           </TableRow>
         ) : (

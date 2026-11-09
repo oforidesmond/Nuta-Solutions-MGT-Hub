@@ -31,6 +31,7 @@ export type SalesPdfListFilters = {
   endDate?: string;
   staffId?: string;
   paymentMethod?: string;
+  search?: string;
 };
 
 export type SalesPdfVarianceFilters = {
@@ -38,6 +39,7 @@ export type SalesPdfVarianceFilters = {
   endDate?: string;
   productId?: string;
   varianceReason?: VarianceReason;
+  search?: string;
 };
 
 export type FetchSalesForPdfResult = {
@@ -152,6 +154,7 @@ export type SalesPdfFilterSummary = {
   forcedSalesOnly?: boolean;
   varianceReasonLabel?: string;
   productId?: string;
+  search?: string;
 };
 
 export type BuildSalesReportPdfArgs = {
@@ -212,6 +215,7 @@ function drawHeader(
     filterParts.push(`Reason: ${args.filters.varianceReasonLabel}`);
   }
   if (args.filters.productId) filterParts.push(`Product ID: ${args.filters.productId}`);
+  if (args.filters.search) filterParts.push(`Search: ${args.filters.search}`);
 
   if (filterParts.length > 0) {
     doc.text(`Filters: ${filterParts.join(" · ")}`, margin, y);
