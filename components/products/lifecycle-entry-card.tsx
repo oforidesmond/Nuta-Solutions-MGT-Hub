@@ -14,7 +14,10 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ProductLedgerEntry } from "@/lib/types/product-lifecycle";
-import { ledgerCategoryTone } from "@/lib/types/product-lifecycle";
+import {
+  formatLedgerStockSnapshot,
+  ledgerCategoryTone,
+} from "@/lib/types/product-lifecycle";
 import { formatCurrency, formatLedgerWhen, toNumericAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -99,6 +102,7 @@ export function LifecycleEntryCard({ entry, currency }: Props) {
   const branchName = entry.branch?.name?.trim() || null;
   const metaParts = [formatLedgerWhen(entry.occurredAt), actorName, branchName].filter(Boolean);
   const money = moneyLine(entry, currency);
+  const stockSnapshot = formatLedgerStockSnapshot(entry.quantity);
   const saleId = entry.references?.saleId;
   const receiptNumber = entry.references?.receiptNumber;
 
@@ -141,6 +145,9 @@ export function LifecycleEntryCard({ entry, currency }: Props) {
               <ArrowDownLeft className="ml-0.5 inline size-3.5" aria-hidden />
             ) : null}
           </p>
+        ) : null}
+        {stockSnapshot ? (
+          <p className="text-xs tabular-nums text-muted-foreground">{stockSnapshot}</p>
         ) : null}
       </div>
     </li>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
+import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,9 +15,19 @@ import {
   fetchProductLifecyclePage,
 } from "@/lib/api/product-lifecycle";
 import { handleApiError } from "@/lib/api/errors";
+import { PRODUCT_ACTIVITY_PDF_ROW_CAP } from "@/lib/exports/constants";
 import { buildExportFilename } from "@/lib/exports/filename";
 import { fetchAllWithCursor } from "@/lib/exports/fetch-paginated";
-import { lifecycleEntryToRow } from "@/lib/exports/row-mappers";
+import {
+  buildProductActivityReportPdf,
+  downloadBlob,
+  fetchProductLifecycleForPdfExport,
+  productActivityPdfFilename,
+} from "@/lib/exports/product-activity-pdf-export";
+import {
+  PRODUCT_ACTIVITY_EXPORT_COLUMNS,
+  lifecycleEntryToRow,
+} from "@/lib/exports/row-mappers";
 import { formatCurrency, toNumericAmount } from "@/lib/format";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { canViewProductLifecycle } from "@/lib/inventory-access";
@@ -91,6 +102,71 @@ export function ProductActivityTab({ productId, productName, enabled = true }: P
     staleTime: 60_000,
   });
 
+  const pdfExportMutation = useMutation({
+    mutationFn: async () => {
+      const { entries, truncated } = await fetchProductLifecycleForPdfExport({
+        productId,
+        chip,
+      });
+      if (entries.length === 0) {
+        throw new Error("Nothing to export for the current filter.");
+      }
+
+      const fin = financialsQuery.data;
+      const salesBlock = fin?.sales as Record<string, unknown> | undefined;
+      const returnsBlock = fin?.returns as Record<string, unknown> | undefined;
+      const shrinkageBlock = fin?.shrinkage as Record<string, unknown> | undefined;
+      const sold = pickFinancialAmount(salesBlock, "revenue", "grossProfit");
+      const profitOnSales = pickFinancialAmount(salesBlock, "grossProfit");
+      const stockLostAmount = pickFinancialAmount(shrinkageBlock, "loss", "lossAmount");
+      const returns =
+        typeof returnsBlock?.count === "number"
+          ? returnsBlock.count
+          : toNumericAmount(returnsBlock?.quantity as string | undefined);
+
+      const blob = buildProductActivityReportPdf({
+        orgName,
+        productName: productName?.trim() || productId,
+        currency,
+        chip,
+        financials: {
+          sold,
+          profitOnSales,
+          stockLost: stockLostAmount,
+          returns,
+          periodFrom: monthRange.from.slice(0, 10),
+          periodTo: monthRange.to.slice(0, 10),
+        },
+        entries,
+        truncated,
+      });
+
+      downloadBlob(
+        blob,
+        productActivityPdfFilename({
+          orgName,
+          chip,
+          from: monthRange.from.slice(0, 10),
+          to: monthRange.to.slice(0, 10),
+        }),
+      );
+
+      return { truncated, count: entries.length };
+    },
+    onSuccess: ({ truncated, count }) => {
+      toast.success("PDF download started.");
+      if (truncated) {
+        toast.warning(
+          `Report capped at ${PRODUCT_ACTIVITY_PDF_ROW_CAP.toLocaleString()} rows (${count.toLocaleString()} exported). Narrow the filter for a full export.`,
+        );
+      }
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : handleApiError(err);
+      toast.error(msg);
+    },
+  });
+
   if (!canView) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -126,18 +202,10 @@ export function ProductActivityTab({ productId, productName, enabled = true }: P
           ? "problem"
           : null;
 
-  const timelineColumns = [
-    { key: "occurredAt", header: "When" },
-    { key: "category", header: "Type" },
-    { key: "summary", header: "Summary" },
-    { key: "quantityDelta", header: "Qty change" },
-    { key: "revenue", header: "Revenue" },
-    { key: "grossProfit", header: "Profit on sales" },
-    { key: "loss", header: "Stock lost" },
-    { key: "actor", header: "Staff" },
-    { key: "branch", header: "Branch" },
-    { key: "receiptNumber", header: "Receipt" },
-  ];
+  const timelineColumns = PRODUCT_ACTIVITY_EXPORT_COLUMNS.map((c) => ({
+    key: c.key,
+    header: c.header,
+  }));
 
   return (
     <div className="space-y-4">
@@ -230,36 +298,55 @@ export function ProductActivityTab({ productId, productName, enabled = true }: P
             </Button>
           ))}
         </div>
-        <ExportButton
-          label="Export activity"
-          filename={buildExportFilename({
-            orgName,
-            reportType: `product-activity-${chip}`,
-            from: monthRange.from.slice(0, 10),
-            to: monthRange.to.slice(0, 10),
-          })}
-          columns={timelineColumns}
-          disabled={timelineQuery.isPending}
-          getRows={async () => {
-            const { rows, truncated } = await fetchAllWithCursor({
-              fetchPage: async (cursor) => {
-                const page = await fetchProductLifecyclePage(productId, {
-                  cursor,
-                  limit: 50,
-                  categories: activityFilterChipToCategories(chip),
-                });
-                return {
-                  items: page.data.filter((entry) => activityEntryMatchesChip(entry, chip)),
-                  nextCursor: page.nextCursor,
-                };
-              },
-            });
-            return {
-              rows: rows.map(lifecycleEntryToRow),
-              truncated,
-            };
-          }}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            label="Export activity"
+            filename={buildExportFilename({
+              orgName,
+              reportType: `product-activity-${chip}`,
+              from: monthRange.from.slice(0, 10),
+              to: monthRange.to.slice(0, 10),
+            })}
+            columns={timelineColumns}
+            disabled={timelineQuery.isPending || pdfExportMutation.isPending}
+            getRows={async () => {
+              const { rows, truncated } = await fetchAllWithCursor({
+                fetchPage: async (cursor) => {
+                  const page = await fetchProductLifecyclePage(productId, {
+                    cursor,
+                    limit: 50,
+                    categories: activityFilterChipToCategories(chip),
+                  });
+                  return {
+                    items: page.data.filter((entry) =>
+                      activityEntryMatchesChip(entry, chip),
+                    ),
+                    nextCursor: page.nextCursor,
+                  };
+                },
+              });
+              return {
+                rows: rows.map(lifecycleEntryToRow),
+                truncated,
+              };
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-9"
+            disabled={timelineQuery.isPending || pdfExportMutation.isPending}
+            onClick={() => pdfExportMutation.mutate()}
+          >
+            {pdfExportMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Download className="size-4" aria-hidden />
+            )}
+            <span className="ml-2">Export PDF</span>
+          </Button>
+        </div>
       </div>
 
       <div className="flex justify-end">

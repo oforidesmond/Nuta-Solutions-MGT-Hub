@@ -286,6 +286,18 @@ export function currentMonthDateRange(): { from: string; to: string } {
   return { from: toIso(start), to: toIso(end) };
 }
 
+/** Trim trailing zeros from a quantity for display (keeps integers clean). */
+export function formatLedgerQtyValue(value: string | number | null | undefined): string | null {
+  if (value == null || value === "") return null;
+  const n = toNumericAmount(value);
+  if (!Number.isFinite(n)) return String(value);
+  const abs = Math.abs(n);
+  const formatted = Number.isInteger(abs)
+    ? String(abs)
+    : abs.toFixed(3).replace(/\.?0+$/, "");
+  return n < 0 ? `−${formatted}` : formatted;
+}
+
 /** Human-readable signed quantity for accountability / investigation rows. */
 export function formatLedgerQuantityDelta(delta: string | number | null | undefined): string {
   if (delta == null || delta === "") return "No change";
@@ -297,4 +309,24 @@ export function formatLedgerQuantityDelta(delta: string | number | null | undefi
   if (n > 0) return `+${formatted} units`;
   if (n < 0) return `−${formatted} units`;
   return "No change";
+}
+
+/**
+ * Stock level after an event, optionally with before → after when both differ.
+ * Returns null when after is missing.
+ */
+export function formatLedgerStockSnapshot(
+  quantity:
+    | { before?: string | number | null; after?: string | number | null }
+    | null
+    | undefined,
+): string | null {
+  if (!quantity) return null;
+  const after = formatLedgerQtyValue(quantity.after);
+  if (after == null) return null;
+  const before = formatLedgerQtyValue(quantity.before);
+  if (before != null && before !== after) {
+    return `Stock: ${before} → ${after}`;
+  }
+  return `Stock after: ${after}`;
 }

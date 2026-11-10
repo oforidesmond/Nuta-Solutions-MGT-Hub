@@ -7,6 +7,22 @@ import type { ProductLedgerEntry } from "@/lib/types/product-lifecycle";
 import { ledgerCategoryLabel } from "@/lib/types/product-lifecycle";
 import { formatAuditBranchLabel, safeJsonPretty } from "@/lib/audit-display";
 
+/** Shared CSV / PDF column keys for product activity exports. */
+export const PRODUCT_ACTIVITY_EXPORT_COLUMNS = [
+  { key: "occurredAt", header: "When" },
+  { key: "category", header: "Type" },
+  { key: "summary", header: "Summary" },
+  { key: "quantityBefore", header: "Qty before" },
+  { key: "quantityDelta", header: "Qty change" },
+  { key: "quantityAfter", header: "Qty after" },
+  { key: "revenue", header: "Revenue" },
+  { key: "grossProfit", header: "Profit on sales" },
+  { key: "loss", header: "Stock lost" },
+  { key: "actor", header: "Staff" },
+  { key: "branch", header: "Branch" },
+  { key: "receiptNumber", header: "Receipt" },
+] as const;
+
 export function lifecycleEntryToRow(entry: ProductLedgerEntry): Record<string, unknown> {
   return {
     occurredAt: entry.occurredAt,
