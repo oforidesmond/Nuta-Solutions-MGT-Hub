@@ -151,7 +151,7 @@ function MoneyEntryForm({
       onClose();
     },
     onError: (err) => {
-      toast.error(handleApiError(err).message);
+      toast.error(handleApiError(err));
     },
   });
 

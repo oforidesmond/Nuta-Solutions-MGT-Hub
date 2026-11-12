@@ -58,7 +58,7 @@ export function MoneyCategoriesDialog({ open, onOpenChange }: Props) {
       invalidate();
       toast.success("Added to what-for list.");
     },
-    onError: (e) => toast.error(handleApiError(e).message),
+    onError: (e) => toast.error(handleApiError(e)),
   });
 
   const toggleMutation = useMutation({
@@ -68,7 +68,7 @@ export function MoneyCategoriesDialog({ open, onOpenChange }: Props) {
       invalidate();
       toast.success("Updated.");
     },
-    onError: (e) => toast.error(handleApiError(e).message),
+    onError: (e) => toast.error(handleApiError(e)),
   });
 
   const rows = categoriesQuery.data ?? [];

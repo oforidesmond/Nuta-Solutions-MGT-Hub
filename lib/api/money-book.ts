@@ -1,6 +1,5 @@
-import { apiClient } from "@/lib/api/client";
+import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
-import { handleApiError } from "@/lib/api/errors";
 import { cleanQueryParams } from "@/lib/api/query-params";
 import { unwrapList } from "@/lib/api/response";
 import type {
@@ -48,14 +47,10 @@ export async function fetchMoneyBookSummary(params: {
   startDate: string;
   endDate: string;
 }): Promise<MoneyBookSummary> {
-  try {
-    const { data } = await apiClient.get(endpoints.moneyBook.summary, {
-      params: cleanQueryParams(params),
-    });
-    return asSummary(data);
-  } catch (e) {
-    throw handleApiError(e);
-  }
+  const { data } = await api.get(endpoints.moneyBook.summary, {
+    params: cleanQueryParams(params),
+  });
+  return asSummary(data);
 }
 
 export async function fetchMoneyBookFeed(params: {
@@ -65,103 +60,69 @@ export async function fetchMoneyBookFeed(params: {
   limit?: number;
   direction?: MoneyEntryDirection;
 }): Promise<{ data: MoneyFeedItem[]; meta: MoneyBookListMeta }> {
-  try {
-    const { data } = await apiClient.get(endpoints.moneyBook.feed, {
-      params: cleanQueryParams(params),
-    });
-    const unwrapped = unwrapList<MoneyFeedItem>(
-      data,
-      params.page ?? 1,
-      params.limit ?? 20,
-    );
-    return {
-      data: unwrapped.items,
-      meta: {
-        page: unwrapped.meta.page,
-        limit: unwrapped.meta.limit,
-        total: unwrapped.meta.total,
-        totalPages: unwrapped.meta.totalPages,
-      },
-    };
-  } catch (e) {
-    throw handleApiError(e);
-  }
+  const { data } = await api.get(endpoints.moneyBook.feed, {
+    params: cleanQueryParams(params),
+  });
+  const unwrapped = unwrapList<MoneyFeedItem>(
+    data,
+    params.page ?? 1,
+    params.limit ?? 20,
+  );
+  return {
+    data: unwrapped.items,
+    meta: {
+      page: unwrapped.meta.page,
+      limit: unwrapped.meta.limit,
+      total: unwrapped.meta.total,
+      totalPages: unwrapped.meta.totalPages,
+    },
+  };
 }
 
 export async function createMoneyEntry(
   input: CreateMoneyEntryInput,
 ): Promise<MoneyEntry> {
-  try {
-    const { data } = await apiClient.post(endpoints.moneyBook.entries, input);
-    return data as MoneyEntry;
-  } catch (e) {
-    throw handleApiError(e);
-  }
+  const { data } = await api.post(endpoints.moneyBook.entries, input);
+  return data as MoneyEntry;
 }
 
 export async function updateMoneyEntry(
   id: string,
   input: UpdateMoneyEntryInput,
 ): Promise<MoneyEntry> {
-  try {
-    const { data } = await apiClient.patch(
-      endpoints.moneyBook.entryById(id),
-      input,
-    );
-    return data as MoneyEntry;
-  } catch (e) {
-    throw handleApiError(e);
-  }
+  const { data } = await api.patch(endpoints.moneyBook.entryById(id), input);
+  return data as MoneyEntry;
 }
 
 export async function deleteMoneyEntry(id: string): Promise<void> {
-  try {
-    await apiClient.delete(endpoints.moneyBook.entryById(id));
-  } catch (e) {
-    throw handleApiError(e);
-  }
+  await api.delete(endpoints.moneyBook.entryById(id));
 }
 
 export async function fetchMoneyCategories(params?: {
   direction?: MoneyEntryDirection;
   includeInactive?: boolean;
 }): Promise<MoneyCategory[]> {
-  try {
-    const { data } = await apiClient.get(endpoints.moneyBook.categories, {
-      params: cleanQueryParams(params ?? {}),
-    });
-    if (Array.isArray(data)) return data as MoneyCategory[];
-    return unwrapList<MoneyCategory>(data).items;
-  } catch (e) {
-    throw handleApiError(e);
-  }
+  const { data } = await api.get(endpoints.moneyBook.categories, {
+    params: cleanQueryParams(params ?? {}),
+  });
+  if (Array.isArray(data)) return data as MoneyCategory[];
+  return unwrapList<MoneyCategory>(data).items;
 }
 
 export async function createMoneyCategory(
   input: CreateMoneyCategoryInput,
 ): Promise<MoneyCategory> {
-  try {
-    const { data } = await apiClient.post(
-      endpoints.moneyBook.categories,
-      input,
-    );
-    return data as MoneyCategory;
-  } catch (e) {
-    throw handleApiError(e);
-  }
+  const { data } = await api.post(endpoints.moneyBook.categories, input);
+  return data as MoneyCategory;
 }
 
 export async function updateMoneyCategory(
   id: string,
   input: UpdateMoneyCategoryInput,
 ): Promise<MoneyCategory> {
-  try {
-    const { data } = await apiClient.patch(
-      endpoints.moneyBook.categoryById(id),
-      input,
-    );
-    return data as MoneyCategory;
-  } catch (e) {
-    throw handleApiError(e);
-  }
+  const { data } = await api.patch(
+    endpoints.moneyBook.categoryById(id),
+    input,
+  );
+  return data as MoneyCategory;
 }
