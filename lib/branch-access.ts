@@ -19,3 +19,8 @@ export function canTransferStock(role: UserRole | undefined): boolean {
 export function canViewOrgAnalytics(role: UserRole | undefined): boolean {
   return role === "ADMIN";
 }
+
+/** Business Money Book is ADMIN-only (GET/POST /money-book/*). */
+export function canUseMoneyBook(role: UserRole | undefined): boolean {
+  return role === "ADMIN";
+}

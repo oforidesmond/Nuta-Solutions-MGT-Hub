@@ -36,6 +36,13 @@ export interface BranchLedgerSummary {
   hasLedgerFinancials: boolean;
 }
 
+/** Additive Business Money Book cash block on sales-summary (not COGS). */
+export interface ReportMoneyBookBlock {
+  otherIn: string;
+  moneyOut: string;
+  whatsLeftCash: string;
+}
+
 export interface StaffReportRow {
   staffId?: string;
   userId?: string;

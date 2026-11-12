@@ -37,13 +37,14 @@ import {
   fetchReportSalesSummary,
   fetchReportStaffPerformance,
   normalizeBranchLedgerSummary,
+  normalizeReportMoneyBook,
   normalizeRevenueTrendPoints,
   normalizeStaffPerformanceRows,
   financialBlockHas,
 } from "@/lib/api/reports";
 import { formatCurrency, toNumericAmount } from "@/lib/format";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
-import { canViewOrgAnalytics } from "@/lib/branch-access";
+import { canUseMoneyBook, canViewOrgAnalytics } from "@/lib/branch-access";
 import type { DateRangePreset } from "@/lib/date-range-presets";
 import { toYyyyMmDd } from "@/lib/date-range-presets";
 import { reportKeys } from "@/lib/query/report-keys";
@@ -76,6 +77,7 @@ export function ReportsBusinessSection() {
   const role = useAuthStore((s) => s.user?.role);
   const authUser = useAuthStore((s) => s.user);
   const showOrgLink = canViewOrgAnalytics(role);
+  const showMoneyBook = canUseMoneyBook(role);
 
   const [preset, setPreset] = useState<DateRangePreset>("this_month");
   const [customStart, setCustomStart] = useState(() => toYyyyMmDd(new Date()));
@@ -157,6 +159,11 @@ export function ReportsBusinessSection() {
       to: range.endDate,
     });
   }, [salesSummaryQuery.data, range.startDate, range.endDate]);
+
+  const moneyBookBlock = useMemo(
+    () => normalizeReportMoneyBook(salesSummaryQuery.data),
+    [salesSummaryQuery.data],
+  );
 
   const staffRows = useMemo(() => {
     const rows = normalizeStaffPerformanceRows(staffPerfQuery.data?.reportData ?? {});
@@ -327,6 +334,45 @@ export function ReportsBusinessSection() {
             </div>
           )}
         </SectionCard>
+        {showMoneyBook && moneyBookBlock && !salesSummaryQuery.isPending ? (
+          <SectionCard
+            title="Bills and other money"
+            description="Cash from the Business Money Book for this same period (separate from stock profit)."
+          >
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <MetricTile
+                label="Other Money In"
+                value={formatCurrency(
+                  toNumericAmount(moneyBookBlock.otherIn),
+                  currency,
+                )}
+              />
+              <MetricTile
+                label="Money Out"
+                value={formatCurrency(
+                  toNumericAmount(moneyBookBlock.moneyOut),
+                  currency,
+                )}
+              />
+              <MetricTile
+                label="What's left (cash)"
+                value={formatCurrency(
+                  toNumericAmount(moneyBookBlock.whatsLeftCash),
+                  currency,
+                )}
+              />
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              <Link
+                href="/money-book"
+                className="font-medium text-foreground underline underline-offset-2"
+              >
+                Open Business Money Book
+              </Link>{" "}
+              to record bills like light or rent.
+            </p>
+          </SectionCard>
+        ) : null}
       </section>
 
       <section className="space-y-4">

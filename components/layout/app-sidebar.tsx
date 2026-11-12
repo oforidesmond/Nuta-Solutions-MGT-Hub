@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { navSections } from "@/components/layout/nav-config";
+import { canUseMoneyBook } from "@/lib/branch-access";
 import { canManageStockTakes } from "@/lib/inventory-access";
 import { canSendStaffNotifications } from "@/lib/notifications/can-send-staff-notifications";
 import { cn } from "@/lib/utils";
@@ -15,12 +16,14 @@ type AppSidebarProps = { onNavigate?: () => void };
 
 const STOCK_TAKE_HREF = "/inventory/stock-take";
 const STAFF_NOTIFICATIONS_HREF = "/notifications";
+const MONEY_BOOK_HREF = "/money-book";
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const pathname = usePathname();
   const role = useAuthStore((s) => s.user?.role);
   const showStockTake = canManageStockTakes(role);
   const showStaffNotifications = canSendStaffNotifications(role);
+  const showMoneyBook = canUseMoneyBook(role);
 
   const filteredSections = useMemo(
     () =>
@@ -29,10 +32,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         items: section.items.filter((item) => {
           if (!showStockTake && item.href === STOCK_TAKE_HREF) return false;
           if (!showStaffNotifications && item.href === STAFF_NOTIFICATIONS_HREF) return false;
+          if (!showMoneyBook && item.href === MONEY_BOOK_HREF) return false;
           return true;
         }),
       })),
-    [showStockTake, showStaffNotifications],
+    [showStockTake, showStaffNotifications, showMoneyBook],
   );
 
   function isActive(href: string) {

@@ -18,6 +18,7 @@ export const BRANCH_SCOPED_ROOTS = [
   "sales",
   "returns",
   "reports",
+  "money-book",
   "inventory",
   "products",
   "product-conversions",

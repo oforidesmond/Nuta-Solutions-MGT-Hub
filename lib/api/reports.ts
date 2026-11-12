@@ -25,6 +25,7 @@ import type { ProductLifecycleFinancialBlock } from "@/lib/types/product-lifecyc
 import type {
   BranchLedgerSummary,
   ReportBranchContext,
+  ReportMoneyBookBlock,
   ReportRevenueTrendsParams,
   ReportSalesSummaryParams,
   ReportStaffPerformanceParams,
@@ -267,6 +268,23 @@ export function normalizeBranchLedgerSummary(
     netPosition,
     cogs,
     hasLedgerFinancials: reportDataHasLedgerFinancials(d),
+  };
+}
+
+/** Extract additive money-book cash block from sales-summary reportData. */
+export function normalizeReportMoneyBook(
+  envelope: ReportEnvelope | null | undefined,
+): ReportMoneyBookBlock | null {
+  if (!envelope?.reportData) return null;
+  const mb = asRecord(envelope.reportData.moneyBook);
+  if (!mb) return null;
+  if (mb.otherIn == null && mb.moneyOut == null && mb.whatsLeftCash == null) {
+    return null;
+  }
+  return {
+    otherIn: String(mb.otherIn ?? "0.00"),
+    moneyOut: String(mb.moneyOut ?? "0.00"),
+    whatsLeftCash: String(mb.whatsLeftCash ?? "0.00"),
   };
 }
 

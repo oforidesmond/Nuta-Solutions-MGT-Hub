@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   PackageX,
   TrendingDown,
+  Wallet,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { fetchDashboardSummary } from "@/lib/api/dashboard";
+import { fetchMoneyBookSummary } from "@/lib/api/money-book";
 import { fetchOrgInsightShrinkage, fetchOrgInsightSlowStock } from "@/lib/api/org-insights";
 import { fetchSalesWithVariancesPage } from "@/lib/api/sales";
 import { FORCED_SALES_UI } from "@/lib/copy/forced-sales-ui";
@@ -29,11 +31,13 @@ import { fetchReliabilityHomeSummary, mergeReliabilityForHome } from "@/lib/api/
 import { formatCurrency, formatDate, toNumericAmount } from "@/lib/format";
 import { formatRelativeUpdated } from "@/lib/format-relative-updated";
 import { canViewStaffReliability } from "@/lib/operations-access";
-import { canViewOrgAnalytics } from "@/lib/branch-access";
+import { canUseMoneyBook, canViewOrgAnalytics } from "@/lib/branch-access";
 import { orgInsightKeys } from "@/lib/query/product-lifecycle-keys";
+import { moneyBookKeys } from "@/lib/query/money-book-keys";
 import { POLL_DASHBOARD_MS, refetchIntervalWhenVisible } from "@/lib/query/poll-intervals";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
+import { toYyyyMmDd } from "@/lib/date-range-presets";
 import { SendStaffNotificationModal } from "@/components/notifications/send-staff-notification-modal";
 import { canSendStaffNotifications } from "@/lib/notifications/can-send-staff-notifications";
 import { useAuthStore } from "@/stores/auth-store";
@@ -45,12 +49,25 @@ export default function DashboardHomePage() {
   const canReliability = canViewStaffReliability(user?.role);
   const canOrgInsights = canViewOrgAnalytics(user?.role);
   const canNotifyStaff = canSendStaffNotifications(user?.role);
+  const canMoneyBook = canUseMoneyBook(user?.role);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const activeBranchId = useActiveBranchId();
+
+  const todayRange = useMemo(() => {
+    const today = toYyyyMmDd(new Date());
+    return { startDate: today, endDate: today };
+  }, []);
 
   const summaryQuery = useQuery({
     queryKey: withBranchKey(activeBranchId, "dashboard", "summary"),
     queryFn: fetchDashboardSummary,
+    refetchInterval: () => refetchIntervalWhenVisible(POLL_DASHBOARD_MS),
+  });
+
+  const moneyBookTeaserQuery = useQuery({
+    queryKey: moneyBookKeys.summary(activeBranchId, todayRange),
+    queryFn: () => fetchMoneyBookSummary(todayRange),
+    enabled: canMoneyBook,
     refetchInterval: () => refetchIntervalWhenVisible(POLL_DASHBOARD_MS),
   });
 
@@ -214,6 +231,36 @@ export default function DashboardHomePage() {
           </div>
         )}
       </section>
+
+      {canMoneyBook ? (
+        <section aria-label="Business Money Book">
+          <div className="mb-3">
+            <h2 className="text-sm font-semibold text-foreground">Business Money Book</h2>
+            <p className="text-xs text-muted-foreground">Today&apos;s money in, money out, and what&apos;s left</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <InsightTeaserCard
+              href="/money-book"
+              title="What's left today"
+              icon={Wallet}
+              isLoading={moneyBookTeaserQuery.isPending}
+              value={
+                moneyBookTeaserQuery.isError
+                  ? "—"
+                  : formatCurrency(
+                      toNumericAmount(moneyBookTeaserQuery.data?.whatsLeft) ?? 0,
+                      organization?.currency ?? "GHS",
+                    )
+              }
+              hint={
+                moneyBookTeaserQuery.data
+                  ? `In ${formatCurrency(toNumericAmount(moneyBookTeaserQuery.data.moneyInTotal) ?? 0, organization?.currency ?? "GHS")} · Out ${formatCurrency(toNumericAmount(moneyBookTeaserQuery.data.moneyOut) ?? 0, organization?.currency ?? "GHS")}`
+                  : "Open to record bills and other money"
+              }
+            />
+          </div>
+        </section>
+      ) : null}
 
       {canOrgInsights ? (
         <section aria-label="Stock and loss insights">
@@ -407,6 +454,12 @@ export default function DashboardHomePage() {
             <LineChart className="size-4" aria-hidden />
             Reports
           </Button>
+          {canMoneyBook ? (
+            <Button variant="outline" className="min-h-11 justify-center sm:min-w-[11rem]" render={<Link href="/money-book" />}>
+              <Wallet className="size-4" aria-hidden />
+              Money Book
+            </Button>
+          ) : null}
         </div>
       </div>
 
