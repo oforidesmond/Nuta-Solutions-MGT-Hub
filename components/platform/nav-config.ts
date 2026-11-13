@@ -8,6 +8,7 @@ import {
   MoreHorizontal,
   Package,
   Smartphone,
+  Store,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -49,6 +50,7 @@ export const platformNavSections: PlatformNavSection[] = [
     title: "Operations",
     items: [
       { href: "/platform/staff-app", label: "Staff app", icon: Package },
+      { href: "/platform/offline-shops", label: "Offline shops", icon: Store },
       { href: "/platform/audit", label: "Audit log", icon: FileText },
       { href: "/platform/notifications", label: "Notifications", icon: Bell },
     ],

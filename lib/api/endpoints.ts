@@ -169,5 +169,16 @@ export const endpoints = {
     staffAppReleases: "/platform/staff-app/releases",
     staffAppReleaseCurrent: "/platform/staff-app/releases/current",
     staffAppReleaseRegister: "/platform/staff-app/releases/register",
+    offlineLicenseCustomers: "/platform/offline-license/customers",
+    offlineLicenseCustomer: (id: string) =>
+      `/platform/offline-license/customers/${id}` as const,
+    offlineLicenseActivationCode: (id: string) =>
+      `/platform/offline-license/customers/${id}/activation-code` as const,
+    offlineLicenseExtend: (id: string) =>
+      `/platform/offline-license/customers/${id}/extend` as const,
+    offlineLicenseMarkPaid: (id: string) =>
+      `/platform/offline-license/customers/${id}/mark-paid` as const,
+    offlineLicenseRevokeDevice: (id: string, deviceId: string) =>
+      `/platform/offline-license/customers/${id}/devices/${encodeURIComponent(deviceId)}/revoke` as const,
   },
 } as const;

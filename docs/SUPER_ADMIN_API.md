@@ -416,6 +416,59 @@ Response: `{ success: true, notificationsSent, recipientCount }`.
 
 ---
 
+### Offline shops (standalone PWA licenses)
+
+Manages customers for the offline-first NutaPOS PWA (`nutapos-offline`).  
+All routes require `SUPER_ADMIN`. Defaults: **GHS 600** / **365 days** (overridable per customer).
+
+#### `GET /platform/offline-license/customers`
+
+Returns all offline license customers (newest first), each including nested
+`devices`, last 5 `activationCodes`, and last 5 `payments`.
+
+#### `POST /platform/offline-license/customers`
+
+Body:
+
+```json
+{
+  "name": "Adom Pharmacy",
+  "phone": "0541298861",
+  "email": "optional@example.com",
+  "amountGhs": 600,
+  "periodDays": 365,
+  "graceDays": 0,
+  "supportNotes": "optional"
+}
+```
+
+#### `PATCH /platform/offline-license/customers/:id`
+
+Partial update of name, phone, email, amountGhs, periodDays, graceDays,
+supportNotes, `isActive`.
+
+#### `POST /platform/offline-license/customers/:id/activation-code`
+
+Issues a one-time activation code (14-day expiry). Fails if customer is inactive.  
+Response: `{ code, expiresAt, customerId }`.
+
+#### `POST /platform/offline-license/customers/:id/mark-paid`
+
+Optional body `{ "periodDays": 365 }`. Extends `validUntil` and returns
+`{ validUntil, unlockToken, deviceId }` for support unlock handoff.
+
+#### `POST /platform/offline-license/customers/:id/extend`
+
+Body `{ "days": 30 }`. Same response shape as mark-paid.
+
+#### `POST /platform/offline-license/customers/:id/devices/:deviceId/revoke`
+
+Revokes the bound device. Shop must re-activate with a new code.
+
+Hub UI: `/platform/offline-shops`.
+
+---
+
 ## Side-effect enforcement
 
 The following enforcement points exist outside the platform-admin module so
