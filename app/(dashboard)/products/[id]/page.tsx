@@ -45,7 +45,12 @@ import type { ProductConversion } from "@/lib/types/conversions";
 import { formatCurrency, toNumericAmount } from "@/lib/format";
 import { formatDateDMY } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
-import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
+import {
+  getStockStatus,
+  productQuantity,
+  productReorderLevel,
+  productSellableQuantity,
+} from "@/lib/stock-status";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import { useAppNavigate } from "@/lib/hooks/use-app-navigate";
 import { withBranchKey } from "@/lib/query/branch-query-keys";
@@ -219,7 +224,8 @@ export default function ProductDetailPage() {
     );
   }
 
-  const q = productQuantity(product);
+  const q = productSellableQuantity(product);
+  const physicalOnHand = productQuantity(product);
   const tone = getStockStatus(q, productReorderLevel(product));
   const cost = Number(product.costPrice ?? 0);
   const sell = Number(product.sellingPrice ?? 0);
@@ -273,6 +279,13 @@ export default function ProductDetailPage() {
               <Badge variant="outline" className={cn("mt-1 tabular-nums", stockBadgeClass(tone))}>
                 {Number.isFinite(q) ? q : "-"} units
               </Badge>
+              {Number.isFinite(physicalOnHand) &&
+              Number.isFinite(q) &&
+              physicalOnHand !== q ? (
+                <p className="mt-1 text-muted-foreground">
+                  On hand: {physicalOnHand}
+                </p>
+              ) : null}
               {product.reorderLevel != null ? (
                 <p className="mt-1 text-muted-foreground">Reorder at: {String(product.reorderLevel)}</p>
               ) : null}

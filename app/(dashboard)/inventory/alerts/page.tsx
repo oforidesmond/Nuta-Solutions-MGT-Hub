@@ -20,14 +20,14 @@ import { handleApiError } from "@/lib/api/errors";
 import {
   DEFAULT_LOW_STOCK_MAX,
   getStockStatus,
-  productQuantity,
   productReorderLevel,
+  productSellableQuantity,
 } from "@/lib/stock-status";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
 import type { HubProduct } from "@/lib/types/domain";
 
 function shortfall(p: HubProduct): number {
-  const q = productQuantity(p);
+  const q = productSellableQuantity(p);
   const r = productReorderLevel(p);
   if (r == null) return Math.max(0, DEFAULT_LOW_STOCK_MAX - q);
   return Math.max(0, r - q);
@@ -54,7 +54,10 @@ export default function LowStockAlertsPage() {
       const active = all.filter((p) => p.isActive !== false);
       setRows(
         active.filter((p) => {
-          const tone = getStockStatus(productQuantity(p), productReorderLevel(p));
+          const tone = getStockStatus(
+            productSellableQuantity(p),
+            productReorderLevel(p),
+          );
           return tone === "low" || tone === "out";
         }),
       );
@@ -106,7 +109,7 @@ export default function LowStockAlertsPage() {
               </TableHeader>
               <TableBody>
                 {rows.map((p) => {
-                  const q = productQuantity(p);
+                  const q = productSellableQuantity(p);
                   const r = productReorderLevel(p);
                   const reorderDisplay = r ?? DEFAULT_LOW_STOCK_MAX;
                   const sh = shortfall(p);

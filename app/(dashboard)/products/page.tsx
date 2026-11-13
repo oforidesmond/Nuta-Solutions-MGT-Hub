@@ -65,7 +65,11 @@ import {
 } from "@/lib/exports/product-export";
 import { formatCurrency } from "@/lib/format";
 import { productCategoryLabel } from "@/lib/product-helpers";
-import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
+import {
+  getStockStatus,
+  productReorderLevel,
+  productSellableQuantity,
+} from "@/lib/stock-status";
 import { canManageInventoryConversions, canManageStockTakes } from "@/lib/inventory-access";
 import { canTransferStock } from "@/lib/branch-access";
 import { useActiveBranchId } from "@/lib/hooks/use-active-branch-id";
@@ -131,7 +135,7 @@ function applyClientFilters(
   }
   if (stockFilter === "all") return out;
   return out.filter((p) => {
-    const q = productQuantity(p);
+    const q = productSellableQuantity(p);
     const tone = getStockStatus(q, productReorderLevel(p));
     if (stockFilter === "in_stock") return tone === "ok";
     if (stockFilter === "low") return tone === "low";
@@ -568,7 +572,7 @@ export default function ProductsPage() {
               </TableHeader>
               <TableBody>
                 {items.map((p) => {
-                  const q = productQuantity(p);
+                  const q = productSellableQuantity(p);
                   const tone = getStockStatus(q, productReorderLevel(p));
                   const cost = Number(p.costPrice ?? 0);
                   const price = Number(p.sellingPrice ?? 0);
@@ -642,7 +646,7 @@ export default function ProductsPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((p) => {
-            const q = productQuantity(p);
+            const q = productSellableQuantity(p);
             const tone = getStockStatus(q, productReorderLevel(p));
             const price = Number(p.sellingPrice ?? 0);
             return (

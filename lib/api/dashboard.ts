@@ -4,7 +4,11 @@ import { endpoints } from "@/lib/api/endpoints";
 import { fetchAllProducts } from "@/lib/api/products";
 import { fetchSalesPage, fetchSalesStats } from "@/lib/api/sales";
 import { rangeForPreset } from "@/lib/date-range-presets";
-import { getStockStatus, productQuantity, productReorderLevel } from "@/lib/stock-status";
+import {
+  getStockStatus,
+  productReorderLevel,
+  productSellableQuantity,
+} from "@/lib/stock-status";
 import { extractReliabilityFromDashboardPayload } from "@/lib/api/staff-reliability";
 import { toNumericAmount } from "@/lib/format";
 import type { DashboardSummary, HubProduct } from "@/lib/types/domain";
@@ -94,7 +98,7 @@ function sumSalesTotals(sales: { totalAmount: string | number }[]): number {
 /** Items that need restocking: out of stock or at/below reorder / low threshold. */
 function countRestockAttention(products: HubProduct[]): number {
   return products.filter((p) => {
-    const q = productQuantity(p);
+    const q = productSellableQuantity(p);
     const tone = getStockStatus(q, productReorderLevel(p));
     return tone === "low" || tone === "out";
   }).length;

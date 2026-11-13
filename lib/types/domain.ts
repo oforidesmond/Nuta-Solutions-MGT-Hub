@@ -74,9 +74,14 @@ export interface HubProduct {
   branchSellingPriceOverride?: string | number | null;
   /** true when either branch price override is set. */
   hasBranchPriceOverride?: boolean;
-  /** Same as currentStock in Prisma; APIs may use stockQuantity */
+  /** Same as currentStock in Prisma; APIs may use stockQuantity — physical on-hand */
   currentStock?: string | number | null;
   stockQuantity?: string | number | null;
+  /**
+   * Effective sellable for catalog UI (matches staff/PWA). Prefer over currentStock
+   * for list/detail badges; inventory ops must use currentStock.
+   */
+  sellableStock?: string | number | null;
   reorderLevel?: string | number | null;
   unit?: string | null;
   unitOfMeasure?: string | null;

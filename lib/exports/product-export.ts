@@ -2,8 +2,8 @@ import type { ExportColumn } from "@/components/exports/export-button";
 import { productCategoryLabel } from "@/lib/product-helpers";
 import {
   getStockStatus,
-  productQuantity,
   productReorderLevel,
+  productSellableQuantity,
   type StockStatusTone,
 } from "@/lib/stock-status";
 import type { HubProduct } from "@/lib/types/domain";
@@ -31,7 +31,7 @@ export const PRODUCT_LIST_EXPORT_COLUMNS: ExportColumn[] = [
 ];
 
 export function productToExportRow(product: HubProduct): Record<string, unknown> {
-  const quantity = productQuantity(product);
+  const quantity = productSellableQuantity(product);
   const tone = getStockStatus(quantity, productReorderLevel(product));
   return {
     name: product.name,

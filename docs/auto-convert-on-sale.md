@@ -62,10 +62,11 @@ Staff sale re-posts with the same sale `id` short-circuit as duplicates and do n
 
 | Audience | Endpoints | Stock shown |
 |----------|-----------|-------------|
-| Staff app | `GET /staff/inventory`, `/staff/pricing`, `/staff/master-data`, `GET /sync/initial-pull` | **Effective:** `childStock + floor(parentStock × ratio)` for auto children (exactly one auto parent) |
-| Hub | `GET /products*`, stock-takes, adjustments | **True** `BranchInventory` on-hand |
+| Staff app | `GET /staff/inventory`, `/staff/pricing`, `/staff/master-data`, `GET /sync/initial-pull` | **Effective** in `currentStock` / `stock_quantity`: `childStock + floor(parentStock × ratio)` for auto children (exactly one auto parent) |
+| Hub catalog | `GET /products*` list/detail badges | **`sellableStock`** (same effective formula) so owners see the same number as staff |
+| Hub inventory ops | stock-takes, adjustments, transfers, convert-bulk | **`currentStock`** = true `BranchInventory` on-hand |
 
-Inflation is **response-only**. Physical counts and Hub stocktakes must use true on-hand.
+Inflation is **response-only**. Physical counts and Hub stocktakes must use `currentStock` / true on-hand — never `sellableStock`.
 
 Multi-product oversell risk (Whole / Half / Quarter sharing one parent pool) is accepted for v1 offline UX; the **server still enforces** real stock at sale ingest.
 

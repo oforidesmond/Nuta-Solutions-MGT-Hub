@@ -20,6 +20,7 @@ export function getStockStatus(
   return "ok";
 }
 
+/** Physical branch on-hand (stock-take, adjust, transfer, convert). */
 export function productQuantity(p: {
   currentStock?: string | number | null;
   stockQuantity?: string | number | null;
@@ -27,6 +28,23 @@ export function productQuantity(p: {
   const raw = p.stockQuantity ?? p.currentStock ?? 0;
   const n = typeof raw === "string" ? parseFloat(raw) : raw;
   return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Catalog/POS sellable qty — matches staff PWA. Prefers API `sellableStock`
+ * (child + convertible packs); falls back to physical when absent.
+ */
+export function productSellableQuantity(p: {
+  sellableStock?: string | number | null;
+  currentStock?: string | number | null;
+  stockQuantity?: string | number | null;
+}): number {
+  const raw = p.sellableStock;
+  if (raw != null && raw !== "") {
+    const n = typeof raw === "string" ? parseFloat(raw) : raw;
+    if (Number.isFinite(n)) return n;
+  }
+  return productQuantity(p);
 }
 
 export function productReorderLevel(p: {
