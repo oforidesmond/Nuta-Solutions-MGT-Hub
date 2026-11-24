@@ -46,10 +46,8 @@ export function OfflineShopBackupsSheet({
   });
 
   const embedded = shop?.backup ?? null;
-  const backup = backupQuery.data ?? (backupQuery.isError ? null : embedded);
-  const notFound =
-    backupQuery.isError ||
-    (!backupQuery.isFetching && !backup && !embedded && open);
+  const backup = backupQuery.data ?? embedded;
+  const notFound = !backupQuery.isFetching && !backup && open;
 
   const downloadMutation = useMutation({
     mutationFn: () => downloadOfflineLicenseBackup(shopId),
