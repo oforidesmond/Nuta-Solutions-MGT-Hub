@@ -41,6 +41,19 @@ export interface OfflineLicensePayment {
   paidAt: string | null;
 }
 
+/** Summary embedded on customer list, or full meta from GET .../backup. */
+export interface OfflineLicenseBackupSummary {
+  id?: string;
+  receivedAt: string;
+  byteSize: number;
+  deviceId: string;
+  appVersion: string;
+  originalFilename?: string | null;
+  buildNumber?: string | null;
+  createdAtClient?: string;
+  customerId?: string;
+}
+
 export interface OfflineLicenseCustomer {
   id: string;
   name: string;
@@ -57,6 +70,7 @@ export interface OfflineLicenseCustomer {
   devices?: OfflineLicenseDevice[];
   activationCodes?: OfflineActivationCode[];
   payments?: OfflineLicensePayment[];
+  backup?: OfflineLicenseBackupSummary | null;
 }
 
 export interface CreateOfflineLicenseCustomerDto {

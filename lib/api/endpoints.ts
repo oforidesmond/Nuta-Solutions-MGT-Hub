@@ -180,5 +180,9 @@ export const endpoints = {
       `/platform/offline-license/customers/${id}/mark-paid` as const,
     offlineLicenseRevokeDevice: (id: string, deviceId: string) =>
       `/platform/offline-license/customers/${id}/devices/${encodeURIComponent(deviceId)}/revoke` as const,
+    offlineLicenseBackup: (id: string) =>
+      `/platform/offline-license/customers/${id}/backup` as const,
+    offlineLicenseBackupDownload: (id: string) =>
+      `/platform/offline-license/customers/${id}/backup/download` as const,
   },
 } as const;

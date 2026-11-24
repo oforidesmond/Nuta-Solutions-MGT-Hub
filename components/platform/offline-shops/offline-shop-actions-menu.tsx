@@ -5,6 +5,7 @@ import {
   Ban,
   CalendarPlus,
   Eye,
+  HardDrive,
   KeyRound,
   MoreVertical,
   Pencil,
@@ -22,6 +23,7 @@ import { ActivationCodeDialog } from "@/components/platform/offline-shops/activa
 import { EditOfflineShopModal } from "@/components/platform/offline-shops/edit-offline-shop-modal";
 import { ExtendDialog } from "@/components/platform/offline-shops/extend-dialog";
 import { MarkPaidDialog } from "@/components/platform/offline-shops/mark-paid-dialog";
+import { OfflineShopBackupsSheet } from "@/components/platform/offline-shops/offline-shop-backups-sheet";
 import { OfflineShopDetailSheet } from "@/components/platform/offline-shops/offline-shop-detail-sheet";
 import { RevokeOfflineDeviceDialog } from "@/components/platform/offline-shops/revoke-device-dialog";
 import type { OfflineLicenseCustomer, OfflineLicenseDevice } from "@/lib/types/offline-license";
@@ -29,6 +31,7 @@ import type { OfflineLicenseCustomer, OfflineLicenseDevice } from "@/lib/types/o
 type OpenModal =
   | null
   | "details"
+  | "backups"
   | "create-code"
   | "mark-paid"
   | "extend"
@@ -62,6 +65,10 @@ export function OfflineShopActionsMenu({ shop }: OfflineShopActionsMenuProps) {
           <DropdownMenuItem onClick={() => setOpenModal("details")}>
             <Eye className="size-4" aria-hidden />
             View details
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setOpenModal("backups")}>
+            <HardDrive className="size-4" aria-hidden />
+            Backups
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setOpenModal("create-code")}
@@ -104,6 +111,11 @@ export function OfflineShopActionsMenu({ shop }: OfflineShopActionsMenuProps) {
         shop={shop}
         open={openModal === "details"}
         onOpenChange={(open) => setOpenModal(open ? "details" : null)}
+      />
+      <OfflineShopBackupsSheet
+        shop={shop}
+        open={openModal === "backups"}
+        onOpenChange={(open) => setOpenModal(open ? "backups" : null)}
       />
       <ActivationCodeDialog
         shop={shop}

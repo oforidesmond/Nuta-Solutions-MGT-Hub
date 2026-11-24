@@ -1,4 +1,5 @@
 import { endpoints } from "@/lib/api/endpoints";
+import { api } from "@/lib/api/client";
 import {
   platformGet,
   platformPatch,
@@ -7,10 +8,25 @@ import {
 import type {
   CreateOfflineLicenseCustomerDto,
   OfflineActivationCodeResponse,
+  OfflineLicenseBackupSummary,
   OfflineLicenseCustomer,
   OfflineLicenseUnlockResponse,
   UpdateOfflineLicenseCustomerDto,
 } from "@/lib/types/offline-license";
+
+function parseContentDispositionFilename(header: string): string | null {
+  const star = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(header);
+  if (star?.[1]) {
+    try {
+      return decodeURIComponent(star[1].trim().replace(/^"|"$/g, ""));
+    } catch {
+      /* fall through */
+    }
+  }
+  const plain = /filename\s*=\s*"([^"]+)"|filename\s*=\s*([^;]+)/i.exec(header);
+  const raw = plain?.[1] ?? plain?.[2];
+  return raw ? raw.trim().replace(/^"|"$/g, "") : null;
+}
 
 export async function fetchOfflineLicenseCustomers(): Promise<OfflineLicenseCustomer[]> {
   const raw = await platformGet<OfflineLicenseCustomer[] | { data: OfflineLicenseCustomer[] }>(
@@ -76,4 +92,35 @@ export async function revokeOfflineLicenseDevice(
   return platformPost<{ ok: true }>(
     endpoints.platform.offlineLicenseRevokeDevice(customerId, deviceId),
   );
+}
+
+export async function fetchOfflineLicenseBackup(
+  customerId: string,
+): Promise<OfflineLicenseBackupSummary> {
+  return platformGet<OfflineLicenseBackupSummary>(
+    endpoints.platform.offlineLicenseBackup(customerId),
+  );
+}
+
+/** Binary download in browser; throws on non-2xx. */
+export async function downloadOfflineLicenseBackup(customerId: string): Promise<void> {
+  const res = await api.get<Blob>(endpoints.platform.offlineLicenseBackupDownload(customerId), {
+    responseType: "blob",
+  });
+  const header = res.headers["content-disposition"] ?? res.headers["Content-Disposition"];
+  const parsed = typeof header === "string" ? parseContentDispositionFilename(header) : null;
+  const filename = parsed ?? `offline_backup_${customerId}.json`;
+  const blob = res.data;
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
